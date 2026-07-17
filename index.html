@@ -183,6 +183,11 @@
   .drag-handle{cursor:grab;color:var(--text-muted);font-weight:700;user-select:none;}
   .stage-add-col{border:1.5px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;min-width:230px;max-width:230px;height:60px;box-sizing:border-box;color:var(--text-muted);font-weight:700;font-size:13px;flex-shrink:0;transition:background .15s,color .15s;}
   .stage-add-col:hover{background:var(--surface-2);color:var(--text);}
+  /* Toggled via classList (not inline style) so it can never permanently
+     override the role-based data-roles CSS gating on the same element —
+     inline styles beat stylesheet rules regardless of specificity, and this
+     is a single-page demo where the role can switch without a reload. */
+  .js-hidden{display:none !important;}
 
   /* ---------- Table ---------- */
   table{width:100%;border-collapse:collapse;font-size:13.5px;}
@@ -282,8 +287,36 @@
   .stepper{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--surface);}
   .stepper button{width:32px;height:36px;border:none;background:var(--surface-2);color:var(--text);font-size:16px;font-weight:700;transition:background .15s;}
   .stepper button:hover{background:var(--surface-hover);}
-  .stepper input{width:52px;text-align:center;border:none;background:var(--surface);color:var(--text);font-size:13.5px;-moz-appearance:textfield;}
+  .stepper input{width:52px;text-align:center;border:none;background:var(--surface);color:var(--text);font-size:13.5px;font-weight:700;-moz-appearance:textfield;}
   .stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .stepper input:focus{outline:2px solid var(--accent-1);outline-offset:-2px;}
+  .stepper button:disabled{opacity:.4;cursor:default;}
+  .stepper button:disabled:hover{background:var(--surface-2);}
+  .stepper input:disabled{color:var(--text-muted);}
+
+  /* report detail — card grid of metrics (replaces the old plain table) */
+  .report-metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:16px;}
+  @media (max-width:640px){ .report-metric-grid{grid-template-columns:1fr;} }
+  .report-metric-card{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);transition:border-color .15s;}
+  .report-metric-card:focus-within{border-color:var(--accent-1);}
+  .report-metric-label{font-size:13px;font-weight:600;color:var(--text);line-height:1.3;}
+  .report-summary-strip{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px;}
+  .report-summary-chip{background:#2F4EF314;color:var(--accent-1);border-radius:999px;padding:6px 14px;font-size:12.5px;font-weight:800;}
+
+  /* ---------- Analytics ---------- */
+  .analytics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;}
+  @media (max-width:980px){ .analytics-grid{grid-template-columns:repeat(2,1fr);} }
+  .analytics-bars{display:flex;flex-direction:column;gap:14px;}
+  .analytics-bar-row{display:grid;grid-template-columns:200px 1fr 40px;align-items:center;gap:14px;font-size:13px;}
+  @media (max-width:700px){ .analytics-bar-row{grid-template-columns:130px 1fr 34px;font-size:12px;} }
+  .analytics-bar-label{color:var(--text);font-weight:600;}
+  .analytics-bar-track{height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden;}
+  .analytics-bar-fill{height:100%;background:var(--accent-grad);border-radius:999px;transition:width .4s cubic-bezier(.2,.8,.3,1);}
+  .analytics-bar-value{font-weight:800;font-size:12.5px;text-align:right;color:var(--text-muted);}
+  .analytics-manager-card{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);}
+  .analytics-manager-name{font-weight:700;font-size:13.5px;min-width:150px;flex-shrink:0;display:flex;align-items:center;gap:8px;}
+  .analytics-manager-stats{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--text-muted);}
+  .analytics-manager-stats b{color:var(--text);font-weight:800;}
 
   /* reminder banner */
   .reminder-banner{display:flex;align-items:center;gap:10px;padding:13px 18px;margin-bottom:16px;border:1px solid var(--accent-1);background:#2F4EF314;border-radius:var(--radius);font-size:13px;font-weight:600;}
@@ -422,6 +455,9 @@
       <li data-nav="reports"><a href="#" onclick="showView(event,'reports')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
         Звітність</a></li>
+      <li data-nav="analytics"><a href="#" onclick="showView(event,'analytics')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H4a1 1 0 0 1-1-1V3"/><circle cx="7" cy="14" r="1.5"/><circle cx="12" cy="9" r="1.5"/><circle cx="16.5" cy="13" r="1.5"/><circle cx="20" cy="7" r="1.5"/><path d="M7 14l5-5 4.5 4 3.5-6"/></svg>
+        Аналітика</a></li>
       <li data-nav="campaigns"><a href="#" onclick="showView(event,'campaigns')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
         Розсилки</a></li>
@@ -670,30 +706,48 @@
       <!-- ============ REPORT DETAIL (full page) ============ -->
       <section class="view" id="view-report-detail">
         <button class="btn secondary" style="margin-bottom:18px;" onclick="showView(null,'reports')">← Назад до звітності</button>
-        <div class="card" style="padding:22px;max-width:640px;">
-          <div class="section-title" id="reportDetailTitle">Створити звіт — сьогодні</div>
-          <table>
-            <thead><tr><th>Показник</th><th>Значення</th></tr></thead>
-            <tbody id="reportTableBody">
-              <tr id="rdPeriodRow"><td>Тип звіту</td><td>
-                <div class="cselect" id="reportPeriodSelect">
-                  <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:150px;" onclick="toggleCSelect(this.parentElement)">
-                    <span class="cselect-label">Тиждень</span>
-                    <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                  </button>
-                  <ul class="cselect-menu" data-select="reportPeriod">
-                    <li data-value="day">День</li>
-                    <li data-value="week" class="selected">Тиждень</li>
-                    <li data-value="month">Місяць</li>
-                  </ul>
-                </div>
-              </td></tr>
-              <!-- метрики вставляються тут через JS: renderReportFieldRows() -->
-              <tr><td>Коментар</td><td><div class="field" style="margin:0;"><input id="rdComment" type="text" placeholder="Короткий підсумок дня (необов'язково)"></div></td></tr>
-            </tbody>
-          </table>
+        <div class="card" style="padding:26px;max-width:760px;">
+          <div class="row-between" style="margin-bottom:2px;">
+            <div class="section-title" id="reportDetailTitle" style="margin:0;">Створити звіт — сьогодні</div>
+            <button class="btn secondary small" id="reportEditBtn" style="display:none;" onclick="enableReportEditing()">✏️ Редагувати звіт</button>
+          </div>
+          <div class="report-summary-strip" id="reportSummaryStrip"></div>
+          <div class="field" id="rdPeriodRow" style="max-width:220px;margin-top:14px;">
+            <label>Тип звіту</label>
+            <div class="cselect" id="reportPeriodSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;width:100%;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label">Тиждень</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" data-select="reportPeriod">
+                <li data-value="day">День</li>
+                <li data-value="week" class="selected">Тиждень</li>
+                <li data-value="month">Місяць</li>
+              </ul>
+            </div>
+          </div>
+          <div class="report-metric-grid" id="reportMetricGrid"><!-- вставляється через JS: renderReportFieldRows() --></div>
+          <div class="field" style="margin-top:18px;"><label>Коментар</label><textarea id="rdComment" style="min-height:64px;" placeholder="Короткий підсумок дня (необов'язково)"></textarea></div>
           <div style="margin-top:18px;display:flex;gap:10px;" id="reportDetailActions">
             <button class="btn" onclick="saveReportDetail()">Зберегти звіт</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ANALYTICS ============ -->
+      <section class="view" id="view-analytics">
+        <div id="analyticsEmpty" class="card" style="padding:32px;text-align:center;color:var(--text-muted);display:none;">
+          Звітів ще немає — аналітика з'явиться, щойно буде подано перший звіт.
+        </div>
+        <div id="analyticsContent">
+          <div class="analytics-grid" id="analyticsSummary"></div>
+          <div class="card" style="padding:22px;margin-bottom:16px;">
+            <div class="section-title">Показники по звітах — сума за весь період</div>
+            <div class="analytics-bars" id="analyticsMetricBars"></div>
+          </div>
+          <div class="card" style="padding:22px;" data-roles="admin cto" id="analyticsByManagerCard">
+            <div class="section-title">Розподіл по спеціалістах</div>
+            <div style="display:flex;flex-direction:column;gap:10px;" id="analyticsByManager"></div>
           </div>
         </div>
       </section>
@@ -829,7 +883,10 @@
         <div class="field"><label>Назва компанії *</label><input id="dealCompany" type="text" onblur="validateRequiredField(this,'Вкажіть назву компанії')"></div>
         <div class="field"><label>Ніша *</label><input id="dealNiche" type="text" onblur="validateRequiredField(this,'Вкажіть нішу компанії')"></div>
       </div>
-      <div class="field"><label>Посилання</label><input id="dealLink" type="text"></div>
+      <div class="field-row">
+        <div class="field"><label>Посилання</label><input id="dealLink" type="text"></div>
+        <div class="field"><label>Дата створення</label><input id="dealCreatedAt" type="text" disabled></div>
+      </div>
     </div>
     <div class="panel-section">
       <div class="section-title" style="font-size:13px;">Нотатки</div>
@@ -1020,16 +1077,24 @@ const REPORT_FIELDS = [
   {key:'interestedLPR', label:'Зацікавлені ЛПР'},
   {key:'meetings', label:'Назначено зустрічей'},
 ];
+// Кожен показник — картка з лейблом і степером; значення можна як клікати
+// +/-, так і вписувати вручну (поле більше не readonly), onReportFieldInput
+// прибирає від'ємні/нечислові значення при введенні.
 function renderReportFieldRows(){
-  const periodRow = document.getElementById('rdPeriodRow');
-  if(!periodRow) return;
-  const html = REPORT_FIELDS.map(f => `
-    <tr><td>${f.label}</td><td>
-      <div class="stepper"><button type="button" onclick="stepValue('rd_${f.key}',-1)">−</button><input id="rd_${f.key}" type="number" value="0" readonly><button type="button" onclick="stepValue('rd_${f.key}',1)">+</button></div>
-    </td></tr>`).join('');
-  periodRow.insertAdjacentHTML('afterend', html);
+  const grid = document.getElementById('reportMetricGrid');
+  if(!grid) return;
+  grid.innerHTML = REPORT_FIELDS.map(f => `
+    <div class="report-metric-card">
+      <span class="report-metric-label">${f.label}</span>
+      <div class="stepper"><button type="button" onclick="stepValue('rd_${f.key}',-1)">−</button><input id="rd_${f.key}" type="number" min="0" value="0" oninput="onReportFieldInput(this)"><button type="button" onclick="stepValue('rd_${f.key}',1)">+</button></div>
+    </div>`).join('');
 }
 renderReportFieldRows();
+function onReportFieldInput(el){
+  let v = Math.round(Number(el.value));
+  if(!Number.isFinite(v) || v < 0) v = 0;
+  el.value = v;
+}
 
 let REPORTS = [
   {id:1, date:'15.07.2026', managerId:'oksana', calls:12, presLPR:5, reachLPR:6, notInterestedLPR:2, hasContractor:1, callLaterLPR:2, notPastAdmin:3, presAdmin:2, callBackBusyLPR:1, interestedLPR:3, meetings:2, comment:'12 дзвінків · 2 зустрічі · 3 зацікавлених ЛПР'},
@@ -1257,10 +1322,11 @@ function showView(e, name){
   document.querySelectorAll('.nav li').forEach(li => li.classList.remove('active'));
   const li = document.querySelector('.nav li[data-nav="' + name + '"]');
   if(li) li.classList.add('active');
-  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'База клієнтів', tasks:'Завдання', reports:'Звітність', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт'};
+  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'База клієнтів', tasks:'Завдання', reports:'Звітність', analytics:'Аналітика', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт'};
   document.getElementById('pageTitle').textContent = titles[name];
   if(name === 'account') renderAccountView();
   if(name === 'tasks') renderTasksTable();
+  if(name === 'analytics') renderAnalytics();
   if(name === 'campaigns') renderCampaignsTable();
   if(name === 'admin') updateAdminPageLabels();
 }
@@ -1383,6 +1449,11 @@ function handleNotifClick(id){
     if(LEADS.find(l=>l.id===t.id)) openClientCard(t.id);
   } else if(t.type === 'task'){
     if(t.leadId && LEADS.find(l=>l.id===t.leadId)) openClientCard(t.leadId);
+  } else if(t.type === 'report'){
+    // Звіт — повноцінна сторінка (не спливна картка), тож клік коректно
+    // відкриває саме її, на відміну від lead/task, де все відкривається
+    // лише спливним поп-апом.
+    if(REPORTS.find(r=>r.id===t.id)) openReportView(t.id);
   }
 }
 function markAllNotifRead(){
@@ -1588,8 +1659,8 @@ function toggleStageEditor(){
   document.getElementById('stageEditorBoard').style.flexWrap = 'wrap';
   document.getElementById('stageEditorBoard').style.alignItems = 'flex-start';
   document.getElementById('stageEditorActions').style.display = 'flex';
-  document.getElementById('editStagesBtn').style.display = 'none';
-  document.getElementById('addDealBtn').style.display = 'none';
+  document.getElementById('editStagesBtn').classList.add('js-hidden');
+  document.getElementById('addDealBtn').classList.add('js-hidden');
   renderStageEditor();
 }
 let editingStages = [];
@@ -1633,8 +1704,8 @@ function cancelStageEditor(){
   document.getElementById('board').style.display = 'flex';
   document.getElementById('stageEditorBoard').style.display = 'none';
   document.getElementById('stageEditorActions').style.display = 'none';
-  document.getElementById('editStagesBtn').style.display = 'inline-flex';
-  document.getElementById('addDealBtn').style.display = 'inline-flex';
+  document.getElementById('editStagesBtn').classList.remove('js-hidden');
+  document.getElementById('addDealBtn').classList.remove('js-hidden');
 }
 function saveStageEditor(){
   const removed = STAGES.filter(s => !editingStages.includes(s));
@@ -1654,6 +1725,9 @@ function openDeal(id, presetStage){
   if(id === null){
     document.getElementById('dealPanelTitle').textContent = 'Нова угода';
     ['dealName','dealPhone','dealEmail','dealCompany','dealNiche','dealLink'].forEach(f=>document.getElementById(f).value='');
+    // Дата створення встановлюється автоматично при збереженні — тут лише
+    // показуємо, якою вона буде, полем не можна керувати вручну.
+    document.getElementById('dealCreatedAt').value = new Date().toLocaleDateString('uk-UA') + ' (встановиться при збереженні)';
     document.getElementById('dealNotesList').innerHTML = '<div class="empty-hint">Нотаток ще немає.</div>';
     document.getElementById('dealTasksList').innerHTML = '<div class="empty-hint">Завдань ще немає.</div>';
     document.getElementById('dealAttachList').innerHTML = '<div class="empty-hint">Документів ще немає.</div>';
@@ -1668,6 +1742,7 @@ function openDeal(id, presetStage){
     document.getElementById('dealCompany').value = l.company;
     document.getElementById('dealNiche').value = l.niche;
     document.getElementById('dealLink').value = l.link;
+    document.getElementById('dealCreatedAt').value = l.createdAt;
     renderDealNotes(l);
     renderDealTasks(l);
     renderDealAttachments(l);
@@ -2190,13 +2265,30 @@ function renderReportsTable(){
       <td>${r.comment}</td>
     </tr>`).join('');
 }
+function setReportFieldsEnabled(enabled){
+  document.querySelectorAll('#view-report-detail .stepper button').forEach(b=>b.disabled = !enabled);
+  document.querySelectorAll('#reportMetricGrid .stepper input').forEach(inp=>inp.disabled = !enabled);
+  document.getElementById('rdComment').disabled = !enabled;
+}
+function renderReportSummaryStrip(values){
+  const el = document.getElementById('reportSummaryStrip');
+  if(!el) return;
+  if(!values){ el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <span class="report-summary-chip">📞 ${values.calls||0} дзвінків</span>
+    <span class="report-summary-chip">🤝 ${values.meetings||0} зустрічей</span>
+    <span class="report-summary-chip">🔥 ${values.interestedLPR||0} зацікавлених ЛПР</span>`;
+}
 function openReportCreate(){
   if(state.role === 'cto') return; // CTO лише переглядає звіти керівника відділу і менеджерів
   state.reportMode = 'create';
+  state.reportViewId = null;
   document.getElementById('reportDetailTitle').textContent = 'Створити звіт — сьогодні';
+  document.getElementById('reportEditBtn').style.display = 'none';
+  renderReportSummaryStrip(null);
   REPORT_FIELDS.forEach(f => { document.getElementById('rd_'+f.key).value = '0'; });
   document.getElementById('rdComment').value = '';
-  document.getElementById('rdComment').disabled = false;
+  setReportFieldsEnabled(true);
   document.getElementById('rdPeriodRow').style.display = '';
   const periodMenu = document.querySelector('#reportPeriodSelect .cselect-menu');
   const defaultPeriod = (state.role === 'manager') ? 'week' : 'month';
@@ -2207,6 +2299,10 @@ function openReportCreate(){
   document.getElementById('reportDetailActions').innerHTML = '<button class="btn" onclick="saveReportDetail()">Зберегти звіт</button>';
   showView(null, 'report-detail');
 }
+// Перегляд існуючого звіту. Редагувати можна лише СВІЙ ВЛАСНИЙ звіт (не
+// чужий) і не з ролі CTO (CTO лише переглядає). Кнопка "Редагувати" з'являється
+// тільки за цих умов; сама форма стартує заблокованою, як у звичайному
+// перегляді — редагування вмикається окремим кліком (enableReportEditing).
 function openReportView(id){
   const r = REPORTS.find(r=>r.id===id);
   if(!r) return;
@@ -2215,25 +2311,140 @@ function openReportView(id){
   document.getElementById('reportDetailTitle').innerHTML = 'Звіт — ' + r.date + ' · ' + managerName(r.managerId);
   document.getElementById('rdPeriodRow').style.display = 'none';
   REPORT_FIELDS.forEach(f => { document.getElementById('rd_'+f.key).value = r[f.key] || 0; });
-  document.getElementById('rdComment').value = r.comment; document.getElementById('rdComment').disabled = true;
-  document.querySelectorAll('#view-report-detail .stepper button').forEach(b=>b.disabled = true);
+  document.getElementById('rdComment').value = r.comment;
+  setReportFieldsEnabled(false);
+  renderReportSummaryStrip(r);
+  const me = currentUserRecord();
+  const canEdit = me && me.id === r.managerId && state.role !== 'cto';
+  document.getElementById('reportEditBtn').style.display = canEdit ? 'inline-flex' : 'none';
   document.getElementById('reportDetailActions').innerHTML = '';
   showView(null, 'report-detail');
+}
+function enableReportEditing(){
+  if(state.reportMode !== 'view' || state.reportViewId === null) return;
+  state.reportMode = 'edit';
+  setReportFieldsEnabled(true);
+  document.getElementById('reportEditBtn').style.display = 'none';
+  document.getElementById('reportDetailActions').innerHTML = '<button class="btn" onclick="saveReportDetail()">Зберегти зміни</button>';
+}
+// Приватне сповіщення керівнику(-ам) відділу і CTO про факт редагування
+// вже поданого звіту — крім самого редактора (щоб не дублювати йому власне
+// сповіщення, яке й так створює logActivity).
+function notifyReportEdited(r, editorName){
+  const target = {type:'report', id:r.id};
+  const editorId = currentUserRecord() ? currentUserRecord().id : null;
+  NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `Звіт за ${r.date} (${editorName}) відредаговано`, time:'зараз', read:false, target, ownerId:'ostap'});
+  USERS.filter(u=>u.role==='admin' && u.id!==editorId).forEach(a=>{
+    NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `Звіт за ${r.date} (${editorName}) відредаговано`, time:'зараз', read:false, target, ownerId:a.id});
+  });
+  renderNotifications();
 }
 function saveReportDetail(){
   const values = {};
   REPORT_FIELDS.forEach(f => { values[f.key] = Number(document.getElementById('rd_'+f.key).value) || 0; });
   const comment = document.getElementById('rdComment').value.trim()
     || `${values.calls} дзвінків · ${values.meetings} зустрічей · ${values.interestedLPR} зацікавлених ЛПР`;
+  const me = currentUserRecord();
+
+  if(state.reportMode === 'edit'){
+    const r = REPORTS.find(r=>r.id===state.reportViewId);
+    if(!r) return;
+    Object.assign(r, values, {comment});
+    renderReportsTable();
+    logActivity(`Відредаговано звіт за ${r.date}`, {target:{type:'report', id:r.id}});
+    notifyReportEdited(r, me ? me.name : '');
+    showView(null, 'reports');
+    return;
+  }
+
   const periodLabel = document.querySelector('#reportPeriodSelect .cselect-label').textContent;
   const today = new Date().toLocaleDateString('uk-UA');
-  const me = currentUserRecord();
   const newReportId = nextReportId++;
   REPORTS.unshift({id: newReportId, date: today, managerId: me ? me.id : 'ostap', comment, ...values});
-  document.querySelectorAll('#view-report-detail .stepper button').forEach(b=>b.disabled = false);
+  setReportFieldsEnabled(true);
   renderReportsTable();
   logActivity(`Збережено звіт за ${today} (${periodLabel.toLowerCase()})`, {target:{type:'report', id:newReportId}});
   showView(null, 'reports');
+}
+
+/* =========================================================
+   ANALYTICS (зведена аналітика по всіх звітах у видимій зоні)
+   ========================================================= */
+// Той самий принцип видимості, що й на сторінці звітності без фільтра:
+// менеджер бачить лише свої звіти; керівник відділу і CTO — усі.
+function scopedReportsForAnalytics(){
+  if(state.role === 'manager') return REPORTS.filter(r=>r.managerId===state.managerId);
+  return REPORTS;
+}
+function renderAnalytics(){
+  const rows = scopedReportsForAnalytics();
+  const emptyEl = document.getElementById('analyticsEmpty');
+  const contentEl = document.getElementById('analyticsContent');
+  if(!rows.length){
+    emptyEl.style.display = 'block';
+    contentEl.style.display = 'none';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  contentEl.style.display = 'block';
+
+  // ---- зведені суми по кожному показнику ----
+  const totals = {};
+  REPORT_FIELDS.forEach(f => { totals[f.key] = rows.reduce((s,r)=>s+Number(r[f.key]||0),0); });
+
+  // ---- верхні картки-підсумки ----
+  const avgCallsPerReport = Math.round(totals.calls / rows.length);
+  const summaryCards = [
+    {label:'Звітів подано', value: rows.length},
+    {label:'Дзвінків загалом', value: totals.calls, sub:`~${avgCallsPerReport} у звіті`},
+    {label:'Зустрічей призначено', value: totals.meetings},
+    {label:'Зацікавлених ЛПР', value: totals.interestedLPR},
+  ];
+  document.getElementById('analyticsSummary').innerHTML = summaryCards.map(c => `
+    <div class="card stat-card">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-value">${c.value}</div>
+      ${c.sub ? `<div class="stat-sub" style="color:var(--text-muted);">${c.sub}</div>` : ''}
+    </div>`).join('');
+
+  // ---- горизонтальні бари по кожному показнику (відносно найбільшого) ----
+  const maxTotal = Math.max(1, ...REPORT_FIELDS.map(f=>totals[f.key]));
+  document.getElementById('analyticsMetricBars').innerHTML = REPORT_FIELDS.map(f => `
+    <div class="analytics-bar-row">
+      <span class="analytics-bar-label">${f.label}</span>
+      <div class="analytics-bar-track"><div class="analytics-bar-fill" style="width:${Math.round(totals[f.key]/maxTotal*100)}%;"></div></div>
+      <span class="analytics-bar-value">${totals[f.key]}</span>
+    </div>`).join('');
+
+  // ---- розподіл по спеціалістах (лише для керівника відділу/CTO) ----
+  const managerCard = document.getElementById('analyticsByManagerCard');
+  if(state.role === 'manager'){
+    managerCard.style.display = 'none';
+  } else {
+    managerCard.style.display = '';
+    const byManager = {};
+    rows.forEach(r => {
+      if(!byManager[r.managerId]) byManager[r.managerId] = {calls:0, meetings:0, interestedLPR:0, count:0};
+      byManager[r.managerId].calls += Number(r.calls||0);
+      byManager[r.managerId].meetings += Number(r.meetings||0);
+      byManager[r.managerId].interestedLPR += Number(r.interestedLPR||0);
+      byManager[r.managerId].count++;
+    });
+    const entries = Object.entries(byManager).sort((a,b)=>b[1].calls-a[1].calls);
+    document.getElementById('analyticsByManager').innerHTML = entries.map(([id, s]) => {
+      const u = USERS.find(u=>u.id===id);
+      return `
+      <div class="analytics-manager-card">
+        <div class="analytics-manager-name">${nameBadge(u ? u.name : id, u && u.role==='admin')}</div>
+        <div class="analytics-manager-stats">
+          <span><b>${s.count}</b> звітів</span>
+          <span><b>${s.calls}</b> дзвінків</span>
+          <span><b>${s.meetings}</b> зустрічей</span>
+          <span><b>${s.interestedLPR}</b> зацікавлених ЛПР</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
 }
 
 /* =========================================================
