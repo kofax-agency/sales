@@ -508,9 +508,9 @@
       <!-- ============ DASHBOARD ============ -->
       <section class="view active" id="view-dashboard">
         <div class="grid-3" style="margin-bottom:16px;">
-          <div class="card stat-card"><div class="stat-label">Активні ліди</div><div class="stat-value">128</div><div class="stat-sub">+12 за тиждень</div></div>
-          <div class="card stat-card"><div class="stat-label">Угоди в роботі</div><div class="stat-value">34</div><div class="stat-sub" data-roles="admin cto">на суму $186k</div></div>
-          <div class="card stat-card"><div class="stat-label">Дзвінки сьогодні</div><div class="stat-value">6</div><div class="stat-sub" style="color:var(--warning)">2 прострочено</div></div>
+          <div class="card stat-card"><div class="stat-label">Активні ліди</div><div class="stat-value" id="statActiveLeads">0</div></div>
+          <div class="card stat-card"><div class="stat-label">Угоди в роботі</div><div class="stat-value" id="statDealsCount">0</div><div class="stat-sub" data-roles="admin cto" id="statDealsSum">на суму $0</div></div>
+          <div class="card stat-card"><div class="stat-label">Дзвінки сьогодні</div><div class="stat-value" id="statCallsToday">0</div><div class="stat-sub" id="statCallsOverdue" style="color:var(--text-muted);">прострочених немає</div></div>
         </div>
         <div class="grid-3">
           <div class="card widget">
@@ -1004,38 +1004,14 @@ function loadStoredPhotos(){
 }
 loadStoredPhotos();
 
-let LEADS = [
-  {id:1, name:'Дмитро Коваль', phone:'+380 67 111 22 33', email:'dmytro@example.com', company:'ТОВ Аврора', niche:'Роздрібна торгівля', link:'aurora.ua', stage:'Контакт', value:0, managerId:'oksana', createdAt:'02.07.2026',
-    notes:[{author:'Володимир', date:'02.07.2026', text:'Перший контакт, обіцяв подумати до кінця тижня.'}],
-    tasks:[{title:'Передзвонити через тиждень', due:'23.07.2026 10:00', done:false}], attachments:[]},
-  {id:2, name:'Оксана Гнатюк', phone:'+380 50 222 33 44', email:'oksana.h@example.com', company:'FreshMarket', niche:'Продукти харчування', link:'freshmarket.ua', stage:'Передзвонити', value:0, managerId:'oksana', createdAt:'05.07.2026',
-    notes:[{author:'Володимир', date:'05.07.2026', text:'Передзвонити у вересні, зацікавився пропозицією.'}],
-    tasks:[{title:'Передзвонити у вересні', due:'01.09.2026 12:00', done:false}], attachments:[], flag:'red'},
-  {id:3, name:'Ігор Литовченко', phone:'+380 63 555 66 77', email:'ihor.l@example.com', company:'BuildPro', niche:'Будівництво', link:'buildpro.ua', stage:'Передзвонити', value:0, managerId:'oksana', createdAt:'06.07.2026',
-    notes:[], tasks:[], attachments:[]},
-  {id:4, name:'Валерій Дудко', phone:'+380 97 888 99 00', email:'valerii@example.com', company:'Kappa LLC', niche:'IT-послуги', link:'kappa.io', stage:'Переданий - WEB', value:1500, managerId:'oksana', createdAt:'10.07.2026',
-    notes:[{author:'Володимир', date:'10.07.2026', text:'Погодив бюджет, чекаємо на підписання договору.'}],
-    tasks:[{title:'Підготувати договір', due:'17.07.2026 13:30', done:false}], attachments:[{name:'kp_kappa.pdf'}], flag:'yellow'},
-  {id:5, name:'Марія Ісаєва', phone:'+380 99 321 45 67', email:'maria.isaieva@example.com', company:'Litvin Studio', niche:'Дизайн', link:'litvinstudio.ua', stage:'Переданий - WEB', value:1700, managerId:'oksana', createdAt:'12.07.2026',
-    notes:[], tasks:[], attachments:[]},
-  {id:6, name:'Андрій Швець', phone:'+380 68 456 78 90', email:'andrii@example.com', company:'ShvetsAuto', niche:'Автопослуги', link:'shvetsauto.ua', stage:'Переданий - WEB', value:1000, managerId:'oksana', createdAt:'13.07.2026',
-    notes:[], tasks:[], attachments:[]},
-  {id:7, name:'Юлія Соколова', phone:'+380 66 777 12 34', email:'yulia.s@example.com', company:'Sokol Group', niche:'Логістика', link:'sokolgroup.ua', stage:'Зацікавлений', value:2200, managerId:'artem', createdAt:'11.07.2026',
-    notes:[{author:'Богдан', date:'11.07.2026', text:'Веду перемовини особисто, велике замовлення.'}],
-    tasks:[{title:'Надіслати комерційну пропозицію', due:'20.07.2026 15:00', done:false}], attachments:[]},
-];
-let nextLeadId = 8;
+let LEADS = [];
+let nextLeadId = 1;
 
 let TASKS = [];
-LEADS.forEach(l => l.tasks.forEach(t => TASKS.push({...t, leadId:l.id, leadName:l.name, managerId:l.managerId})));
 
 // Заплановані дзвінки на дашборді — прив'язані до ліда, тому клік по дзвінку
 // відкриває картку відповідного клієнта.
-let CALLS = [
-  {id:1, leadId:4, time:'11:00'},
-  {id:2, leadId:2, time:'14:15'},
-  {id:3, leadId:1, time:'17:00'},
-];
+let CALLS = [];
 
 // Поля, які менеджер/керівник відділу заповнює у звіті. Кожне — число,
 // зберігається під ключем f.key, поле у формі має id "rd_" + key.
@@ -1071,18 +1047,10 @@ function onReportFieldInput(el){
   el.value = v;
 }
 
-let REPORTS = [
-  {id:1, date:'15.07.2026', managerId:'oksana', calls:12, presLPR:5, reachLPR:6, notInterestedLPR:2, hasContractor:1, callLaterLPR:2, notPastAdmin:3, presAdmin:2, callBackBusyLPR:1, interestedLPR:3, meetings:2, comment:'12 дзвінків · 2 зустрічі · 3 зацікавлених ЛПР'},
-  {id:2, date:'15.07.2026', managerId:'oksana', calls:8, presLPR:3, reachLPR:4, notInterestedLPR:1, hasContractor:0, callLaterLPR:1, notPastAdmin:2, presAdmin:1, callBackBusyLPR:1, interestedLPR:2, meetings:1, comment:'8 дзвінків · 1 зустріч · 2 зацікавлених ЛПР'},
-  {id:3, date:'14.07.2026', managerId:'artem', calls:15, presLPR:6, reachLPR:7, notInterestedLPR:2, hasContractor:1, callLaterLPR:3, notPastAdmin:4, presAdmin:3, callBackBusyLPR:2, interestedLPR:4, meetings:2, comment:'15 дзвінків · 2 зустрічі · 4 зацікавлених ЛПР (зведений звіт керівника відділу)'},
-];
-let nextReportId = 4;
+let REPORTS = [];
+let nextReportId = 1;
 
-let NOTIFICATIONS = [
-  {id:1, text:'Дедлайн задачі "Передзвонити" настав', time:'зараз', read:false, target:{type:'lead', id:2}},
-  {id:2, text:'Новий лід у воронці "Контакт"', time:'10 хв тому', read:false, target:{type:'lead', id:1}},
-  {id:3, text:'Звіт за вчора підтверджено керівником відділу', time:'вчора', read:true},
-];
+let NOTIFICATIONS = [];
 
 // Аудит дій (видно лише CTO/керівнику відділу) — кожна зміна в СРМ (збереження,
 // видалення, редагування воронки, паролів тощо) логується сюди і одночасно
@@ -1270,6 +1238,7 @@ function login(){
   renderNotifications();
   renderDashboardTasks();
   renderDashboardCalls();
+  renderDashboardStats();
   renderAccountView();
   renderReminderBanner();
   showView(null, 'dashboard');
@@ -1537,16 +1506,53 @@ async function toggleTaskDone(idx, checked){
     logActivity(`Виконано завдання "${t.title}" (${t.leadName})`, {target:{type:'task', leadId:t.leadId, tab:'done'}});
     renderDashboardTasks();
     renderTasksTable();
+    renderDashboardStats();
     showUndoToast(`Завдання "${t.title}" виконано і переміщено в архів`, () => {
       t.done = false;
       renderDashboardTasks();
       renderTasksTable();
+      renderDashboardStats();
       logActivity(`Скасовано виконання завдання "${t.title}"`, {target:{type:'task', leadId:t.leadId, tab:'active'}});
     });
   } else {
     t.done = false;
     renderDashboardTasks();
     renderTasksTable();
+    renderDashboardStats();
+  }
+}
+// Верхні картки дашборда (Активні ліди / Угоди в роботі / Дзвінки сьогодні)
+// рахуються з реальних даних (LEADS/CALLS/TASKS), а не захардкоджені —
+// тож щойно СРМ порожня, вони коректно показують 0.
+function renderDashboardStats(){
+  let leads = LEADS;
+  if(state.role === 'manager') leads = leads.filter(l=>l.managerId===state.managerId);
+  const activeLeadsEl = document.getElementById('statActiveLeads');
+  if(activeLeadsEl) activeLeadsEl.textContent = leads.length;
+
+  const dealsCountEl = document.getElementById('statDealsCount');
+  if(dealsCountEl) dealsCountEl.textContent = leads.length;
+  const dealsSumEl = document.getElementById('statDealsSum');
+  if(dealsSumEl){
+    const sum = leads.reduce((s,l)=>s+Number(l.value||0),0);
+    dealsSumEl.textContent = `на суму $${sum.toLocaleString('en-US')}`;
+  }
+
+  let calls = CALLS.map(c => ({...c, lead: LEADS.find(l=>l.id===c.leadId)})).filter(c=>c.lead);
+  if(state.role === 'manager') calls = calls.filter(c=>c.lead.managerId===state.managerId);
+  const callsTodayEl = document.getElementById('statCallsToday');
+  if(callsTodayEl) callsTodayEl.textContent = calls.length;
+
+  let tasks = TASKS.filter(t=>!t.done);
+  if(state.role === 'manager') tasks = tasks.filter(t=>t.managerId===state.managerId);
+  const overdueCount = tasks.filter(t=>{
+    const d = parseTaskDueDate(t.due);
+    return d && d < new Date(new Date().toDateString());
+  }).length;
+  const overdueEl = document.getElementById('statCallsOverdue');
+  if(overdueEl){
+    overdueEl.textContent = overdueCount ? `${overdueCount} прострочено` : 'прострочених немає';
+    overdueEl.style.color = overdueCount ? 'var(--warning)' : 'var(--text-muted)';
   }
 }
 function renderDashboardCalls(){
@@ -1789,6 +1795,7 @@ function addDealTask(){
   TASKS.unshift({...task, leadId: state.currentDealId, leadName, managerId: mgrId});
   renderDashboardTasks();
   renderTasksTable();
+  renderDashboardStats();
   logActivity(`Додано завдання "${title}" для ${leadName}`, state.currentDealId !== null ? {target:{type:'task', leadId:state.currentDealId, tab:'active'}} : {});
   document.getElementById('newTaskTitle').value='';
   document.getElementById('newTaskDue').value='';
@@ -1844,6 +1851,7 @@ function saveDeal(){
   }
   renderBoard();
   renderClientsTable();
+  renderDashboardStats();
   closeAllPanels();
 }
 async function deleteDeal(){
@@ -1860,12 +1868,14 @@ async function deleteDeal(){
   LEADS = LEADS.filter(x=>x.id!==l.id);
   renderBoard();
   renderClientsTable();
+  renderDashboardStats();
   closeAllPanels();
   logActivity(`Видалено угоду "${l.name}" (${l.company})`);
   showUndoToast(`Угоду "${l.name}" видалено`, () => {
     LEADS.push(l);
     renderBoard();
     renderClientsTable();
+    renderDashboardStats();
     logActivity(`Відновлено угоду "${l.name}" (скасовано видалення)`);
   });
 }
