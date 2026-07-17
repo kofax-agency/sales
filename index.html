@@ -67,6 +67,7 @@
   /* ---------- Main ---------- */
   .main{flex:1;min-width:0;display:flex;flex-direction:column;}
   .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:20;}
+  .topbar-left{display:flex;align-items:center;gap:12px;min-width:0;}
   .page-title{font-size:20px;font-weight:800;letter-spacing:-.01em;}
   .topbar-actions{display:flex;align-items:center;gap:10px;}
 
@@ -383,6 +384,51 @@
   .login-field input{padding:11px 14px;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:var(--radius-sm);font-size:13.5px;outline:none;transition:border-color .15s;}
   .login-field input:focus{border-color:var(--accent-1);}
 
+  /* ---------- Mobile: hamburger sidebar + horizontal-scroll tables ---------- */
+  .mobile-menu-btn{display:none;}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(10,11,20,.45);z-index:58;}
+  .sidebar-overlay.open{display:block;}
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+  @media (max-width:900px){
+    .mobile-menu-btn{display:flex;}
+    .sidebar{
+      position:fixed;left:0;top:0;width:250px;
+      transform:translateX(-100%);
+      transition:transform .25s ease;
+      box-shadow:0 10px 34px rgba(0,0,0,.22);
+      z-index:59;
+    }
+    .sidebar.open{transform:translateX(0);}
+    .topbar{padding:12px 14px;gap:8px;}
+    .page-title{font-size:16px;max-width:38vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;}
+    .topbar-actions{gap:6px;}
+    .search-wrap{flex:1;min-width:0;}
+    .search-box{min-width:0;width:100%;padding:8px 12px;}
+    .search-box input{min-width:0;}
+    .content{padding:16px 14px 48px;}
+    .grid-3{grid-template-columns:1fr;}
+    .filters-bar{padding:14px;gap:12px;}
+    .filters-bar .field{flex:1 1 100%;min-width:0;}
+    .filters-bar .field .cselect{width:100%;}
+    .filters-bar .field .cselect-trigger{width:100%;min-width:0;}
+    .filters-bar > .btn{width:100%;justify-content:center;margin-left:0 !important;}
+    .field-row{grid-template-columns:1fr;}
+    .side-panel.wide,.side-panel.narrow{width:100%;min-width:0;}
+    .pipeline-toolbar .btn{flex:1 1 auto;justify-content:center;}
+    .pipeline-toolbar .cselect,.pipeline-toolbar .pipeline-static-label{width:100%;}
+    .pipeline-toolbar .cselect .cselect-trigger{width:100%;}
+    .board{padding-bottom:6px;}
+    .analytics-grid{grid-template-columns:repeat(2,1fr);}
+    .login-card{padding:24px 20px;}
+  }
+  @media (max-width:520px){
+    .stat-value{font-size:22px;}
+    .analytics-grid{grid-template-columns:1fr;}
+    .dropdown-panel{width:88vw !important;right:-8px;}
+    .undo-toast{left:12px;right:12px;max-width:none;}
+  }
+
   ::-webkit-scrollbar{height:8px;width:8px;}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
 </style>
@@ -396,18 +442,28 @@
       <img src="logo-icon.png" alt="Kofax Agency" />
       <div class="sub">kofax agency · CRM</div>
     </div>
-    <div class="login-field"><label>Email</label><input id="loginEmail" type="email" placeholder="name@kofax.agency" onblur="validateEmailField(this)" oninput="hideLoginError()"></div>
-    <div class="login-field"><label>Пароль</label><input id="loginPassword" type="password" placeholder="••••••••" oninput="hideLoginError()" onkeydown="if(event.key==='Enter') login()"></div>
-    <div id="loginError" style="display:none;color:var(--danger);font-size:12.5px;font-weight:700;margin:-6px 0 14px;">Невірний email або пароль</div>
+    <form id="loginForm" onsubmit="return handleLoginSubmit(event)">
+      <div class="login-field"><label>Email</label><input id="loginEmail" name="email" type="email" autocomplete="username" placeholder="name@kofax.agency" onblur="validateEmailField(this)" oninput="hideLoginError()"></div>
+      <div class="login-field"><label>Пароль</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="••••••••" oninput="hideLoginError()"></div>
+      <div id="loginError" style="display:none;color:var(--danger);font-size:12.5px;font-weight:700;margin:-6px 0 14px;">Невірний email або пароль</div>
 
-    <button class="btn" style="width:100%;justify-content:center;" onclick="login()">Увійти</button>
+      <label class="chk" style="gap:8px;margin:0 0 16px;font-size:12.5px;color:var(--text-muted);font-weight:600;">
+        <input type="checkbox" id="rememberMe" checked><span></span>
+        Запам'ятати мене на цьому пристрої
+      </label>
+
+      <button class="btn" type="submit" style="width:100%;justify-content:center;">Увійти</button>
+    </form>
   </div>
 </div>
 
 <div class="app" id="appRoot">
 
+  <!-- Затемнення позаду висувного меню на мобільних (клік закриває меню) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
   <!-- ================= SIDEBAR ================= -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebarEl">
     <div class="logo">
       <img src="logo-icon.png" alt="Kofax Agency" width="30" height="25" />
       <div class="logo-word">kofax<span>agency · CRM</span></div>
@@ -455,7 +511,12 @@
   <!-- ================= MAIN ================= -->
   <div class="main">
     <header class="topbar">
-      <div class="page-title" id="pageTitle">Головна</div>
+      <div class="topbar-left">
+        <button class="icon-btn mobile-menu-btn" onclick="toggleMobileSidebar()" title="Меню" aria-label="Меню">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+        <div class="page-title" id="pageTitle">Головна</div>
+      </div>
       <div class="topbar-actions">
 
         <div class="search-wrap">
@@ -587,10 +648,10 @@
           <button class="btn secondary" style="margin-left:auto" onclick="renderClientsTable()">Застосувати фільтр</button>
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
-          <table>
+          <div class="table-scroll"><table>
             <thead><tr><th>Контакт</th><th>Компанія</th><th data-roles="admin cto">Менеджер</th><th>Стадія</th><th>Дата</th></tr></thead>
             <tbody id="clientsTableBody"></tbody>
-          </table>
+          </table></div>
         </div>
       </section>
 
@@ -627,10 +688,10 @@
           </div>
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
-          <table>
+          <div class="table-scroll"><table>
             <thead><tr><th>Завдання</th><th>Клієнт</th><th data-roles="admin cto">Менеджер</th><th>Дедлайн</th><th>Статус</th></tr></thead>
             <tbody id="tasksTableBody"></tbody>
-          </table>
+          </table></div>
         </div>
       </section>
 
@@ -671,10 +732,10 @@
           <button class="btn secondary" style="margin-left:auto" onclick="renderReportsTable()">Застосувати фільтр</button>
         </div>
         <div class="card" style="padding:8px 4px;">
-          <table>
+          <div class="table-scroll"><table>
             <thead><tr><th>Дата</th><th data-roles="admin cto">Менеджер</th><th>Звіт</th></tr></thead>
             <tbody id="reportsTableBody"></tbody>
-          </table>
+          </table></div>
         </div>
       </section>
 
@@ -741,10 +802,10 @@
           <div style="color:var(--text-muted);font-size:13px;">Розсилка пачками по 50–100 листів, з нерівномірною затримкою між відправками (напр. 10, 2, 5, 3, 7 хв)</div>
         </div>
         <div class="card" style="padding:8px 4px;">
-          <table>
+          <div class="table-scroll"><table>
             <thead><tr><th style="width:36px"></th><th>Лід</th><th>Email</th><th data-roles="admin cto">Менеджер</th></tr></thead>
             <tbody id="campaignsTableBody"></tbody>
-          </table>
+          </table></div>
           <div style="padding:14px;"><button class="btn">Запустити розсилку</button></div>
         </div>
       </section>
@@ -756,10 +817,10 @@
           <button class="btn" onclick="openManagerPanel(null)" id="createManagerBtn">+ Створити менеджера</button>
         </div>
         <div class="card" style="padding:8px 4px;">
-          <table>
+          <div class="table-scroll"><table>
             <thead><tr><th>Ім'я</th><th>Email (логін)</th><th>Роль</th><th></th></tr></thead>
             <tbody id="managersTableBody"></tbody>
-          </table>
+          </table></div>
         </div>
       </section>
 
@@ -793,10 +854,10 @@
             <div class="section-title" style="margin:0;">База даних для входу</div>
           </div>
           <div class="card" style="padding:8px 4px;margin-bottom:20px;">
-            <table>
+            <div class="table-scroll"><table>
               <thead><tr><th>Ім'я</th><th>Роль</th><th>Логін</th><th>Пароль</th><th></th></tr></thead>
               <tbody id="credentialsTableBody"></tbody>
-            </table>
+            </table></div>
           </div>
 
           <div class="row-between" style="margin-bottom:14px;">
@@ -1196,17 +1257,16 @@ function hideLoginError(){
   const el = document.getElementById('loginError');
   if(el) el.style.display = 'none';
 }
-function login(){
-  const emailEl = document.getElementById('loginEmail');
-  const email = emailEl.value.trim();
-  const password = document.getElementById('loginPassword').value;
-  const user = USERS.find(u => u.login.toLowerCase() === email.toLowerCase() && u.password === password);
-  if(!user){
-    document.getElementById('loginError').style.display = 'block';
-    return;
-  }
-  hideLoginError();
-
+function handleLoginSubmit(e){
+  if(e) e.preventDefault();
+  login();
+  return false;
+}
+// Спільна логіка входу — використовується і звичайним логіном за формою,
+// і автоматичним відновленням сесії (tryAutoLogin). showReminder=false для
+// автовходу, щоб нагадування про звіт не плодилося щоразу при оновленні сторінки.
+function completeLogin(user, opts){
+  opts = opts || {};
   const role = user.role;
   state.role = role;
   state.userId = user.id;
@@ -1234,7 +1294,7 @@ function login(){
   renderManagersTable();
   renderCredentialsTable();
   updateAdminPageLabels();
-  seedReminderNotification(role);
+  if(opts.showReminder !== false) seedReminderNotification(role);
   renderNotifications();
   renderDashboardTasks();
   renderDashboardCalls();
@@ -1242,6 +1302,37 @@ function login(){
   renderAccountView();
   renderReminderBanner();
   showView(null, 'dashboard');
+}
+// Реальна автентифікація за email + пароль з таблиці USERS (та сама база,
+// що редагується в "База даних для входу"). Якщо позначено "Запам'ятати
+// мене" — id користувача зберігається в localStorage (без пароля), і при
+// наступному відкритті сторінки tryAutoLogin() одразу відновлює сесію.
+function login(){
+  const emailEl = document.getElementById('loginEmail');
+  const email = emailEl.value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const remember = document.getElementById('rememberMe') ? document.getElementById('rememberMe').checked : true;
+  const user = USERS.find(u => u.login.toLowerCase() === email.toLowerCase() && u.password === password);
+  if(!user){
+    document.getElementById('loginError').style.display = 'block';
+    return;
+  }
+  hideLoginError();
+  try{
+    if(remember) localStorage.setItem('kofax_session', user.id);
+    else localStorage.removeItem('kofax_session');
+  }catch(err){ /* localStorage недоступний — просто без автовходу наступного разу */ }
+  completeLogin(user, {showReminder:true});
+}
+// Автоматичне відновлення сесії при відкритті сторінки, якщо раніше
+// вхід був виконаний з позначкою "Запам'ятати мене".
+function tryAutoLogin(){
+  let savedId = null;
+  try{ savedId = localStorage.getItem('kofax_session'); }catch(err){ return; }
+  if(!savedId) return;
+  const user = USERS.find(u=>u.id===savedId);
+  if(!user) return;
+  completeLogin(user, {showReminder:false});
 }
 
 function logout(){
@@ -1252,6 +1343,7 @@ function logout(){
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
   hideLoginError();
+  try{ localStorage.removeItem('kofax_session'); }catch(err){}
   state.userId = null;
   state.managerId = null;
 }
@@ -1277,6 +1369,7 @@ applyTheme(localStorage.getItem('kofax-crm-theme') || 'light');
 function showView(e, name){
   if(e) e.preventDefault();
   closeAllDropdowns();
+  closeMobileSidebar();
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.nav li').forEach(li => li.classList.remove('active'));
@@ -1297,6 +1390,24 @@ function showView(e, name){
 function closeAllDropdowns(){
   document.querySelectorAll('.cselect.open').forEach(el => el.classList.remove('open'));
   document.querySelectorAll('.dropdown-panel.open').forEach(el => el.classList.remove('open'));
+}
+
+/* =========================================================
+   MOBILE SIDEBAR (hamburger drawer, <900px)
+   ========================================================= */
+function toggleMobileSidebar(){
+  const sb = document.getElementById('sidebarEl');
+  const overlay = document.getElementById('sidebarOverlay');
+  if(!sb || !overlay) return;
+  const willOpen = !sb.classList.contains('open');
+  sb.classList.toggle('open', willOpen);
+  overlay.classList.toggle('open', willOpen);
+}
+function closeMobileSidebar(){
+  const sb = document.getElementById('sidebarEl');
+  const overlay = document.getElementById('sidebarOverlay');
+  if(sb) sb.classList.remove('open');
+  if(overlay) overlay.classList.remove('open');
 }
 // Popovers/menus are positioned with JS (position:fixed) computed from the
 // trigger's bounding rect, so they can never be clipped by a scrollable
@@ -1351,6 +1462,7 @@ document.addEventListener('click', function(e){
   }
 });
 window.addEventListener('resize', closeAllDropdowns);
+window.addEventListener('resize', closeMobileSidebar);
 document.addEventListener('DOMContentLoaded', function(){
   const contentEl = document.querySelector('.content');
   if(contentEl) contentEl.addEventListener('scroll', closeAllDropdowns, true);
@@ -2859,6 +2971,10 @@ function seedReminderNotification(role){
     : `${name}, нагадування: місячний зведений звіт потрібно підготувати до кінця місяця`;
   NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text, time:'зараз', read:false, ownerId: me ? me.id : null});
 }
+
+// Якщо є збережена сесія ("Запам'ятати мене") — відразу відновлюємо вхід,
+// без показу екрана логіну.
+tryAutoLogin();
 </script>
 </body>
 </html>
