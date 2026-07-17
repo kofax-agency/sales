@@ -513,4 +513,2140 @@
           <div class="card widget">
             <div class="section-title">Push-сповіщення</div>
             <div id="dashboardNotifs"></div>
- 
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PIPELINE ============ -->
+      <section class="view" id="view-pipeline">
+        <div class="pipeline-toolbar">
+          <div data-roles="manager" class="pipeline-static-label">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
+            Воронка продажів
+          </div>
+          <div data-roles="admin cto" class="cselect" id="pipelineSelect">
+            <button type="button" class="cselect-trigger" style="border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+              <span class="cselect-label">Керівник відділу</span>
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <ul class="cselect-menu" id="pipelineSelectMenu" data-select="pipeline"></ul>
+          </div>
+          <button class="btn secondary" data-roles="admin cto" onclick="toggleStageEditor()" id="editStagesBtn">Редагувати стовпці</button>
+          <button class="btn" style="margin-left:auto" onclick="openDeal(null)" id="addDealBtn">+ Нова угода</button>
+        </div>
+
+        <div class="board" id="board"></div>
+        <div id="stageEditorBoard" style="display:none;"></div>
+        <div id="stageEditorActions" style="display:none;margin-top:14px;gap:10px;" class="row-between">
+          <div></div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn secondary" onclick="cancelStageEditor()">Скасувати</button>
+            <button class="btn" onclick="saveStageEditor()">Зберегти зміни</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CLIENTS ============ -->
+      <section class="view" id="view-clients">
+        <div class="filters-bar card">
+          <div class="field">
+            <label>Період</label>
+            <div class="cselect" id="dateRangeSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:200px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="dateRangeLabel">Оберіть період</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              </button>
+              <div class="calendar-popover">
+                <div class="cal-head"><button onclick="calNav(-1)" type="button">‹</button><span id="calMonthLabel"></span><button onclick="calNav(1)" type="button">›</button></div>
+                <div class="cal-grid" id="calGrid"></div>
+                <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearRange()">Скинути</button><button class="btn small" type="button" onclick="applyRange()">Застосувати</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="field" data-roles="admin cto">
+            <label>Менеджери</label>
+            <div class="cselect" id="managerMultiSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:170px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="managerMultiLabel">Усі менеджери</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="managerMultiMenu"></ul>
+            </div>
+          </div>
+          <button class="btn secondary" style="margin-left:auto" onclick="renderClientsTable()">Застосувати фільтр</button>
+        </div>
+        <div class="card" style="padding:8px 4px;margin-top:16px;">
+          <table>
+            <thead><tr><th>Контакт</th><th>Компанія</th><th data-roles="admin cto">Менеджер</th><th>Стадія</th><th>Дата</th></tr></thead>
+            <tbody id="clientsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ TASKS ============ -->
+      <section class="view" id="view-tasks">
+        <div class="filters-bar card">
+          <div class="field">
+            <label>Період</label>
+            <div class="cselect" id="taskDateRangeSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:200px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="taskDateRangeLabel">Оберіть період</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              </button>
+              <div class="calendar-popover">
+                <div class="cal-head"><button onclick="taskCalNav(-1)" type="button">‹</button><span id="taskCalMonthLabel"></span><button onclick="taskCalNav(1)" type="button">›</button></div>
+                <div class="cal-grid" id="taskCalGrid"></div>
+                <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearTaskRange()">Скинути</button><button class="btn small" type="button" onclick="applyTaskRange()">Застосувати</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="field" data-roles="admin cto">
+            <label>Менеджери</label>
+            <div class="cselect" id="taskManagerMultiSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:170px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="taskManagerMultiLabel">Усі менеджери</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="taskManagerMultiMenu"></ul>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-left:auto;">
+            <button class="btn secondary tasks-tab-btn active" id="tasksTabActiveBtn" onclick="setTasksTab('active')">Активні</button>
+            <button class="btn secondary tasks-tab-btn" id="tasksTabDoneBtn" onclick="setTasksTab('done')">Архів виконаних</button>
+          </div>
+        </div>
+        <div class="card" style="padding:8px 4px;margin-top:16px;">
+          <table>
+            <thead><tr><th>Завдання</th><th>Клієнт</th><th data-roles="admin cto">Менеджер</th><th>Дедлайн</th><th>Статус</th></tr></thead>
+            <tbody id="tasksTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ REPORTS ============ -->
+      <section class="view" id="view-reports">
+        <div class="reminder-banner" id="reportReminderBanner">
+          <span>🔔</span><div id="reportReminderText"></div>
+        </div>
+        <div class="row-between" style="margin-bottom:16px;">
+          <div class="section-title" style="margin:0;">Звітність</div>
+          <button class="btn" data-roles="admin manager" onclick="openReportCreate()">+ Створити звіт</button>
+        </div>
+        <div class="filters-bar card" style="margin-bottom:16px;">
+          <div class="field">
+            <label>Період</label>
+            <div class="cselect" id="reportDateRangeSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:200px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="reportDateRangeLabel">Оберіть період</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              </button>
+              <div class="calendar-popover">
+                <div class="cal-head"><button onclick="reportCalNav(-1)" type="button">‹</button><span id="reportCalMonthLabel"></span><button onclick="reportCalNav(1)" type="button">›</button></div>
+                <div class="cal-grid" id="reportCalGrid"></div>
+                <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearReportRange()">Скинути</button><button class="btn small" type="button" onclick="applyReportRange()">Застосувати</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="field" data-roles="admin cto">
+            <label>Менеджери</label>
+            <div class="cselect" id="reportManagerMultiSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:170px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="reportManagerMultiLabel">Усі менеджери</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="reportManagerMultiMenu"></ul>
+            </div>
+          </div>
+          <button class="btn secondary" style="margin-left:auto" onclick="renderReportsTable()">Застосувати фільтр</button>
+        </div>
+        <div class="card" style="padding:8px 4px;">
+          <table>
+            <thead><tr><th>Дата</th><th data-roles="admin cto">Менеджер</th><th>Звіт</th></tr></thead>
+            <tbody id="reportsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ REPORT DETAIL (full page) ============ -->
+      <section class="view" id="view-report-detail">
+        <button class="btn secondary" style="margin-bottom:18px;" onclick="showView(null,'reports')">← Назад до звітності</button>
+        <div class="card" style="padding:22px;max-width:640px;">
+          <div class="section-title" id="reportDetailTitle">Створити звіт — сьогодні</div>
+          <table>
+            <thead><tr><th>Показник</th><th>Значення</th></tr></thead>
+            <tbody id="reportTableBody">
+              <tr id="rdPeriodRow"><td>Тип звіту</td><td>
+                <div class="cselect" id="reportPeriodSelect">
+                  <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:150px;" onclick="toggleCSelect(this.parentElement)">
+                    <span class="cselect-label">Тиждень</span>
+                    <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                  </button>
+                  <ul class="cselect-menu" data-select="reportPeriod">
+                    <li data-value="day">День</li>
+                    <li data-value="week" class="selected">Тиждень</li>
+                    <li data-value="month">Місяць</li>
+                  </ul>
+                </div>
+              </td></tr>
+              <!-- метрики вставляються тут через JS: renderReportFieldRows() -->
+              <tr><td>Коментар</td><td><div class="field" style="margin:0;"><input id="rdComment" type="text" placeholder="Короткий підсумок дня (необов'язково)"></div></td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:18px;display:flex;gap:10px;" id="reportDetailActions">
+            <button class="btn" onclick="saveReportDetail()">Зберегти звіт</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CAMPAIGNS ============ -->
+      <section class="view" id="view-campaigns">
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <div class="section-title">Нова розсилка</div>
+          <div class="field-row-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="field"><label>Заголовок листа</label><input type="text" placeholder="Напр. Спецпропозиція для клієнтів"></div>
+            <div class="field"><label>Файл (необов'язково)</label>
+              <label class="file-btn">📎 Обрати файл<input type="file" style="display:none"></label>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:12px;"><label>Опис / текст листа</label><textarea style="min-height:80px;" placeholder="Текст розсилки..."></textarea></div>
+          <div style="color:var(--text-muted);font-size:13px;">Розсилка пачками по 50–100 листів, з нерівномірною затримкою між відправками (напр. 10, 2, 5, 3, 7 хв)</div>
+        </div>
+        <div class="card" style="padding:8px 4px;">
+          <table>
+            <thead><tr><th style="width:36px"></th><th>Лід</th><th>Email</th><th data-roles="admin cto">Менеджер</th></tr></thead>
+            <tbody id="campaignsTableBody"></tbody>
+          </table>
+          <div style="padding:14px;"><button class="btn">Запустити розсилку</button></div>
+        </div>
+      </section>
+
+      <!-- ============ ADMIN ============ -->
+      <section class="view" id="view-admin">
+        <div class="row-between" style="margin-bottom:16px;">
+          <div class="section-title" style="margin:0;" id="adminSectionTitle">Менеджери</div>
+          <button class="btn" onclick="openManagerPanel(null)" id="createManagerBtn">+ Створити менеджера</button>
+        </div>
+        <div class="card" style="padding:8px 4px;">
+          <table>
+            <thead><tr><th>Ім'я</th><th>Email (логін)</th><th>Роль</th><th></th></tr></thead>
+            <tbody id="managersTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ ACCOUNT / PERSONAL CABINET ============ -->
+      <section class="view" id="view-account">
+        <div class="row-between" style="margin-bottom:16px;">
+          <div class="section-title" style="margin:0;">Особистий кабінет</div>
+          <button class="btn secondary" id="acctEditBtn" onclick="toggleAccountEdit()">Редагувати</button>
+        </div>
+        <div class="card" style="padding:22px;max-width:520px;margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+            <div class="avatar" id="acctAvatarPreview" style="width:64px;height:64px;font-size:22px;flex-shrink:0;">CT</div>
+            <div>
+              <label class="file-btn" style="margin:0;">📷 Змінити фото<input type="file" accept="image/*" style="display:none" onchange="changeOwnPhoto(event)"></label>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">JPG або PNG, до ~2 МБ</div>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:12px;"><label>Ім'я</label><input id="acctName" type="text" disabled></div>
+          <div class="field" style="margin-bottom:12px;"><label>Email (логін)</label><input id="acctEmail" type="text" disabled></div>
+          <div class="field" style="margin-bottom:4px;"><label>Роль</label><input id="acctRole" type="text" disabled></div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:10px;" data-roles="manager">Логін і пароль може змінити лише керівник відділу або CTO.</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:10px;" data-roles="admin cto">Змінити пароль можна нижче, у таблиці "База даних для входу".</div>
+          <div id="acctEditActions" style="display:none;gap:10px;margin-top:16px;">
+            <button class="btn secondary" onclick="cancelAccountEdit()">Скасувати</button>
+            <button class="btn" onclick="saveAccountEdit()">Зберегти зміни</button>
+          </div>
+        </div>
+
+        <div data-roles="admin cto">
+          <div class="row-between" style="margin-bottom:14px;">
+            <div class="section-title" style="margin:0;">База даних для входу</div>
+          </div>
+          <div class="card" style="padding:8px 4px;margin-bottom:20px;">
+            <table>
+              <thead><tr><th>Ім'я</th><th>Роль</th><th>Логін</th><th>Пароль</th><th></th></tr></thead>
+              <tbody id="credentialsTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="row-between" style="margin-bottom:14px;">
+            <div class="section-title" style="margin:0;">Історія дій</div>
+          </div>
+          <div class="card" style="padding:14px 18px;max-height:360px;overflow-y:auto;">
+            <div id="historyList"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= OVERLAY ================= -->
+<div class="panel-overlay" id="panelOverlay" onclick="handleOverlayClick()"></div>
+
+<!-- ================= UNDO TOAST (bottom-left, 5s) ================= -->
+<div class="undo-toast" id="undoToast">
+  <div class="undo-toast-icon" id="undoToastIcon">✓</div>
+  <div class="undo-toast-body">
+    <div class="undo-toast-text" id="undoToastText"></div>
+    <div class="undo-toast-progress"><div class="undo-toast-progress-bar" id="undoToastBar"></div></div>
+  </div>
+  <button class="undo-toast-btn" onclick="undoLastAction()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>
+    Скасувати
+  </button>
+</div>
+
+<!-- ================= CUSTOM CONFIRM / ALERT MODAL ================= -->
+<div class="modal-overlay" id="modalOverlay" onclick="resolveConfirmModal(false)"></div>
+<div class="confirm-modal" id="confirmModal" role="alertdialog">
+  <div class="confirm-modal-icon" id="confirmModalIcon">❗</div>
+  <div class="confirm-modal-title" id="confirmModalTitle">Підтвердіть дію</div>
+  <div class="confirm-modal-text" id="confirmModalText"></div>
+  <div class="confirm-modal-actions">
+    <button class="btn secondary" id="confirmModalCancelBtn" onclick="resolveConfirmModal(false)">Скасувати</button>
+    <button class="btn" id="confirmModalOkBtn" onclick="resolveConfirmModal(true)">OK</button>
+  </div>
+</div>
+
+<!-- ================= DEAL PANEL (half-page) ================= -->
+<aside class="side-panel wide" id="dealPanel">
+  <div class="panel-head"><h3 id="dealPanelTitle">Нова угода</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Контактна особа</div>
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field"><label>Ім'я *</label><input id="dealName" type="text" onblur="validateRequiredField(this,'Вкажіть ім\'я')"></div>
+        <div class="field"><label>Телефон *</label><input id="dealPhone" type="text" placeholder="+380 XX XXX XX XX" oninput="formatPhoneLive(this)" onblur="validatePhoneField(this); validateRequiredField(this,'Вкажіть телефон')"></div>
+      </div>
+      <div class="field"><label>Email</label><input id="dealEmail" type="text" placeholder="name@example.com" onblur="validateEmailField(this)"></div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Компанія</div>
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field"><label>Назва компанії *</label><input id="dealCompany" type="text" onblur="validateRequiredField(this,'Вкажіть назву компанії')"></div>
+        <div class="field"><label>Ніша *</label><input id="dealNiche" type="text" onblur="validateRequiredField(this,'Вкажіть нішу компанії')"></div>
+      </div>
+      <div class="field"><label>Посилання</label><input id="dealLink" type="text"></div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Нотатки</div>
+      <div id="dealNotesList"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <textarea id="newNoteText" placeholder="Додати нотатку..." style="min-height:50px;"></textarea>
+        <button class="btn secondary" style="white-space:nowrap;" onclick="addDealNote()">Додати</button>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Завдання</div>
+      <div id="dealTasksList"></div>
+      <div class="field-row" style="margin-top:8px;">
+        <div class="field"><label>Назва завдання</label><input id="newTaskTitle" type="text" placeholder="Напр. Передзвонити"></div>
+        <div class="field"><label>Дедлайн</label><input id="newTaskDue" type="text" placeholder="дд.мм.рррр гг:хх"></div>
+      </div>
+      <button class="btn secondary" style="margin-top:8px;" onclick="addDealTask()">+ Додати завдання (push-сповіщення)</button>
+    </div>
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Документи</div>
+      <div id="dealAttachList"></div>
+      <label class="file-btn" style="margin-top:8px;">📎 Прикріпити документ<input type="file" style="display:none" onchange="addDealAttachment(event)"></label>
+    </div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn danger-ghost" id="dealDeleteBtn" style="display:none;margin-right:auto;" onclick="deleteDeal()">Видалити угоду</button>
+    <button class="btn secondary" onclick="closeAllPanels()">Закрити</button>
+    <button class="btn" onclick="saveDeal()">Зберегти</button>
+  </div>
+</aside>
+
+<!-- ================= CLIENT CARD PANEL ================= -->
+<aside class="side-panel wide" id="clientPanel">
+  <div class="panel-head"><h3 id="clientPanelTitle">Картка клієнта</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Контакт</div>
+      <div id="clientContactInfo" style="font-size:13.5px;line-height:1.9;"></div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Компанія</div>
+      <div id="clientCompanyInfo" style="font-size:13.5px;line-height:1.9;"></div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Історія нотаток менеджера</div>
+      <div id="clientNotesHistory"></div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Завдання</div>
+      <div id="clientTasksHistory"></div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Документи</div>
+      <div id="clientAttachHistory"></div>
+    </div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn secondary" onclick="closeAllPanels()">Закрити</button>
+    <button class="btn" onclick="editFromClientCard()">Редагувати угоду</button>
+  </div>
+</aside>
+
+<!-- ================= MANAGER / ADMIN DRAWER (narrow) ================= -->
+<aside class="side-panel narrow" id="managerPanel">
+  <div class="panel-head"><h3 id="managerPanelTitle">Новий менеджер</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="field" data-roles="cto" id="newUserRoleField">
+      <label>Роль</label>
+      <div class="cselect" id="newUserRoleSelect">
+        <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+          <span class="cselect-label">Менеджер</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <ul class="cselect-menu" data-select="newUserRole">
+          <li data-value="manager" class="selected">Менеджер</li>
+          <li data-value="admin">Керівник відділу</li>
+        </ul>
+      </div>
+    </div>
+    <div class="field"><label>Ім'я</label><input id="mgrName" type="text" placeholder="Ім'я Прізвище"></div>
+    <div class="field"><label>Email (логін)</label><input id="mgrEmail" type="email" placeholder="name@kofax.agency" onblur="validateEmailField(this)"></div>
+    <div class="field">
+      <label>Пароль</label>
+      <div class="pw-row">
+        <input id="mgrPass" type="password" placeholder="Тимчасовий пароль">
+        <button type="button" class="eye-btn" onclick="togglePwVisibility('mgrPass', this)">👁</button>
+        <button type="button" class="btn secondary small" onclick="generatePw('mgrPass')">Згенерувати</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);" id="managerPanelNote">Менеджер не зможе змінити логін і пароль самостійно — лише керівник відділу/CTO.</div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn secondary" onclick="closeAllPanels()">Скасувати</button>
+    <button class="btn" onclick="saveManager()" id="managerPanelSaveBtn">Створити</button>
+  </div>
+</aside>
+
+<!-- ================= CREDENTIAL EDIT DRAWER (narrow) ================= -->
+<aside class="side-panel narrow" id="credentialPanel">
+  <div class="panel-head"><h3>Редагувати доступ</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="field"><label>Ім'я</label><input id="credName" type="text"></div>
+    <div class="field"><label>Логін (email)</label><input id="credLogin" type="text" onblur="validateEmailField(this)"></div>
+    <div class="field">
+      <label>Пароль</label>
+      <div class="pw-row">
+        <input id="credPass" type="password">
+        <button type="button" class="eye-btn" onclick="togglePwVisibility('credPass', this)">👁</button>
+        <button type="button" class="btn secondary small" onclick="generatePw('credPass')">Згенерувати</button>
+      </div>
+    </div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn secondary" onclick="closeAllPanels()">Скасувати</button>
+    <button class="btn" onclick="saveCredential()">Зберегти</button>
+  </div>
+</aside>
+
+<script>
+/* =========================================================
+   DATA MODEL (in-memory demo data)
+   ========================================================= */
+let STAGES = ["Контакт","Передзвонити","Зацікавлений","Переданий - ADS","Переданий - WEB","Переданий - SMM","Відмова"];
+
+const USERS = [
+  {id:'ostap', name:'Остап', role:'cto', login:'ostap.booodnar@gmail.com', password:'Adm!n2026Xz'},
+  {id:'artem', name:'Богдан', role:'admin', login:'bogdan@kofax.agency', password:'Adm!8vQ2r'},
+  {id:'oksana', name:'Володимир', role:'manager', login:'volodymyr@kofax.agency', password:'Kf8xLm21'},
+];
+// Фото профілю зберігаємо в localStorage (ключ на кожного користувача),
+// щоб воно не губилось при оновленні сторінки — решта демо-даних живе лише
+// в пам'яті і скидається при перезавантаженні, як і задумано для прототипу.
+function loadStoredPhotos(){
+  USERS.forEach(u => {
+    try{
+      const saved = localStorage.getItem('kofax_photo_' + u.id);
+      if(saved) u.photo = saved;
+    }catch(err){ /* localStorage недоступний — тихо ігноруємо */ }
+  });
+}
+loadStoredPhotos();
+
+let LEADS = [
+  {id:1, name:'Дмитро Коваль', phone:'+380 67 111 22 33', email:'dmytro@example.com', company:'ТОВ Аврора', niche:'Роздрібна торгівля', link:'aurora.ua', stage:'Контакт', value:0, managerId:'oksana', createdAt:'02.07.2026',
+    notes:[{author:'Володимир', date:'02.07.2026', text:'Перший контакт, обіцяв подумати до кінця тижня.'}],
+    tasks:[{title:'Передзвонити через тиждень', due:'23.07.2026 10:00', done:false}], attachments:[]},
+  {id:2, name:'Оксана Гнатюк', phone:'+380 50 222 33 44', email:'oksana.h@example.com', company:'FreshMarket', niche:'Продукти харчування', link:'freshmarket.ua', stage:'Передзвонити', value:0, managerId:'oksana', createdAt:'05.07.2026',
+    notes:[{author:'Володимир', date:'05.07.2026', text:'Передзвонити у вересні, зацікавився пропозицією.'}],
+    tasks:[{title:'Передзвонити у вересні', due:'01.09.2026 12:00', done:false}], attachments:[], flag:'red'},
+  {id:3, name:'Ігор Литовченко', phone:'+380 63 555 66 77', email:'ihor.l@example.com', company:'BuildPro', niche:'Будівництво', link:'buildpro.ua', stage:'Передзвонити', value:0, managerId:'oksana', createdAt:'06.07.2026',
+    notes:[], tasks:[], attachments:[]},
+  {id:4, name:'Валерій Дудко', phone:'+380 97 888 99 00', email:'valerii@example.com', company:'Kappa LLC', niche:'IT-послуги', link:'kappa.io', stage:'Переданий - WEB', value:1500, managerId:'oksana', createdAt:'10.07.2026',
+    notes:[{author:'Володимир', date:'10.07.2026', text:'Погодив бюджет, чекаємо на підписання договору.'}],
+    tasks:[{title:'Підготувати договір', due:'17.07.2026 13:30', done:false}], attachments:[{name:'kp_kappa.pdf'}], flag:'yellow'},
+  {id:5, name:'Марія Ісаєва', phone:'+380 99 321 45 67', email:'maria.isaieva@example.com', company:'Litvin Studio', niche:'Дизайн', link:'litvinstudio.ua', stage:'Переданий - WEB', value:1700, managerId:'oksana', createdAt:'12.07.2026',
+    notes:[], tasks:[], attachments:[]},
+  {id:6, name:'Андрій Швець', phone:'+380 68 456 78 90', email:'andrii@example.com', company:'ShvetsAuto', niche:'Автопослуги', link:'shvetsauto.ua', stage:'Переданий - WEB', value:1000, managerId:'oksana', createdAt:'13.07.2026',
+    notes:[], tasks:[], attachments:[]},
+  {id:7, name:'Юлія Соколова', phone:'+380 66 777 12 34', email:'yulia.s@example.com', company:'Sokol Group', niche:'Логістика', link:'sokolgroup.ua', stage:'Зацікавлений', value:2200, managerId:'artem', createdAt:'11.07.2026',
+    notes:[{author:'Богдан', date:'11.07.2026', text:'Веду перемовини особисто, велике замовлення.'}],
+    tasks:[{title:'Надіслати комерційну пропозицію', due:'20.07.2026 15:00', done:false}], attachments:[]},
+];
+let nextLeadId = 8;
+
+let TASKS = [];
+LEADS.forEach(l => l.tasks.forEach(t => TASKS.push({...t, leadId:l.id, leadName:l.name, managerId:l.managerId})));
+
+// Заплановані дзвінки на дашборді — прив'язані до ліда, тому клік по дзвінку
+// відкриває картку відповідного клієнта.
+let CALLS = [
+  {id:1, leadId:4, time:'11:00'},
+  {id:2, leadId:2, time:'14:15'},
+  {id:3, leadId:1, time:'17:00'},
+];
+
+// Поля, які менеджер/керівник відділу заповнює у звіті. Кожне — число,
+// зберігається під ключем f.key, поле у формі має id "rd_" + key.
+const REPORT_FIELDS = [
+  {key:'calls', label:'Кількість зроблених дзвінків'},
+  {key:'presLPR', label:'Скинуто презентацій ЛПР'},
+  {key:'reachLPR', label:'Вихід на ЛПР'},
+  {key:'notInterestedLPR', label:'Не цікаво ЛПР'},
+  {key:'hasContractor', label:'Є підрядник'},
+  {key:'callLaterLPR', label:'Пізніше набрати ЛПР'},
+  {key:'notPastAdmin', label:'Не пройшов Адміна'},
+  {key:'presAdmin', label:'Скинуто презентацій Адміну'},
+  {key:'callBackBusyLPR', label:'Передзвонити пізніше - ЛПР зайнятий'},
+  {key:'interestedLPR', label:'Зацікавлені ЛПР'},
+  {key:'meetings', label:'Назначено зустрічей'},
+];
+function renderReportFieldRows(){
+  const periodRow = document.getElementById('rdPeriodRow');
+  if(!periodRow) return;
+  const html = REPORT_FIELDS.map(f => `
+    <tr><td>${f.label}</td><td>
+      <div class="stepper"><button type="button" onclick="stepValue('rd_${f.key}',-1)">−</button><input id="rd_${f.key}" type="number" value="0" readonly><button type="button" onclick="stepValue('rd_${f.key}',1)">+</button></div>
+    </td></tr>`).join('');
+  periodRow.insertAdjacentHTML('afterend', html);
+}
+renderReportFieldRows();
+
+let REPORTS = [
+  {id:1, date:'15.07.2026', managerId:'oksana', calls:12, presLPR:5, reachLPR:6, notInterestedLPR:2, hasContractor:1, callLaterLPR:2, notPastAdmin:3, presAdmin:2, callBackBusyLPR:1, interestedLPR:3, meetings:2, comment:'12 дзвінків · 2 зустрічі · 3 зацікавлених ЛПР'},
+  {id:2, date:'15.07.2026', managerId:'oksana', calls:8, presLPR:3, reachLPR:4, notInterestedLPR:1, hasContractor:0, callLaterLPR:1, notPastAdmin:2, presAdmin:1, callBackBusyLPR:1, interestedLPR:2, meetings:1, comment:'8 дзвінків · 1 зустріч · 2 зацікавлених ЛПР'},
+  {id:3, date:'14.07.2026', managerId:'artem', calls:15, presLPR:6, reachLPR:7, notInterestedLPR:2, hasContractor:1, callLaterLPR:3, notPastAdmin:4, presAdmin:3, callBackBusyLPR:2, interestedLPR:4, meetings:2, comment:'15 дзвінків · 2 зустрічі · 4 зацікавлених ЛПР (зведений звіт керівника відділу)'},
+];
+let nextReportId = 4;
+
+let NOTIFICATIONS = [
+  {id:1, text:'Дедлайн задачі "Передзвонити" настав', time:'зараз', read:false, target:{type:'lead', id:2}},
+  {id:2, text:'Новий лід у воронці "Контакт"', time:'10 хв тому', read:false, target:{type:'lead', id:1}},
+  {id:3, text:'Звіт за вчора підтверджено керівником відділу', time:'вчора', read:true},
+];
+
+// Аудит дій (видно лише CTO/керівнику відділу) — кожна зміна в СРМ (збереження,
+// видалення, редагування воронки, паролів тощо) логується сюди і одночасно
+// створює push-сповіщення для того, хто виконав дію.
+let HISTORY = [];
+
+const state = {
+  role: 'cto',
+  managerId: null,
+  pipelineFilter: 'admin',
+  clientManagerFilter: [],
+  dateRange: {start:null, end:null},
+  calendarMonth: new Date(2026,6,1),
+  currentDealId: null,
+  currentClientId: null,
+  editingManagerId: null,
+  editingCredentialId: null,
+  reportMode: 'create',
+  reportViewId: null,
+  taskDateRange: {start:null, end:null},
+  taskCalendarMonth: new Date(2026,6,1),
+  taskManagerFilter: [],
+  tasksTab: 'active',
+  reportDateRange: {start:null, end:null},
+  reportCalendarMonth: new Date(2026,6,1),
+  reportManagerFilter: [],
+};
+
+// Синя іконка корони — візуальна позначка біля імені керівника відділу
+// (role==='admin'), щоб його було легко відрізнити від менеджерів у
+// таблицях/дропдаунах.
+function crownIcon(){
+  // Симетрична корона: 3 зубці навколо центру (x=12), рівна основа-стрічка знизу,
+  // маленькі "коштовності"-цятки на кожному зубці — компактно і чітко навіть у 20px.
+  // Без vertical-align — вирівнювання відносно тексту робить обгортка nameBadge().
+  return '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent-grad);flex-shrink:0;box-shadow:0 0 0 2px var(--surface);" title="Керівник відділу">'
+    + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    + '<path d="M3.5 8L7 11L12 4L17 11L20.5 8L19 18H5L3.5 8Z" fill="#fff"/>'
+    + '<circle cx="7" cy="9.2" r="1" fill="#fff"/><circle cx="12" cy="6.2" r="1" fill="#fff"/><circle cx="17" cy="9.2" r="1" fill="#fff"/>'
+    + '</svg>'
+    + '</span>';
+}
+// Ім'я + корона (за потреби) в одному flex-рядку з чітким вертикальним
+// центруванням — надійніше за vertical-align, який "гуляє" залежно від
+// контексту (кнопка, li, td). Використовувати всюди замість ручної конкатенації.
+function nameBadge(name, isAdmin){
+  if(!isAdmin) return name;
+  return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}${crownIcon()}</span>`;
+}
+function managerName(id){
+  const u = USERS.find(u=>u.id===id);
+  if(!u) return id;
+  return nameBadge(u.name, u.role === 'admin');
+}
+
+function nowTimeStr(){
+  const d = new Date();
+  return d.toLocaleDateString('uk-UA') + ' ' + d.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
+}
+function currentUserRecord(){
+  if(state.role === 'manager') return USERS.find(u=>u.id===state.managerId);
+  if(state.role === 'cto') return USERS.find(u=>u.id==='ostap');
+  return USERS.find(u=>u.id==='artem');
+}
+// Аватар користувача: якщо є завантажене фото (u.photo, data-URL) — показуємо
+// його кружечком, інакше — ініціали, як і раніше.
+function avatarContent(u){
+  if(!u) return '';
+  if(u.photo) return `<img src="${u.photo}" alt="${u.name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  return u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+}
+// Оновлює всі місця, де показується аватар поточного користувача (сайдбар,
+// топбар, особистий кабінет), після логіну або зміни фото.
+function updateHeaderAvatars(){
+  const me = currentUserRecord();
+  if(!me) return;
+  const html = avatarContent(me);
+  const a1 = document.getElementById('userAvatar'); if(a1) a1.innerHTML = html;
+  const a2 = document.getElementById('userAvatar2'); if(a2) a2.innerHTML = html;
+  const a3 = document.getElementById('acctAvatarPreview'); if(a3) a3.innerHTML = html;
+}
+// Будь-яка роль може змінити собі фото профілю самостійно (без окремого
+// підтвердження "Зберегти" — застосовується одразу, як типовий upload аватара).
+function changeOwnPhoto(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ showAlertModal('Будь ласка, оберіть файл зображення (JPG/PNG).', 'Невірний формат файлу'); return; }
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const me = currentUserRecord();
+    if(!me) return;
+    me.photo = ev.target.result;
+    try{ localStorage.setItem('kofax_photo_' + me.id, me.photo); }catch(err){ /* сховище недоступне — фото діє лише в цій сесії */ }
+    updateHeaderAvatars();
+    renderManagersTable();
+    renderCredentialsTable();
+    logActivity(`Оновлено фото профілю (${me.name})`, {target:{type:'account'}});
+  };
+  reader.readAsDataURL(file);
+}
+function currentActorLabel(){
+  const me = currentUserRecord();
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
+  return me ? `${me.name} (${roleLabels[state.role]})` : roleLabels[state.role];
+}
+// Логує дію в аудит (видно лише CTO/керівнику відділу) + одразу створює
+// push-сповіщення для того, хто цю дію виконав. opts.notifyCTO — додатковий
+// текст сповіщення, яке в реальній системі пішло б окремо на акаунт CTO
+// (напр. коли керівник відділу міняє власний пароль). opts.target — куди
+// перейти при кліку на це сповіщення (картка ліда, звіт, сторінка тощо).
+function logActivity(action, opts){
+  opts = opts || {};
+  const me = currentUserRecord();
+  HISTORY.unshift({id: Date.now()+Math.random(), actor: currentActorLabel(), action, time: nowTimeStr()});
+  NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: action, time:'зараз', read:false, target: opts.target || null, ownerId: me ? me.id : null});
+  if(opts.notifyCTO){
+    NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: '🔒 Для CTO: ' + opts.notifyCTO, time:'зараз', read:false, target: {type:'account'}, ownerId:'ostap'});
+  }
+  renderNotifications();
+  renderHistory();
+}
+// Сповіщення персональні для кожного акаунта: ownerId===null означає
+// загальне демо-сповіщення (видиме всім), інакше видиме лише власнику.
+function visibleNotifications(){
+  const me = currentUserRecord();
+  const myId = me ? me.id : null;
+  return NOTIFICATIONS.filter(n => n.ownerId == null || n.ownerId === myId);
+}
+function renderHistory(){
+  const el = document.getElementById('historyList');
+  if(!el) return;
+  if(!HISTORY.length){ el.innerHTML = '<div class="empty-hint">Історія дій поки порожня.</div>'; return; }
+  el.innerHTML = HISTORY.slice(0,60).map(h => `
+    <div class="timeline-item">${h.action}<div class="timeline-meta">${h.actor} · ${h.time}</div></div>`).join('');
+}
+
+/* =========================================================
+   LOGIN / LOGOUT
+   ========================================================= */
+function login(){
+  const role = document.querySelector('#demoRoleSelect .cselect-menu li.selected').dataset.value;
+  state.role = role;
+  let user;
+  if(role === 'cto') user = USERS.find(u=>u.id==='ostap');
+  else if(role === 'admin') user = USERS.find(u=>u.id==='artem');
+  else { user = USERS.find(u=>u.id==='oksana'); state.managerId = 'oksana'; }
+  if(role !== 'manager') state.managerId = null;
+
+  document.body.setAttribute('data-role', role);
+  const labels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
+  document.getElementById('userName').textContent = user.name;
+  document.getElementById('userRoleLabel').textContent = labels[role];
+  document.getElementById('rolePill').textContent = labels[role];
+  updateHeaderAvatars();
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').classList.add('ready');
+
+  renderPipelineSelectOptions();
+  renderManagerMultiOptions();
+  renderTaskManagerMultiOptions();
+  renderReportManagerMultiOptions();
+  renderBoard();
+  renderClientsTable();
+  renderTasksTable();
+  renderReportsTable();
+  renderCampaignsTable();
+  renderManagersTable();
+  renderCredentialsTable();
+  updateAdminPageLabels();
+  seedReminderNotification(role);
+  renderNotifications();
+  renderDashboardTasks();
+  renderDashboardCalls();
+  renderAccountView();
+  renderReminderBanner();
+  showView(null, 'dashboard');
+}
+
+function logout(){
+  closeAllDropdowns();
+  closeAllPanels();
+  document.getElementById('appRoot').classList.remove('ready');
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+}
+
+/* =========================================================
+   THEME
+   ========================================================= */
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeIconSun').style.display = t === 'light' ? 'block' : 'none';
+  document.getElementById('themeIconMoon').style.display = t === 'dark' ? 'block' : 'none';
+  localStorage.setItem('kofax-crm-theme', t);
+}
+function toggleTheme(){
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(current === 'light' ? 'dark' : 'light');
+}
+applyTheme(localStorage.getItem('kofax-crm-theme') || 'light');
+
+/* =========================================================
+   NAV / VIEWS
+   ========================================================= */
+function showView(e, name){
+  if(e) e.preventDefault();
+  closeAllDropdowns();
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.nav li').forEach(li => li.classList.remove('active'));
+  const li = document.querySelector('.nav li[data-nav="' + name + '"]');
+  if(li) li.classList.add('active');
+  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'База клієнтів', tasks:'Завдання', reports:'Звітність', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт'};
+  document.getElementById('pageTitle').textContent = titles[name];
+  if(name === 'account') renderAccountView();
+  if(name === 'tasks') renderTasksTable();
+  if(name === 'campaigns') renderCampaignsTable();
+  if(name === 'admin') updateAdminPageLabels();
+}
+
+/* =========================================================
+   CUSTOM DROPDOWNS (select / notif / account menu)
+   ========================================================= */
+function closeAllDropdowns(){
+  document.querySelectorAll('.cselect.open').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.dropdown-panel.open').forEach(el => el.classList.remove('open'));
+}
+// Popovers/menus are positioned with JS (position:fixed) computed from the
+// trigger's bounding rect, so they can never be clipped by a scrollable
+// ancestor (e.g. .content{overflow-y:auto}) — a fixed-size CSS offset would
+// get cut off whenever the trigger sits near the bottom/edge of the viewport.
+function positionCSelectPopover(el){
+  const trigger = el.querySelector('.cselect-trigger');
+  const popover = el.querySelector('.cselect-menu, .calendar-popover');
+  if(!trigger || !popover) return;
+  const rect = trigger.getBoundingClientRect();
+  popover.style.position = 'fixed';
+  popover.style.top = (rect.bottom + 6) + 'px';
+  popover.style.minWidth = rect.width + 'px';
+  let left = rect.left;
+  const popW = popover.offsetWidth || rect.width;
+  if(left + popW > window.innerWidth - 12) left = Math.max(12, window.innerWidth - popW - 12);
+  popover.style.left = left + 'px';
+  const popH = popover.offsetHeight;
+  if(rect.bottom + 6 + popH > window.innerHeight - 12){
+    popover.style.top = Math.max(12, rect.top - popH - 6) + 'px';
+  }
+}
+function positionDropdownPanel(panel){
+  const trigger = panel.parentElement.querySelector('.icon-btn, .account-trigger');
+  if(!trigger) return;
+  const rect = trigger.getBoundingClientRect();
+  panel.style.position = 'fixed';
+  panel.style.top = (rect.bottom + 10) + 'px';
+  panel.style.left = 'auto';
+  panel.style.right = (window.innerWidth - rect.right) + 'px';
+}
+function toggleCSelect(el){
+  const wasOpen = el.classList.contains('open');
+  closeAllDropdowns();
+  if(!wasOpen){
+    el.classList.add('open');
+    positionCSelectPopover(el);
+  }
+}
+function toggleDropdown(id){
+  const panel = document.getElementById(id);
+  const isOpen = panel.classList.contains('open');
+  closeAllDropdowns();
+  if(!isOpen){
+    panel.classList.add('open');
+    positionDropdownPanel(panel);
+  }
+}
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.cselect') && !e.target.closest('.account-wrap')){
+    closeAllDropdowns();
+  }
+});
+window.addEventListener('resize', closeAllDropdowns);
+document.addEventListener('DOMContentLoaded', function(){
+  const contentEl = document.querySelector('.content');
+  if(contentEl) contentEl.addEventListener('scroll', closeAllDropdowns, true);
+});
+
+// generic single-select option click (demo role, pipeline)
+document.addEventListener('click', function(e){
+  const li = e.target.closest('.cselect-menu li[data-value]');
+  if(!li) return;
+  const menu = li.parentElement;
+  const selectType = menu.dataset.select;
+  if(selectType === 'managerMulti') return; // handled separately (multi)
+  menu.querySelectorAll('li').forEach(x=>x.classList.remove('selected'));
+  li.classList.add('selected');
+  const trigger = menu.parentElement.querySelector('.cselect-label');
+  if(trigger) trigger.innerHTML = li.innerHTML;
+  menu.parentElement.classList.remove('open');
+
+  if(selectType === 'pipeline'){ state.pipelineFilter = li.dataset.value; renderBoard(); }
+});
+
+/* =========================================================
+   NOTIFICATIONS
+   ========================================================= */
+function renderNotifications(){
+  const list = document.getElementById('notifList');
+  const mine = visibleNotifications();
+  list.innerHTML = mine.map(n => `
+    <div class="dropdown-item ${n.read ? '' : 'unread'}" onclick="handleNotifClick(${n.id})" style="cursor:pointer;">
+      <div>🔔 ${n.text}<div class="t">${n.time}</div></div>
+    </div>`).join('');
+  const anyUnread = mine.some(n => !n.read);
+  document.getElementById('notifDot').classList.toggle('hide', !anyUnread);
+  renderDashboardNotifs();
+}
+function markNotifRead(id){
+  const n = NOTIFICATIONS.find(n=>n.id===id);
+  if(n) n.read = true;
+  renderNotifications();
+}
+// Клік на сповіщення позначає його прочитаним і, якщо є ціль (n.target),
+// одразу відкриває відповідну картку/сторінку (лід, звіт, розділ СРМ тощо).
+// Клік на сповіщення відкриває ЛИШЕ поп-ап (картку клієнта) — ніколи не
+// перемикає сторінку/розділ СРМ. Якщо для типу сповіщення поп-апу немає
+// (напр. звіт чи налаштування акаунта), клік просто позначає його
+// прочитаним, без переходів.
+function handleNotifClick(id){
+  const n = NOTIFICATIONS.find(n=>n.id===id);
+  if(!n) return;
+  n.read = true;
+  renderNotifications();
+  closeAllDropdowns();
+  const t = n.target;
+  if(!t) return;
+  if(t.type === 'lead'){
+    if(LEADS.find(l=>l.id===t.id)) openClientCard(t.id);
+  } else if(t.type === 'task'){
+    if(t.leadId && LEADS.find(l=>l.id===t.leadId)) openClientCard(t.leadId);
+  }
+}
+function markAllNotifRead(){
+  visibleNotifications().forEach(n=>n.read=true);
+  renderNotifications();
+}
+function renderDashboardNotifs(){
+  const el = document.getElementById('dashboardNotifs');
+  if(!el) return;
+  el.innerHTML = visibleNotifications().map(n => `<div class="notif-item" style="cursor:pointer;" onclick="handleNotifClick(${n.id})">🔔 <span class="row-click">${n.text}</span> ${n.read?'':'<span class="badge warn">нове</span>'}</div>`).join('');
+}
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+function onSearchInput(val){
+  const box = document.getElementById('searchResults');
+  const q = (val||'').trim().toLowerCase();
+  if(!q){ box.classList.remove('open'); box.innerHTML=''; return; }
+  let pool = LEADS;
+  if(state.role === 'manager') pool = pool.filter(l=>l.managerId===state.managerId);
+  const matches = pool.filter(l => l.name.toLowerCase().includes(q) || l.company.toLowerCase().includes(q)).slice(0,6);
+  if(!matches.length){ box.innerHTML = '<div class="search-empty">Нічого не знайдено</div>'; box.classList.add('open'); return; }
+  box.innerHTML = matches.map(l => `
+    <div class="search-result-item" onclick="onSearchResultClick(${l.id})">
+      <div>${l.name}</div><div class="search-result-sub">${l.company} · ${l.stage}</div>
+    </div>`).join('');
+  box.classList.add('open');
+}
+function onSearchResultClick(id){
+  document.getElementById('searchResults').classList.remove('open');
+  document.getElementById('searchInput').value = '';
+  openClientCard(id);
+}
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.search-wrap')) document.getElementById('searchResults').classList.remove('open');
+});
+
+/* =========================================================
+   DATE/TIME CHIP (замінює старий сірий "badge time" на всюди
+   однаковий, приємніший чіп з іконкою; підсвічує прострочені)
+   ========================================================= */
+function dtChip(dueStr){
+  const m = String(dueStr||'').match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}:\d{2}))?/);
+  const icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+  if(!m) return `<span class="dt-chip">${icon}${dueStr||'без дедлайну'}</span>`;
+  const [, dd, mm, yyyy, time] = m;
+  const dateObj = new Date(Number(yyyy), Number(mm)-1, Number(dd));
+  const overdue = dateObj < new Date(new Date().toDateString());
+  return `<span class="dt-chip ${overdue?'overdue':''}">${icon}${dd}.${mm}.${yyyy}${time?' · '+time:''}</span>`;
+}
+
+/* =========================================================
+   DASHBOARD TASKS / CALLS
+   ========================================================= */
+function renderDashboardTasks(){
+  const el = document.getElementById('dashboardTasks');
+  // Виконані завдання одразу зникають з активного списку і потрапляють в
+  // архів на сторінці "Завдання".
+  let list = TASKS.filter(t=>!t.done);
+  if(state.role === 'manager') list = list.filter(t=>t.managerId===state.managerId);
+  list = list.slice(0,6);
+  if(!list.length){ el.innerHTML = '<div class="empty-hint">Немає активних завдань.</div>'; return; }
+  el.innerHTML = list.map(t => {
+    const idx = TASKS.indexOf(t);
+    return `
+    <div class="task-item">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTaskDone(${idx},this.checked)"><span></span></label>
+      <span class="row-click" onclick="openClientCard(${t.leadId})">${t.title} — ${t.leadName}</span>
+      ${dtChip(t.due)}
+    </div>`;
+  }).join('');
+}
+async function toggleTaskDone(idx, checked){
+  const t = TASKS[idx];
+  if(!t) return;
+  if(checked){
+    // Завершення — свідома дія, тому питаємо підтвердження і даємо 5с на
+    // "Скасувати", перш ніж завдання остаточно "впаде" в архів виконаних.
+    const ok = await showConfirmModal({
+      title:'Завершити завдання',
+      text:`Позначити завдання "${t.title}" виконаним? Воно перейде в архів.`,
+      okText:'Так, виконано'
+    });
+    if(!ok){
+      renderDashboardTasks(); renderTasksTable();
+      return;
+    }
+    t.done = true;
+    logActivity(`Виконано завдання "${t.title}" (${t.leadName})`, {target:{type:'task', leadId:t.leadId, tab:'done'}});
+    renderDashboardTasks();
+    renderTasksTable();
+    showUndoToast(`Завдання "${t.title}" виконано і переміщено в архів`, () => {
+      t.done = false;
+      renderDashboardTasks();
+      renderTasksTable();
+      logActivity(`Скасовано виконання завдання "${t.title}"`, {target:{type:'task', leadId:t.leadId, tab:'active'}});
+    });
+  } else {
+    t.done = false;
+    renderDashboardTasks();
+    renderTasksTable();
+  }
+}
+function renderDashboardCalls(){
+  const el = document.getElementById('dashboardCalls');
+  if(!el) return;
+  let list = CALLS.map(c => ({...c, lead: LEADS.find(l=>l.id===c.leadId)})).filter(c=>c.lead);
+  if(state.role === 'manager') list = list.filter(c=>c.lead.managerId===state.managerId);
+  if(!list.length){ el.innerHTML = '<div class="empty-hint">Немає запланованих дзвінків.</div>'; return; }
+  el.innerHTML = list.map(c => `
+    <div class="call-item">
+      <span class="row-click" onclick="openClientCard(${c.leadId})">📞 ${c.lead.name}, "${c.lead.stage}"</span>
+      <span class="badge time">${c.time}</span>
+    </div>`).join('');
+}
+
+/* =========================================================
+   PIPELINE
+   ========================================================= */
+function renderPipelineSelectOptions(){
+  const menu = document.getElementById('pipelineSelectMenu');
+  const managers = USERS.filter(u=>u.role==='manager');
+  const adminUser = USERS.find(u=>u.role==='admin');
+  const adminLabel = nameBadge(adminUser ? adminUser.name : 'Керівник відділу', true);
+  let html = `<li data-value="admin" class="selected">${adminLabel}</li>`;
+  managers.forEach(m => html += `<li data-value="${m.id}">Менеджер ${m.name}</li>`);
+  menu.setAttribute('data-select','pipeline');
+  menu.innerHTML = html;
+  state.pipelineFilter = 'admin';
+  const trigger = document.querySelector('#pipelineSelect .cselect-label');
+  if(trigger) trigger.innerHTML = adminLabel;
+}
+
+function currentPipelineOwner(){
+  if(state.role === 'manager') return state.managerId;
+  return state.pipelineFilter;
+}
+
+function renderBoard(){
+  const board = document.getElementById('board');
+  const owner = currentPipelineOwner();
+  // Суми угод ($) показуються лише у воронці Керівника відділу (owner==='admin').
+  // CTO бачить суми, коли переглядає саме цю воронку. У воронках менеджерів
+  // сум немає взагалі.
+  const showValue = owner === 'admin';
+  board.innerHTML = STAGES.map(stage => {
+    const cards = LEADS.filter(l => l.stage === stage && l.managerId === owner);
+    let meta = `${cards.length} ${cards.length===1?'угода':'угоди'}`;
+    if(showValue){
+      const sum = cards.reduce((s,c)=>s+Number(c.value||0),0);
+      meta = cards.length ? `$${sum.toLocaleString('en-US')} · ${meta}` : '$0';
+    }
+    const cardsHtml = cards.map(c => `
+      <div class="lead-card" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
+        <div class="lead-title">${c.name}</div>
+        <div class="lead-sub">${c.company}</div>
+        <div class="lead-foot">
+          ${showValue ? `<span class="lead-value">$${Number(c.value||0).toLocaleString('en-US')}</span>` : '<span></span>'}
+          ${c.flag === 'red' ? '<span class="status-icon red">●</span>' : ''}
+          ${c.flag === 'yellow' ? '<span class="status-icon yellow">⚠</span>' : ''}
+        </div>
+      </div>`).join('');
+    return `
+      <div class="column" data-stage="${stage}" ondragover="allowDrop(event)" ondragenter="columnDragEnter(event)" ondragleave="columnDragLeave(event)" ondrop="dropCard(event,'${stage}')">
+        <div class="column-head"><div class="column-title">${stage}</div><div class="column-meta">${meta}</div></div>
+        <div class="card-list">${cardsHtml}</div>
+        <button class="add-card-btn" type="button" onclick="openDeal(null,'${stage}')">+ Додати картку</button>
+      </div>`;
+  }).join('');
+}
+
+// Ціла колонка (не лише вузька зона списку карток) — валідна зона для
+// скидання картки, тож не треба влучати мишкою в конкретне місце. Вся
+// колонка ще й підсвічується під час перетягування, щоб було очевидно,
+// куди саме карточка потрапить.
+let draggedLeadId = null;
+let dragEnterDepth = 0;
+function dragStart(e, leadId){ draggedLeadId = leadId; e.dataTransfer.effectAllowed = 'move'; }
+function allowDrop(e){ e.preventDefault(); }
+function columnDragEnter(e){
+  e.preventDefault();
+  dragEnterDepth++;
+  e.currentTarget.classList.add('drag-over');
+}
+function columnDragLeave(e){
+  dragEnterDepth = Math.max(0, dragEnterDepth - 1);
+  if(dragEnterDepth === 0) e.currentTarget.classList.remove('drag-over');
+}
+function dropCard(e, stage){
+  e.preventDefault();
+  dragEnterDepth = 0;
+  e.currentTarget.classList.remove('drag-over');
+  const lead = LEADS.find(l=>l.id===draggedLeadId);
+  if(lead){ lead.stage = stage; renderBoard(); }
+}
+
+/* ---- stage editor ---- */
+function toggleStageEditor(){
+  document.getElementById('board').style.display = 'none';
+  document.getElementById('stageEditorBoard').style.display = 'flex';
+  document.getElementById('stageEditorBoard').style.gap = '14px';
+  document.getElementById('stageEditorBoard').style.flexWrap = 'wrap';
+  document.getElementById('stageEditorBoard').style.alignItems = 'flex-start';
+  document.getElementById('stageEditorActions').style.display = 'flex';
+  document.getElementById('editStagesBtn').style.display = 'none';
+  document.getElementById('addDealBtn').style.display = 'none';
+  renderStageEditor();
+}
+let editingStages = [];
+function renderStageEditor(){
+  editingStages = [...STAGES];
+  renderStageEditorFromArray();
+}
+function removeStageEditorItem(i){ editingStages.splice(i,1); renderStageEditorFromArray(); }
+function addStageEditorItem(){ editingStages.push('Новий етап'); renderStageEditorFromArray(); setTimeout(()=>{ const inputs=document.querySelectorAll('#stageEditorBoard .stage-name-input'); const last=inputs[inputs.length-1]; if(last){ last.focus(); last.select(); } },0); }
+let draggedStageIdx = null;
+function stageDragStart(e, idx){
+  draggedStageIdx = idx;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function stageDragEnd(e){ e.currentTarget.classList.remove('dragging'); }
+function stageDragOver(e){ e.preventDefault(); }
+function stageDrop(e, idx){
+  e.preventDefault();
+  if(draggedStageIdx === null || draggedStageIdx === idx) return;
+  const moved = editingStages.splice(draggedStageIdx, 1)[0];
+  editingStages.splice(idx, 0, moved);
+  draggedStageIdx = null;
+  renderStageEditorFromArray();
+}
+function renderStageEditorFromArray(){
+  const el = document.getElementById('stageEditorBoard');
+  el.innerHTML = editingStages.map((s,i) => `
+    <div class="stage-edit-card" style="min-width:230px;max-width:230px;" data-idx="${i}"
+         draggable="true" ondragstart="stageDragStart(event,${i})" ondragend="stageDragEnd(event)"
+         ondragover="stageDragOver(event)" ondrop="stageDrop(event,${i})">
+      <div class="stage-edit-head">
+        <span class="drag-handle" title="Перетягніть, щоб змінити порядок">⋮⋮</span>
+        <span class="stage-order-badge">${i+1}</span>
+        <input type="text" class="stage-name-input" value="${s}" oninput="editingStages[${i}]=this.value" placeholder="Назва етапу">
+        <button class="danger-icon-btn" type="button" title="Видалити етап" onclick="removeStageEditorItem(${i})">🗑</button>
+      </div>
+    </div>`).join('') + `<div class="stage-add-col" onclick="addStageEditorItem()">+ Додати етап</div>`;
+}
+function cancelStageEditor(){
+  document.getElementById('board').style.display = 'flex';
+  document.getElementById('stageEditorBoard').style.display = 'none';
+  document.getElementById('stageEditorActions').style.display = 'none';
+  document.getElementById('editStagesBtn').style.display = 'inline-flex';
+  document.getElementById('addDealBtn').style.display = 'inline-flex';
+}
+function saveStageEditor(){
+  const removed = STAGES.filter(s => !editingStages.includes(s));
+  LEADS.forEach(l => { if(removed.includes(l.stage)) l.stage = editingStages[0] || l.stage; });
+  STAGES = editingStages.filter(s => s.trim() !== '');
+  cancelStageEditor();
+  renderBoard();
+  logActivity(`Оновлено структуру воронки: ${STAGES.join(' → ')}`, {target:{type:'view', name:'pipeline'}});
+}
+
+/* =========================================================
+   DEAL PANEL
+   ========================================================= */
+function openDeal(id, presetStage){
+  state.currentDealId = id;
+  const panel = document.getElementById('dealPanel');
+  if(id === null){
+    document.getElementById('dealPanelTitle').textContent = 'Нова угода';
+    ['dealName','dealPhone','dealEmail','dealCompany','dealNiche','dealLink'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('dealNotesList').innerHTML = '<div class="empty-hint">Нотаток ще немає.</div>';
+    document.getElementById('dealTasksList').innerHTML = '<div class="empty-hint">Завдань ще немає.</div>';
+    document.getElementById('dealAttachList').innerHTML = '<div class="empty-hint">Документів ще немає.</div>';
+    panel.dataset.presetStage = presetStage || STAGES[0];
+  } else {
+    const l = LEADS.find(l=>l.id===id);
+    if(!l) return;
+    document.getElementById('dealPanelTitle').textContent = 'Картка ліда — ' + l.name;
+    document.getElementById('dealName').value = l.name;
+    document.getElementById('dealPhone').value = l.phone;
+    document.getElementById('dealEmail').value = l.email;
+    document.getElementById('dealCompany').value = l.company;
+    document.getElementById('dealNiche').value = l.niche;
+    document.getElementById('dealLink').value = l.link;
+    renderDealNotes(l);
+    renderDealTasks(l);
+    renderDealAttachments(l);
+  }
+  document.getElementById('dealDeleteBtn').style.display = (id === null) ? 'none' : 'inline-flex';
+  ['dealName','dealPhone','dealEmail','dealCompany','dealNiche'].forEach(f => setFieldError(document.getElementById(f), null));
+  openPanel('dealPanel');
+}
+function renderDealNotes(l){
+  document.getElementById('dealNotesList').innerHTML = l.notes.length
+    ? l.notes.map(n=>`<div class="timeline-item">${n.text}<div class="timeline-meta">${n.author} · ${n.date}</div></div>`).join('')
+    : '<div class="empty-hint">Нотаток ще немає.</div>';
+}
+function renderDealTasks(l){
+  document.getElementById('dealTasksList').innerHTML = l.tasks.length
+    ? l.tasks.map(t=>`<div class="timeline-item" style="display:flex;align-items:center;gap:10px;justify-content:space-between;">${t.title}${t.done?' · виконано':''} ${dtChip(t.due)}</div>`).join('')
+    : '<div class="empty-hint">Завдань ще немає.</div>';
+}
+function renderDealAttachments(l){
+  document.getElementById('dealAttachList').innerHTML = l.attachments.length
+    ? l.attachments.map(a=>`<div class="timeline-item">📎 ${a.name}</div>`).join('')
+    : '<div class="empty-hint">Документів ще немає.</div>';
+}
+function addDealNote(){
+  const text = document.getElementById('newNoteText').value.trim();
+  if(!text) return;
+  const today = new Date().toLocaleDateString('uk-UA');
+  const author = USERS.find(u=>u.id===(state.managerId||'ostap'))?.name || 'Я';
+  if(state.currentDealId === null){
+    document.getElementById('dealNotesList').insertAdjacentHTML('beforeend', `<div class="timeline-item">${text}<div class="timeline-meta">${author} · ${today}</div></div>`);
+  } else {
+    const l = LEADS.find(l=>l.id===state.currentDealId);
+    l.notes.push({author, date:today, text});
+    renderDealNotes(l);
+    logActivity(`Додано нотатку до угоди "${l.name}"`, {target:{type:'lead', id:l.id}});
+  }
+  document.getElementById('newNoteText').value='';
+}
+function addDealTask(){
+  const title = document.getElementById('newTaskTitle').value.trim();
+  const due = document.getElementById('newTaskDue').value.trim() || 'без дедлайну';
+  if(!title) return;
+  const mgrId = state.currentDealId ? LEADS.find(l=>l.id===state.currentDealId).managerId : (state.managerId || 'oksana');
+  const leadName = state.currentDealId ? LEADS.find(l=>l.id===state.currentDealId).name : (document.getElementById('dealName').value || 'Нова угода');
+  const task = {title, due, done:false};
+  if(state.currentDealId !== null){
+    const l = LEADS.find(l=>l.id===state.currentDealId);
+    l.tasks.push(task);
+    renderDealTasks(l);
+  } else {
+    document.getElementById('dealTasksList').insertAdjacentHTML('beforeend', `<div class="timeline-item">${title}<div class="timeline-meta">до ${due}</div></div>`);
+  }
+  TASKS.unshift({...task, leadId: state.currentDealId, leadName, managerId: mgrId});
+  renderDashboardTasks();
+  renderTasksTable();
+  logActivity(`Додано завдання "${title}" для ${leadName}`, state.currentDealId !== null ? {target:{type:'task', leadId:state.currentDealId, tab:'active'}} : {});
+  document.getElementById('newTaskTitle').value='';
+  document.getElementById('newTaskDue').value='';
+}
+function addDealAttachment(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(state.currentDealId !== null){
+    const l = LEADS.find(l=>l.id===state.currentDealId);
+    l.attachments.push({name:file.name});
+    renderDealAttachments(l);
+    logActivity(`Додано документ "${file.name}" до угоди "${l.name}"`, {target:{type:'lead', id:l.id}});
+  } else {
+    document.getElementById('dealAttachList').insertAdjacentHTML('beforeend', `<div class="timeline-item">📎 ${file.name}</div>`);
+  }
+}
+function saveDeal(){
+  const nameEl = document.getElementById('dealName');
+  const phoneEl = document.getElementById('dealPhone');
+  const emailEl = document.getElementById('dealEmail');
+  const companyEl = document.getElementById('dealCompany');
+  const nicheEl = document.getElementById('dealNiche');
+  const link = document.getElementById('dealLink').value.trim();
+
+  // Обов'язкові поля картки угоди: ім'я, телефон, назва компанії, ніша.
+  const okName = validateRequiredField(nameEl, "Вкажіть ім'я");
+  const okPhoneFormat = validatePhoneField(phoneEl);
+  const okPhoneRequired = validateRequiredField(phoneEl, 'Вкажіть телефон');
+  const okEmail = validateEmailField(emailEl);
+  const okCompany = validateRequiredField(companyEl, 'Вкажіть назву компанії');
+  const okNiche = validateRequiredField(nicheEl, 'Вкажіть нішу компанії');
+  if(!okName || !okPhoneFormat || !okPhoneRequired || !okEmail || !okCompany || !okNiche) return;
+
+  const name = nameEl.value.trim();
+  const phone = phoneEl.value.trim();
+  const email = emailEl.value.trim();
+  const company = companyEl.value.trim();
+  const niche = nicheEl.value.trim();
+
+  if(state.currentDealId === null){
+    const dupKey = (n,p,e2)=> (n+p+e2).toLowerCase().replace(/\s+/g,'');
+    const dup = LEADS.find(l => dupKey(l.name,l.phone,l.email) === dupKey(name,phone,email));
+    if(dup){ showAlertModal(`Такий лід вже існує в базі (${dup.name}, ${dup.company}). Перевірте дублікат перед створенням.`, 'Дублікат ліда'); return; }
+    const owner = currentPipelineOwner();
+    const stage = document.getElementById('dealPanel').dataset.presetStage || STAGES[0];
+    const newId = nextLeadId++;
+    LEADS.push({id:newId, name, phone, email, company, niche, link, stage, value:0, managerId: owner, createdAt: new Date().toLocaleDateString('uk-UA'), notes:[], tasks:[], attachments:[]});
+    logActivity(`Створено нову угоду "${name}" (${company||'без компанії'})`, {target:{type:'lead', id:newId}});
+  } else {
+    const l = LEADS.find(l=>l.id===state.currentDealId);
+    Object.assign(l, {name, phone, email, company, niche, link});
+    logActivity(`Відредаговано угоду "${name}"`, {target:{type:'lead', id:l.id}});
+  }
+  renderBoard();
+  renderClientsTable();
+  closeAllPanels();
+}
+async function deleteDeal(){
+  if(state.currentDealId === null) return;
+  const l = LEADS.find(l=>l.id===state.currentDealId);
+  if(!l) return;
+  const ok = await showConfirmModal({
+    title:'Видалити угоду',
+    text:`Видалити угоду "${l.name}" (${l.company})?`,
+    okText:'Видалити',
+    danger:true
+  });
+  if(!ok) return;
+  LEADS = LEADS.filter(x=>x.id!==l.id);
+  renderBoard();
+  renderClientsTable();
+  closeAllPanels();
+  logActivity(`Видалено угоду "${l.name}" (${l.company})`);
+  showUndoToast(`Угоду "${l.name}" видалено`, () => {
+    LEADS.push(l);
+    renderBoard();
+    renderClientsTable();
+    logActivity(`Відновлено угоду "${l.name}" (скасовано видалення)`);
+  });
+}
+
+/* =========================================================
+   CLIENT CARD (history view)
+   ========================================================= */
+function openClientCard(id){
+  const l = LEADS.find(l=>l.id===id);
+  if(!l) return;
+  state.currentClientId = id;
+  document.getElementById('clientPanelTitle').textContent = 'Картка клієнта — ' + l.name;
+  document.getElementById('clientContactInfo').innerHTML = `Ім'я: <strong>${l.name}</strong><br>Телефон: ${l.phone}<br>Email: ${l.email}`;
+  document.getElementById('clientCompanyInfo').innerHTML = `Компанія: <strong>${l.company}</strong><br>Ніша: ${l.niche}<br>Посилання: ${l.link}<br>Менеджер: ${managerName(l.managerId)}<br>Стадія: ${l.stage}`;
+  document.getElementById('clientNotesHistory').innerHTML = l.notes.length ? l.notes.map(n=>`<div class="timeline-item">${n.text}<div class="timeline-meta">${n.author} · ${n.date}</div></div>`).join('') : '<div class="empty-hint">Нотаток ще немає.</div>';
+  document.getElementById('clientTasksHistory').innerHTML = l.tasks.length ? l.tasks.map(t=>`<div class="timeline-item" style="display:flex;align-items:center;gap:10px;justify-content:space-between;">${t.title}${t.done?' · виконано':''} ${dtChip(t.due)}</div>`).join('') : '<div class="empty-hint">Завдань ще немає.</div>';
+  document.getElementById('clientAttachHistory').innerHTML = l.attachments.length ? l.attachments.map(a=>`<div class="timeline-item">📎 ${a.name}</div>`).join('') : '<div class="empty-hint">Документів ще немає.</div>';
+  openPanel('clientPanel');
+}
+function editFromClientCard(){
+  const id = state.currentClientId;
+  closeAllPanels();
+  setTimeout(()=>openDeal(id), 200);
+}
+
+/* =========================================================
+   CLIENTS TABLE
+   ========================================================= */
+// Пул для фільтра "Менеджери" (Клієнти/Завдання/Звітність): CTO бачить усіх
+// менеджерів + УСІХ керівників відділу; керівник відділу бачить менеджерів +
+// ЛИШЕ СЕБЕ (щоб міг відфільтрувати власну статистику), але не інших
+// керівників відділу, якщо вони колись з'являться; менеджер бачить лише себе
+// (хоча для нього це поле й так приховане).
+function managerFilterPool(){
+  const managers = USERS.filter(u=>u.role==='manager');
+  if(state.role === 'cto') return managers.concat(USERS.filter(u=>u.role==='admin'));
+  if(state.role === 'admin'){
+    const me = currentUserRecord();
+    return me ? managers.concat([me]) : managers;
+  }
+  return managers;
+}
+function renderManagerMultiOptions(){
+  const menu = document.getElementById('managerMultiMenu');
+  const pool = managerFilterPool();
+  menu.dataset.select = 'managerMulti';
+  menu.innerHTML = pool.map(m => `
+    <li data-value="${m.id}" onclick="toggleManagerFilter(event,'${m.id}')">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleManagerFilter(event,'${m.id}')"><span></span></label> ${nameBadge(m.name, m.role==='admin')}
+    </li>`).join('');
+}
+function toggleManagerFilter(e, id){
+  e.stopPropagation();
+  const idx = state.clientManagerFilter.indexOf(id);
+  if(idx === -1) state.clientManagerFilter.push(id); else state.clientManagerFilter.splice(idx,1);
+  const label = document.getElementById('managerMultiLabel');
+  label.textContent = state.clientManagerFilter.length ? `Обрано: ${state.clientManagerFilter.length}` : 'Усі менеджери';
+  document.querySelectorAll('#managerMultiMenu li').forEach(li => {
+    const cb = li.querySelector('input[type=checkbox]');
+    cb.checked = state.clientManagerFilter.includes(li.dataset.value);
+  });
+}
+
+function renderClientsTable(){
+  let rows = LEADS;
+  if(state.role === 'manager'){
+    rows = rows.filter(l=>l.managerId===state.managerId);
+  } else if(state.clientManagerFilter.length){
+    rows = rows.filter(l=>state.clientManagerFilter.includes(l.managerId));
+  }
+  if(state.dateRange.start && state.dateRange.end){
+    rows = rows.filter(l => {
+      const d = parseUkDate(l.createdAt);
+      return d >= state.dateRange.start && d <= state.dateRange.end;
+    });
+  }
+  const tbody = document.getElementById('clientsTableBody');
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="5" class="empty-hint">Немає клієнтів за обраними фільтрами.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(l => `
+    <tr class="clickable" onclick="openClientCard(${l.id})">
+      <td class="link-name">${l.name}</td>
+      <td>${l.company}</td>
+      <td data-roles="admin cto">${managerName(l.managerId)}</td>
+      <td>${l.stage}</td>
+      <td>${l.createdAt}</td>
+    </tr>`).join('');
+  closeAllDropdowns();
+}
+function renderCampaignsTable(){
+  let rows = LEADS;
+  if(state.role === 'manager'){
+    rows = rows.filter(l=>l.managerId===state.managerId);
+  }
+  const tbody = document.getElementById('campaignsTableBody');
+  if(!tbody) return;
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="4" class="empty-hint">Немає клієнтів для розсилки.</td></tr>'; return; }
+  tbody.innerHTML = rows.map((l,i) => `
+    <tr>
+      <td><label class="chk"><input type="checkbox" ${i<2?'checked':''}><span></span></label></td>
+      <td>${l.name}</td>
+      <td>${l.email}</td>
+      <td data-roles="admin cto">${managerName(l.managerId)}</td>
+    </tr>`).join('');
+}
+function parseUkDate(s){
+  const [d,m,y] = s.split('.').map(Number);
+  return new Date(y,m-1,d);
+}
+function isToday(d){
+  const t = new Date();
+  return d.getFullYear()===t.getFullYear() && d.getMonth()===t.getMonth() && d.getDate()===t.getDate();
+}
+
+/* ---- calendar ---- */
+function renderCalendar(){
+  const monthLabel = document.getElementById('calMonthLabel');
+  const grid = document.getElementById('calGrid');
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const m = state.calendarMonth;
+  monthLabel.textContent = monthNames[m.getMonth()] + ' ' + m.getFullYear();
+  const firstDay = new Date(m.getFullYear(), m.getMonth(), 1);
+  let startOffset = firstDay.getDay();
+  startOffset = (startOffset === 0) ? 6 : startOffset - 1;
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+  const dows = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day muted"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(m.getFullYear(), m.getMonth(), day);
+    let cls = 'cal-day';
+    if(isToday(d)) cls += ' today';
+    if(state.dateRange.start && +d === +state.dateRange.start) cls += ' range-edge';
+    if(state.dateRange.end && +d === +state.dateRange.end) cls += ' range-edge';
+    if(state.dateRange.start && state.dateRange.end && d > state.dateRange.start && d < state.dateRange.end) cls += ' in-range';
+    html += `<div class="${cls}" onclick="pickDate(event,${m.getFullYear()},${m.getMonth()},${day})">${day}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function calNav(dir){
+  state.calendarMonth = new Date(state.calendarMonth.getFullYear(), state.calendarMonth.getMonth()+dir, 1);
+  renderCalendar();
+}
+function pickDate(e,y,mo,d){
+  // Клік на день замінює innerHTML грід-контейнера (renderCalendar), тобто
+  // сам клікнутий елемент видаляється з DOM ще під час обробки цієї ж події.
+  // Без stopPropagation глобальний "клік поза дропдауном" бачить відв'язаний
+  // e.target і хибно закриває календар. Зупиняємо спливання одразу.
+  if(e) e.stopPropagation();
+  const picked = new Date(y,mo,d);
+  if(!state.dateRange.start || (state.dateRange.start && state.dateRange.end)){
+    state.dateRange.start = picked; state.dateRange.end = null;
+  } else if(picked < state.dateRange.start){
+    state.dateRange.start = picked;
+  } else {
+    state.dateRange.end = picked;
+  }
+  renderCalendar();
+}
+function clearRange(){ state.dateRange = {start:null, end:null}; renderCalendar(); document.getElementById('dateRangeLabel').textContent = 'Оберіть період'; }
+function applyRange(){
+  const label = document.getElementById('dateRangeLabel');
+  if(state.dateRange.start && state.dateRange.end){
+    label.textContent = fmtDate(state.dateRange.start) + ' – ' + fmtDate(state.dateRange.end);
+  } else if(state.dateRange.start){
+    label.textContent = fmtDate(state.dateRange.start);
+  }
+  closeAllDropdowns();
+  renderClientsTable();
+}
+function fmtDate(d){ return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear(); }
+renderCalendar();
+renderTaskCalendar();
+renderReportCalendar();
+
+/* =========================================================
+   TASKS PAGE (окрема сторінка "Завдання" — фільтри дата+менеджер,
+   як на сторінці звітності; активні + архів виконаних)
+   ========================================================= */
+function renderTaskManagerMultiOptions(){
+  const menu = document.getElementById('taskManagerMultiMenu');
+  if(!menu) return;
+  const pool = managerFilterPool();
+  menu.dataset.select = 'taskManagerMulti';
+  menu.innerHTML = pool.map(m => `
+    <li data-value="${m.id}" onclick="toggleTaskManagerFilter(event,'${m.id}')">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleTaskManagerFilter(event,'${m.id}')"><span></span></label> ${nameBadge(m.name, m.role==='admin')}
+    </li>`).join('');
+}
+function toggleTaskManagerFilter(e, id){
+  e.stopPropagation();
+  const idx = state.taskManagerFilter.indexOf(id);
+  if(idx === -1) state.taskManagerFilter.push(id); else state.taskManagerFilter.splice(idx,1);
+  const label = document.getElementById('taskManagerMultiLabel');
+  label.textContent = state.taskManagerFilter.length ? `Обрано: ${state.taskManagerFilter.length}` : 'Усі менеджери';
+  document.querySelectorAll('#taskManagerMultiMenu li').forEach(li => {
+    const cb = li.querySelector('input[type=checkbox]');
+    cb.checked = state.taskManagerFilter.includes(li.dataset.value);
+  });
+  renderTasksTable();
+}
+function renderTaskCalendar(){
+  const monthLabel = document.getElementById('taskCalMonthLabel');
+  const grid = document.getElementById('taskCalGrid');
+  if(!monthLabel || !grid) return;
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const m = state.taskCalendarMonth;
+  monthLabel.textContent = monthNames[m.getMonth()] + ' ' + m.getFullYear();
+  const firstDay = new Date(m.getFullYear(), m.getMonth(), 1);
+  let startOffset = firstDay.getDay();
+  startOffset = (startOffset === 0) ? 6 : startOffset - 1;
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+  const dows = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day muted"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(m.getFullYear(), m.getMonth(), day);
+    let cls = 'cal-day';
+    if(isToday(d)) cls += ' today';
+    if(state.taskDateRange.start && +d === +state.taskDateRange.start) cls += ' range-edge';
+    if(state.taskDateRange.end && +d === +state.taskDateRange.end) cls += ' range-edge';
+    if(state.taskDateRange.start && state.taskDateRange.end && d > state.taskDateRange.start && d < state.taskDateRange.end) cls += ' in-range';
+    html += `<div class="${cls}" onclick="pickTaskDate(event,${m.getFullYear()},${m.getMonth()},${day})">${day}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function taskCalNav(dir){
+  state.taskCalendarMonth = new Date(state.taskCalendarMonth.getFullYear(), state.taskCalendarMonth.getMonth()+dir, 1);
+  renderTaskCalendar();
+}
+function pickTaskDate(e,y,mo,d){
+  if(e) e.stopPropagation();
+  const picked = new Date(y,mo,d);
+  if(!state.taskDateRange.start || (state.taskDateRange.start && state.taskDateRange.end)){
+    state.taskDateRange.start = picked; state.taskDateRange.end = null;
+  } else if(picked < state.taskDateRange.start){
+    state.taskDateRange.start = picked;
+  } else {
+    state.taskDateRange.end = picked;
+  }
+  renderTaskCalendar();
+}
+function clearTaskRange(){ state.taskDateRange = {start:null, end:null}; renderTaskCalendar(); document.getElementById('taskDateRangeLabel').textContent = 'Оберіть період'; renderTasksTable(); }
+function applyTaskRange(){
+  const label = document.getElementById('taskDateRangeLabel');
+  if(state.taskDateRange.start && state.taskDateRange.end){
+    label.textContent = fmtDate(state.taskDateRange.start) + ' – ' + fmtDate(state.taskDateRange.end);
+  } else if(state.taskDateRange.start){
+    label.textContent = fmtDate(state.taskDateRange.start);
+  }
+  closeAllDropdowns();
+  renderTasksTable();
+}
+function setTasksTab(tab){
+  state.tasksTab = tab;
+  document.getElementById('tasksTabActiveBtn').classList.toggle('active', tab==='active');
+  document.getElementById('tasksTabDoneBtn').classList.toggle('active', tab==='done');
+  renderTasksTable();
+}
+function parseTaskDueDate(due){
+  const m = String(due||'').match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if(!m) return null;
+  return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
+}
+function renderTasksTable(){
+  const tbody = document.getElementById('tasksTableBody');
+  if(!tbody) return;
+  let rows = TASKS.filter(t => state.tasksTab === 'done' ? t.done : !t.done);
+  if(state.role === 'manager'){
+    rows = rows.filter(t=>t.managerId===state.managerId);
+  } else if(state.taskManagerFilter.length){
+    rows = rows.filter(t=>state.taskManagerFilter.includes(t.managerId));
+  }
+  if(state.taskDateRange.start && state.taskDateRange.end){
+    rows = rows.filter(t => {
+      const d = parseTaskDueDate(t.due);
+      return d && d >= state.taskDateRange.start && d <= state.taskDateRange.end;
+    });
+  }
+  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="5" class="empty-hint">${state.tasksTab==='done' ? 'Архів виконаних завдань порожній.' : 'Активних завдань немає.'}</td></tr>`; return; }
+  tbody.innerHTML = rows.map(t => `
+    <tr class="clickable" onclick="openClientCard(${t.leadId})">
+      <td>${t.title}</td>
+      <td class="link-name">${t.leadName}</td>
+      <td data-roles="admin cto">${managerName(t.managerId)}</td>
+      <td>${dtChip(t.due)}</td>
+      <td>${t.done ? '<span class="badge" style="color:var(--success);background:#1FAE6A1A;">Виконано</span>' : '<span class="badge warn">Активне</span>'}</td>
+    </tr>`).join('');
+}
+
+/* =========================================================
+   REPORTS
+   ========================================================= */
+// Фільтр дата+менеджер на сторінці звітності — той самий патерн, що на
+// сторінках "База клієнтів" і "Завдання".
+function renderReportManagerMultiOptions(){
+  const menu = document.getElementById('reportManagerMultiMenu');
+  if(!menu) return;
+  const pool = managerFilterPool();
+  menu.dataset.select = 'reportManagerMulti';
+  menu.innerHTML = pool.map(m => `
+    <li data-value="${m.id}" onclick="toggleReportManagerFilter(event,'${m.id}')">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleReportManagerFilter(event,'${m.id}')"><span></span></label> ${nameBadge(m.name, m.role==='admin')}
+    </li>`).join('');
+}
+function toggleReportManagerFilter(e, id){
+  e.stopPropagation();
+  const idx = state.reportManagerFilter.indexOf(id);
+  if(idx === -1) state.reportManagerFilter.push(id); else state.reportManagerFilter.splice(idx,1);
+  const label = document.getElementById('reportManagerMultiLabel');
+  label.textContent = state.reportManagerFilter.length ? `Обрано: ${state.reportManagerFilter.length}` : 'Усі менеджери';
+  document.querySelectorAll('#reportManagerMultiMenu li').forEach(li => {
+    const cb = li.querySelector('input[type=checkbox]');
+    cb.checked = state.reportManagerFilter.includes(li.dataset.value);
+  });
+  renderReportsTable();
+}
+function renderReportCalendar(){
+  const monthLabel = document.getElementById('reportCalMonthLabel');
+  const grid = document.getElementById('reportCalGrid');
+  if(!monthLabel || !grid) return;
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const m = state.reportCalendarMonth;
+  monthLabel.textContent = monthNames[m.getMonth()] + ' ' + m.getFullYear();
+  const firstDay = new Date(m.getFullYear(), m.getMonth(), 1);
+  let startOffset = firstDay.getDay();
+  startOffset = (startOffset === 0) ? 6 : startOffset - 1;
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+  const dows = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day muted"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(m.getFullYear(), m.getMonth(), day);
+    let cls = 'cal-day';
+    if(isToday(d)) cls += ' today';
+    if(state.reportDateRange.start && +d === +state.reportDateRange.start) cls += ' range-edge';
+    if(state.reportDateRange.end && +d === +state.reportDateRange.end) cls += ' range-edge';
+    if(state.reportDateRange.start && state.reportDateRange.end && d > state.reportDateRange.start && d < state.reportDateRange.end) cls += ' in-range';
+    html += `<div class="${cls}" onclick="pickReportDate(event,${m.getFullYear()},${m.getMonth()},${day})">${day}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function reportCalNav(dir){
+  state.reportCalendarMonth = new Date(state.reportCalendarMonth.getFullYear(), state.reportCalendarMonth.getMonth()+dir, 1);
+  renderReportCalendar();
+}
+function pickReportDate(e,y,mo,d){
+  if(e) e.stopPropagation();
+  const picked = new Date(y,mo,d);
+  if(!state.reportDateRange.start || (state.reportDateRange.start && state.reportDateRange.end)){
+    state.reportDateRange.start = picked; state.reportDateRange.end = null;
+  } else if(picked < state.reportDateRange.start){
+    state.reportDateRange.start = picked;
+  } else {
+    state.reportDateRange.end = picked;
+  }
+  renderReportCalendar();
+}
+function clearReportRange(){ state.reportDateRange = {start:null, end:null}; renderReportCalendar(); document.getElementById('reportDateRangeLabel').textContent = 'Оберіть період'; renderReportsTable(); }
+function applyReportRange(){
+  const label = document.getElementById('reportDateRangeLabel');
+  if(state.reportDateRange.start && state.reportDateRange.end){
+    label.textContent = fmtDate(state.reportDateRange.start) + ' – ' + fmtDate(state.reportDateRange.end);
+  } else if(state.reportDateRange.start){
+    label.textContent = fmtDate(state.reportDateRange.start);
+  }
+  closeAllDropdowns();
+  renderReportsTable();
+}
+function renderReportsTable(){
+  let rows = REPORTS;
+  if(state.role === 'manager'){
+    rows = rows.filter(r=>r.managerId===state.managerId);
+  } else if(state.reportManagerFilter.length){
+    rows = rows.filter(r=>state.reportManagerFilter.includes(r.managerId));
+  }
+  if(state.reportDateRange.start && state.reportDateRange.end){
+    rows = rows.filter(r => {
+      const d = parseUkDate(r.date);
+      return d >= state.reportDateRange.start && d <= state.reportDateRange.end;
+    });
+  }
+  const tbody = document.getElementById('reportsTableBody');
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="3" class="empty-hint">Немає звітів за обраними фільтрами.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(r => `
+    <tr class="clickable" onclick="openReportView(${r.id})">
+      <td>${r.date}</td>
+      <td data-roles="admin cto">${managerName(r.managerId)}</td>
+      <td>${r.comment}</td>
+    </tr>`).join('');
+}
+function openReportCreate(){
+  if(state.role === 'cto') return; // CTO лише переглядає звіти керівника відділу і менеджерів
+  state.reportMode = 'create';
+  document.getElementById('reportDetailTitle').textContent = 'Створити звіт — сьогодні';
+  REPORT_FIELDS.forEach(f => { document.getElementById('rd_'+f.key).value = '0'; });
+  document.getElementById('rdComment').value = '';
+  document.getElementById('rdComment').disabled = false;
+  document.getElementById('rdPeriodRow').style.display = '';
+  const periodMenu = document.querySelector('#reportPeriodSelect .cselect-menu');
+  const defaultPeriod = (state.role === 'manager') ? 'week' : 'month';
+  periodMenu.querySelectorAll('li').forEach(li=>{
+    li.classList.toggle('selected', li.dataset.value === defaultPeriod);
+  });
+  document.querySelector('#reportPeriodSelect .cselect-label').textContent = periodMenu.querySelector('li.selected').textContent;
+  document.getElementById('reportDetailActions').innerHTML = '<button class="btn" onclick="saveReportDetail()">Зберегти звіт</button>';
+  showView(null, 'report-detail');
+}
+function openReportView(id){
+  const r = REPORTS.find(r=>r.id===id);
+  if(!r) return;
+  state.reportMode = 'view';
+  state.reportViewId = id;
+  document.getElementById('reportDetailTitle').innerHTML = 'Звіт — ' + r.date + ' · ' + managerName(r.managerId);
+  document.getElementById('rdPeriodRow').style.display = 'none';
+  REPORT_FIELDS.forEach(f => { document.getElementById('rd_'+f.key).value = r[f.key] || 0; });
+  document.getElementById('rdComment').value = r.comment; document.getElementById('rdComment').disabled = true;
+  document.querySelectorAll('#view-report-detail .stepper button').forEach(b=>b.disabled = true);
+  document.getElementById('reportDetailActions').innerHTML = '';
+  showView(null, 'report-detail');
+}
+function saveReportDetail(){
+  const values = {};
+  REPORT_FIELDS.forEach(f => { values[f.key] = Number(document.getElementById('rd_'+f.key).value) || 0; });
+  const comment = document.getElementById('rdComment').value.trim()
+    || `${values.calls} дзвінків · ${values.meetings} зустрічей · ${values.interestedLPR} зацікавлених ЛПР`;
+  const periodLabel = document.querySelector('#reportPeriodSelect .cselect-label').textContent;
+  const today = new Date().toLocaleDateString('uk-UA');
+  const me = currentUserRecord();
+  const newReportId = nextReportId++;
+  REPORTS.unshift({id: newReportId, date: today, managerId: me ? me.id : 'ostap', comment, ...values});
+  document.querySelectorAll('#view-report-detail .stepper button').forEach(b=>b.disabled = false);
+  renderReportsTable();
+  logActivity(`Збережено звіт за ${today} (${periodLabel.toLowerCase()})`, {target:{type:'report', id:newReportId}});
+  showView(null, 'reports');
+}
+
+/* =========================================================
+   MANAGERS (admin)
+   ========================================================= */
+// CTO бачить і менеджерів, і керівників відділу (може створювати/редагувати
+// обидві ролі, зокрема міняти пароль керівнику відділу). Керівник відділу
+// бачить і редагує тут лише менеджерів (не інших керівників/CTO).
+function renderManagersTable(){
+  const tbody = document.getElementById('managersTableBody');
+  const visibleRoles = state.role === 'cto' ? ['manager','admin'] : ['manager'];
+  const rows = USERS.filter(u=>visibleRoles.includes(u.role));
+  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO'};
+  tbody.innerHTML = rows.map(m => `
+    <tr>
+      <td>${nameBadge(m.name, m.role==='admin')}</td><td>${m.login}</td><td>${roleLabels[m.role]}</td>
+      <td><button class="btn secondary small" onclick="openManagerPanel('${m.id}')">Редагувати</button></td>
+    </tr>`).join('');
+}
+function updateAdminPageLabels(){
+  const title = document.getElementById('adminSectionTitle');
+  const btn = document.getElementById('createManagerBtn');
+  if(!title || !btn) return;
+  if(state.role === 'cto'){
+    title.textContent = 'Менеджери та керівники відділу';
+    btn.textContent = '+ Створити користувача';
+  } else {
+    title.textContent = 'Менеджери';
+    btn.textContent = '+ Створити менеджера';
+  }
+}
+function setNewUserRoleSelect(role){
+  const menu = document.querySelector('#newUserRoleSelect .cselect-menu');
+  const trigger = document.querySelector('#newUserRoleSelect .cselect-label');
+  if(!menu || !trigger) return;
+  menu.querySelectorAll('li').forEach(li => li.classList.toggle('selected', li.dataset.value === role));
+  const selected = menu.querySelector('li.selected');
+  trigger.textContent = selected ? selected.textContent : 'Менеджер';
+}
+function openManagerPanel(id){
+  state.editingManagerId = id;
+  const roleField = document.getElementById('newUserRoleField');
+  const saveBtn = document.getElementById('managerPanelSaveBtn');
+  const note = document.getElementById('managerPanelNote');
+  if(id === null){
+    document.getElementById('managerPanelTitle').textContent = state.role === 'cto' ? 'Новий користувач' : 'Новий менеджер';
+    document.getElementById('mgrName').value = '';
+    document.getElementById('mgrEmail').value = '';
+    document.getElementById('mgrPass').value = '';
+    saveBtn.textContent = 'Створити';
+    note.textContent = 'Ця людина не зможе змінити логін і пароль самостійно — лише керівник відділу/CTO.';
+    if(roleField) setNewUserRoleSelect('manager');
+  } else {
+    const m = USERS.find(u=>u.id===id);
+    const roleLabels = {manager:'менеджера', admin:'керівника відділу'};
+    document.getElementById('managerPanelTitle').textContent = 'Редагувати ' + (roleLabels[m.role] || 'користувача');
+    document.getElementById('mgrName').value = m.name;
+    document.getElementById('mgrEmail').value = m.login;
+    document.getElementById('mgrPass').value = m.password;
+    saveBtn.textContent = 'Зберегти';
+    note.textContent = m.role === 'admin' ? 'Зміна пароля тут одразу застосовується для керівника відділу.' : 'Ця людина не зможе змінити логін і пароль самостійно — лише керівник відділу/CTO.';
+  }
+  // Роль можна обрати лише при СТВОРЕННІ нового користувача і лише для CTO —
+  // для менеджера-редактора чи вже існуючого користувача поле ховається.
+  if(roleField) roleField.style.display = (id === null && state.role === 'cto') ? '' : 'none';
+  openPanel('managerPanel');
+}
+function saveManager(){
+  const emailEl = document.getElementById('mgrEmail');
+  if(!validateEmailField(emailEl)) return;
+  const name = document.getElementById('mgrName').value.trim() || 'Новий користувач';
+  const email = emailEl.value.trim() || 'new@kofax.agency';
+  const pass = document.getElementById('mgrPass').value.trim() || generateRandomPw();
+  const roleLabels = {manager:'менеджера', admin:'керівника відділу'};
+  if(state.editingManagerId){
+    const m = USERS.find(u=>u.id===state.editingManagerId);
+    const oldPassword = m.password;
+    Object.assign(m, {name, login:email, password:pass});
+    logActivity(`Відредаговано дані ${roleLabels[m.role] || 'користувача'} ${name}${pass!==oldPassword ? ' (у т.ч. пароль)' : ''}`, {target:{type:'view', name:'admin'}});
+  } else {
+    let role = 'manager';
+    if(state.role === 'cto'){
+      const selected = document.querySelector('#newUserRoleSelect .cselect-menu li.selected');
+      role = selected ? selected.dataset.value : 'manager';
+    }
+    USERS.push({id:(role==='admin'?'a':'m')+Date.now(), name, role, login:email, password:pass});
+    logActivity(`Створено ${roleLabels[role]} ${name} (${email})`, {target:{type:'view', name:'admin'}});
+  }
+  renderManagersTable();
+  renderCredentialsTable();
+  renderPipelineSelectOptions();
+  renderManagerMultiOptions();
+  renderTaskManagerMultiOptions();
+  renderReportManagerMultiOptions();
+  closeAllPanels();
+}
+
+/* =========================================================
+   ACCOUNT / CREDENTIALS
+   ========================================================= */
+let acctEditing = false;
+function renderAccountView(){
+  acctEditing = false;
+  const me = currentUserRecord();
+  if(!me) return;
+  document.getElementById('acctName').value = me.name;
+  document.getElementById('acctName').disabled = true;
+  document.getElementById('acctEmail').value = me.login;
+  document.getElementById('acctEditActions').style.display = 'none';
+  const editBtn = document.getElementById('acctEditBtn');
+  if(editBtn){ editBtn.textContent = 'Редагувати'; editBtn.disabled = false; }
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
+  document.getElementById('acctRole').value = roleLabels[state.role];
+  updateHeaderAvatars();
+  renderHistory();
+}
+// Ім'я може змінити будь-яка роль. Зміна пароля для CTO/керівника відділу
+// відбувається окремо, нижче — через "База даних для входу" (Редагувати),
+// щоб не дублювати цю дію у двох місцях.
+function toggleAccountEdit(){
+  acctEditing = true;
+  document.getElementById('acctName').disabled = false;
+  document.getElementById('acctEditActions').style.display = 'flex';
+  const editBtn = document.getElementById('acctEditBtn');
+  editBtn.textContent = 'Редагування...';
+  editBtn.disabled = true;
+}
+function cancelAccountEdit(){
+  renderAccountView();
+}
+function saveAccountEdit(){
+  const me = currentUserRecord();
+  if(!me) return;
+  const newName = document.getElementById('acctName').value.trim() || me.name;
+  const oldName = me.name;
+
+  me.name = newName;
+  document.getElementById('userName').textContent = me.name;
+  renderCredentialsTable();
+  renderManagersTable();
+  renderPipelineSelectOptions();
+  renderManagerMultiOptions();
+  logActivity(`Оновлено власні дані профілю${oldName!==newName ? ' (' + oldName + ' → ' + newName + ')' : ''}`, {target:{type:'account'}});
+  renderAccountView();
+}
+// Керівник відділу не має права бачити (чи редагувати) дані входу CTO —
+// CTO вище в ієрархії. Керівнику відділу показуємо лише себе і менеджерів;
+// сам CTO бачить усіх, включно з іншими керівниками відділу.
+function renderCredentialsTable(){
+  const tbody = document.getElementById('credentialsTableBody');
+  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO'};
+  const rows = state.role === 'admin' ? USERS.filter(u=>u.role!=='cto') : USERS;
+  tbody.innerHTML = rows.map(u => `
+    <tr>
+      <td>${nameBadge(u.name, u.role==='admin')}</td><td>${roleLabels[u.role]}</td><td>${u.login}</td>
+      <td><span id="credmask-${u.id}" style="display:inline-block;min-width:112px;font-family:'Courier New',monospace;">${'•'.repeat(8)}</span> <button class="eye-btn" style="width:26px;height:26px;display:inline-flex;" onclick="toggleCredMask('${u.id}', this)">👁</button></td>
+      <td><button class="btn secondary small" onclick="openCredentialPanel('${u.id}')">Редагувати</button></td>
+    </tr>`).join('');
+}
+function toggleCredMask(id, btn){
+  const span = document.getElementById('credmask-'+id);
+  const u = USERS.find(u=>u.id===id);
+  const masked = span.textContent.includes('•');
+  span.textContent = masked ? u.password : '•'.repeat(8);
+}
+function openCredentialPanel(id){
+  state.editingCredentialId = id;
+  const u = USERS.find(u=>u.id===id);
+  document.getElementById('credName').value = u.name;
+  document.getElementById('credLogin').value = u.login;
+  document.getElementById('credPass').value = u.password;
+  openPanel('credentialPanel');
+}
+function saveCredential(){
+  const u = USERS.find(u=>u.id===state.editingCredentialId);
+  if(!u) return;
+  const loginEl = document.getElementById('credLogin');
+  if(!validateEmailField(loginEl)) return;
+  const oldPassword = u.password;
+  u.name = document.getElementById('credName').value.trim() || u.name;
+  u.login = loginEl.value.trim() || u.login;
+  u.password = document.getElementById('credPass').value.trim() || u.password;
+  renderCredentialsTable();
+  renderManagersTable();
+  renderPipelineSelectOptions();
+  renderManagerMultiOptions();
+  closeAllPanels();
+  const passwordChanged = u.password !== oldPassword;
+  const me = currentUserRecord();
+  const isSelfEdit = me && me.id === u.id;
+  if(isSelfEdit && passwordChanged){
+    // Власна зміна пароля: сам користувач бачить просто "пароль змінено",
+    // без згадки CTO — CTO отримує окреме приватне сповіщення (лише йому).
+    logActivity(
+      `Змінено власний пароль (${u.name})`,
+      state.role === 'admin' ? {target:{type:'account'}, notifyCTO:`Керівник відділу ${u.name} змінив(ла) свій пароль`} : {target:{type:'account'}}
+    );
+  } else {
+    logActivity(`Змінено дані входу користувача ${u.name}${passwordChanged ? ' (у т.ч. пароль)' : ''}`, {target:{type:'account'}});
+  }
+}
+
+/* password helpers */
+function generateRandomPw(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+  let out = '';
+  for(let i=0;i<10;i++) out += chars[Math.floor(Math.random()*chars.length)];
+  return out;
+}
+function generatePw(fieldId){ document.getElementById(fieldId).value = generateRandomPw(); document.getElementById(fieldId).type='text'; }
+function togglePwVisibility(fieldId, btn){
+  const input = document.getElementById(fieldId);
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+/* =========================================================
+   UNDO TOAST (5 секунд, кнопка "Скасувати"; якщо не натиснули —
+   дія стає остаточною і "падає в архів")
+   ========================================================= */
+let pendingUndo = null;
+function showUndoToast(message, undoFn){
+  // Якщо вже є активний тост — попередня дія одразу стає остаточною.
+  if(pendingUndo){ clearTimeout(pendingUndo.timeoutId); pendingUndo = null; }
+  document.getElementById('undoToastText').textContent = message;
+  const toast = document.getElementById('undoToast');
+  const bar = document.getElementById('undoToastBar');
+  toast.classList.add('show');
+  bar.style.animation = 'none';
+  void bar.offsetWidth; // перезапуск CSS-анімації смужки таймера
+  bar.style.animation = 'toast-shrink 5s linear forwards';
+  const timeoutId = setTimeout(()=>{ pendingUndo = null; hideUndoToast(); }, 5000);
+  pendingUndo = {timeoutId, undoFn};
+}
+function undoLastAction(){
+  if(!pendingUndo) return;
+  clearTimeout(pendingUndo.timeoutId);
+  pendingUndo.undoFn();
+  pendingUndo = null;
+  hideUndoToast();
+}
+function hideUndoToast(){
+  document.getElementById('undoToast').classList.remove('show');
+}
+
+/* =========================================================
+   CUSTOM CONFIRM / ALERT MODAL (заміна потворних браузерних
+   confirm()/alert() — той самий вигляд для будь-якого підтвердження
+   в СРМ). showConfirmModal повертає Promise<boolean>: true — ОК,
+   false — скасовано/закрито оверлеєм.
+   ========================================================= */
+let confirmModalResolver = null;
+function showConfirmModal(opts){
+  opts = opts || {};
+  return new Promise(resolve => {
+    document.getElementById('confirmModalTitle').textContent = opts.title || 'Підтвердіть дію';
+    document.getElementById('confirmModalText').textContent = opts.text || '';
+    const iconEl = document.getElementById('confirmModalIcon');
+    iconEl.textContent = opts.icon || (opts.danger ? '🗑' : '❗');
+    iconEl.classList.toggle('danger', !!opts.danger);
+    const okBtn = document.getElementById('confirmModalOkBtn');
+    const cancelBtn = document.getElementById('confirmModalCancelBtn');
+    okBtn.textContent = opts.okText || 'OK';
+    okBtn.className = opts.danger ? 'btn danger-ghost' : 'btn';
+    cancelBtn.style.display = opts.onlyOk ? 'none' : 'inline-flex';
+    cancelBtn.textContent = opts.cancelText || 'Скасувати';
+    document.getElementById('modalOverlay').classList.add('open');
+    document.getElementById('confirmModal').classList.add('open');
+    confirmModalResolver = resolve;
+  });
+}
+function resolveConfirmModal(result){
+  if(!confirmModalResolver) return;
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.getElementById('confirmModal').classList.remove('open');
+  const resolve = confirmModalResolver;
+  confirmModalResolver = null;
+  resolve(result);
+}
+// Зручний хелпер для простих інформаційних повідомлень (заміна alert()) —
+// лише кнопка OK, без "Скасувати".
+function showAlertModal(text, title){
+  return showConfirmModal({title: title || 'Повідомлення', text, onlyOk:true, okText:'Зрозуміло'});
+}
+
+/* =========================================================
+   SIDE PANELS
+   ========================================================= */
+// Захист від випадкової втрати незбережених даних: клік по темному
+// оверлею (повз панель) — випадкова дія, тож якщо у формі є незбережені
+// зміни, ми питаємо підтвердження і не закриваємо панель без згоди.
+// Хрестик і кнопки "Закрити"/"Скасувати" — свідома дія користувача,
+// закривають одразу без запитань (closeAllPanels викликається напряму).
+let panelDirty = false;
+function openPanel(id){
+  document.getElementById('panelOverlay').classList.add('open');
+  document.getElementById(id).classList.add('open');
+  panelDirty = false;
+}
+function markPanelDirty(){ panelDirty = true; }
+document.addEventListener('input', function(e){
+  if(e.target.closest('.side-panel.open')) panelDirty = true;
+});
+async function handleOverlayClick(){
+  if(panelDirty){
+    const ok = await showConfirmModal({
+      title:'Незбережені зміни',
+      text:'У формі є незбережені зміни. Закрити без збереження?',
+      okText:'Закрити без збереження',
+      danger:true
+    });
+    if(!ok) return;
+  }
+  closeAllPanels();
+}
+function closeAllPanels(){
+  document.getElementById('panelOverlay').classList.remove('open');
+  document.querySelectorAll('.side-panel.open').forEach(p=>p.classList.remove('open'));
+  panelDirty = false;
+}
+
+/* =========================================================
+   VALIDATION / INPUT MASKS
+   ========================================================= */
+function isValidEmail(v){ return /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(v.trim()); }
+function isValidPhone(v){ const digits = v.replace(/\D/g,''); return digits.length >= 10 && digits.length <= 12; }
+
+// Живе форматування номера в процесі вводу: +380 XX XXX XX XX
+function formatPhoneLive(input){
+  let digits = input.value.replace(/\D/g,'');
+  if(digits.startsWith('0')) digits = '380' + digits.slice(1);
+  else if(!digits.startsWith('380') && digits.length > 0) digits = '380' + digits;
+  digits = digits.slice(0,12);
+  let out = digits.length ? '+' : '';
+  if(digits.length>0) out += digits.slice(0,3);
+  if(digits.length>3) out += ' ' + digits.slice(3,5);
+  if(digits.length>5) out += ' ' + digits.slice(5,8);
+  if(digits.length>8) out += ' ' + digits.slice(8,10);
+  if(digits.length>10) out += ' ' + digits.slice(10,12);
+  input.value = out;
+}
+function setFieldError(inputEl, message){
+  if(!inputEl) return;
+  const wrap = inputEl.closest('.field, .login-field');
+  if(!wrap) return;
+  let err = wrap.querySelector('.field-error');
+  if(!err){ err = document.createElement('div'); err.className = 'field-error'; wrap.appendChild(err); }
+  if(message){ err.textContent = message; wrap.classList.add('has-error'); }
+  else { err.textContent = ''; wrap.classList.remove('has-error'); }
+}
+function validateEmailField(inputEl){
+  const v = inputEl.value.trim();
+  if(!v){ setFieldError(inputEl, null); return true; }
+  if(!isValidEmail(v)){ setFieldError(inputEl, 'Некоректний формат email'); return false; }
+  setFieldError(inputEl, null);
+  return true;
+}
+function validatePhoneField(inputEl){
+  const v = inputEl.value.trim();
+  if(!v){ setFieldError(inputEl, null); return true; }
+  if(!isValidPhone(v)){ setFieldError(inputEl, 'Некоректний номер телефону'); return false; }
+  setFieldError(inputEl, null);
+  return true;
+}
+// Обов'язкові поля картки угоди (ім'я, телефон, компанія, ніша). Не затирає
+// помилку формату, яку вже міг виставити інший валідатор (напр. телефону).
+function validateRequiredField(inputEl, message){
+  const v = inputEl.value.trim();
+  if(!v){ setFieldError(inputEl, message); return false; }
+  const wrap = inputEl.closest('.field, .login-field');
+  const err = wrap ? wrap.querySelector('.field-error') : null;
+  if(err && err.textContent === message){ setFieldError(inputEl, null); }
+  return true;
+}
+
+/* number stepper (reports) */
+function stepValue(id, delta){
+  const el = document.getElementById(id);
+  let v = Number(el.value) || 0;
+  v = Math.max(0, v + delta);
+  el.value = v;
+}
+
+/* =========================================================
+   REPORT REMINDERS (weekly for managers, monthly for admin/cto)
+   ========================================================= */
+// Нагадування персональне для кожного спеціаліста (по імені), а не загальне
+// для ролі. CTO нічого не подає (лише переглядає звіти керівника відділу і
+// менеджерів), тому для CTO банер/сповіщення про подання звіту не показуються.
+function renderReminderBanner(){
+  const el = document.getElementById('reportReminderText');
+  const banner = document.getElementById('reportReminderBanner');
+  if(!el || !banner) return;
+  const me = currentUserRecord();
+  const name = me ? me.name : '';
+  if(state.role === 'manager'){
+    banner.style.display = '';
+    el.textContent = `${name}, нагадування: подай звіт щотижня (щопонеділка).`;
+  } else if(state.role === 'admin'){
+    banner.style.display = '';
+    el.textContent = `${name}, нагадування: зведений звіт по всіх менеджерах подається раз на місяць (1 числа).`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+function seedReminderNotification(role){
+  if(role === 'cto') return;
+  const me = currentUserRecord();
+  const name = me ? me.name : '';
+  const text = role === 'manager'
+    ? `${name}, нагадування: щотижневий звіт потрібно подати до кінця тижня`
+    : `${name}, нагадування: місячний зведений звіт потрібно підготувати до кінця місяця`;
+  NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text, time:'зараз', read:false, ownerId: me ? me.id : null});
+}
+</script>
+</body>
+</html>
