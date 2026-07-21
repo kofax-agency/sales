@@ -772,7 +772,7 @@
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
           <div class="table-scroll"><table>
-            <thead><tr><th>Завдання</th><th>Клієнт</th><th data-roles="admin cto">Менеджер</th><th>Дедлайн</th><th>Статус</th><th>Дії</th></tr></thead>
+            <thead><tr><th style="width:40px;"></th><th>Завдання</th><th>Клієнт</th><th data-roles="admin cto">Менеджер</th><th>Дедлайн</th><th>Статус</th><th>Дії</th></tr></thead>
             <tbody id="tasksTableBody"></tbody>
           </table></div>
         </div>
@@ -1331,6 +1331,13 @@ function nameBadge(name, isAdmin){
   if(!isAdmin) return name;
   return `<span style="display:inline-flex;align-items:center;gap:6px;">${name}${crownIcon()}</span>`;
 }
+// Єдина іконка "видалити" для всього застосунку (замість емодзі 🗑, яке
+// виглядає по-різному в різних ОС/шрифтах) — контурний кошик, колір через
+// currentColor, тож підхоплює колір кнопки (напр. .danger-icon-btn).
+function trashIconSvg(size){
+  size = size || 14;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+}
 function managerName(id){
   const u = USERS.find(u=>u.id===id);
   if(!u) return id;
@@ -1390,11 +1397,19 @@ function currentActorLabel(){
 // текст сповіщення, яке в реальній системі пішло б окремо на акаунт CTO
 // (напр. коли керівник відділу міняє власний пароль). opts.target — куди
 // перейти при кліку на це сповіщення (картка ліда, звіт, сторінка тощо).
+// opts.silent=true — подія лягає лише в історію (кабінет керівника/CTO),
+// без push-сповіщення у дзвіночку. Використовується для рутинних змін
+// структури воронок (створення/перейменування/редагування стовпців/
+// видалення/пересилання угод між воронками) — це не "нагадування", тому
+// не повинно засмічувати push-стрічку; там мають лишатись лише реальні
+// нагадування (дедлайни завдань, дзвінки, звіти тощо).
 function logActivity(action, opts){
   opts = opts || {};
   const me = currentUserRecord();
   HISTORY.unshift({id: Date.now()+Math.random(), actor: currentActorLabel(), action, time: nowTimeStr()});
-  NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: action, time:'зараз', read:false, target: opts.target || null, ownerId: me ? me.id : null});
+  if(!opts.silent){
+    NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: action, time:'зараз', read:false, target: opts.target || null, ownerId: me ? me.id : null});
+  }
   if(opts.notifyCTO){
     NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: '🔒 Для CTO: ' + opts.notifyCTO, time:'зараз', read:false, target: {type:'account'}, ownerId:'ostap'});
   }
@@ -2059,7 +2074,7 @@ function renderNewPipelineStages(){
   document.getElementById('pipelineStagesList').innerHTML = newPipelineStages.map((s,i)=>`
     <div class="pipeline-stage-row">
       <input type="text" value="${s}" oninput="newPipelineStages[${i}]=this.value" placeholder="Назва стовпця">
-      <button type="button" class="danger-icon-btn" title="Видалити" onclick="removeNewPipelineStage(${i})">🗑</button>
+      <button type="button" class="danger-icon-btn" title="Видалити" onclick="removeNewPipelineStage(${i})">${trashIconSvg()}</button>
     </div>`).join('');
 }
 function addNewPipelineStage(){ newPipelineStages.push('Новий етап'); renderNewPipelineStages(); }
@@ -2077,7 +2092,7 @@ function savePipeline(){
   renderBoardPipelineOptions();
   renderBoard();
   closeAllPanels();
-  logActivity(`Створено нову воронку "${name}" для ${pipelineOwnerName(ownerId)} (${stages.join(' → ')})`, {target:{type:'view', name:'pipeline'}});
+  logActivity(`Створено нову воронку "${name}" для ${pipelineOwnerName(ownerId)} (${stages.join(' → ')})`, {target:{type:'view', name:'pipeline'}, silent:true});
 }
 
 function renderBoard(){
@@ -2152,6 +2167,12 @@ function toggleStageEditor(){
   const settingsBtnOpen = document.getElementById('pipelineSettingsBtn');
   if(settingsBtnOpen) settingsBtnOpen.classList.add('js-hidden');
   document.getElementById('addDealBtn').classList.add('js-hidden');
+  // Під час редагування самої воронки перемикати воронку/фільтр не має сенсу
+  // (і можна випадково загубити незбережені зміни) — ховаємо обидва.
+  const boardPipelineSelectEl = document.getElementById('boardPipelineSelect');
+  if(boardPipelineSelectEl) boardPipelineSelectEl.classList.add('js-hidden');
+  const ownerFilterEl = document.getElementById('pipelineOwnerFilterSelect');
+  if(ownerFilterEl) ownerFilterEl.classList.add('js-hidden');
   const delBtn = document.getElementById('deletePipelineBtn');
   if(delBtn) delBtn.classList.toggle('js-hidden', PIPELINES.filter(p=>p.ownerId===currentPipelineOwner()).length <= 1);
   renderStageEditor();
@@ -2191,7 +2212,7 @@ function renderStageEditorFromArray(){
         <span class="drag-handle" title="Перетягніть, щоб змінити порядок">⋮⋮</span>
         <span class="stage-order-badge">${i+1}</span>
         <input type="text" class="stage-name-input" value="${s}" oninput="editingStages[${i}]=this.value" placeholder="Назва етапу">
-        <button class="danger-icon-btn" type="button" title="Видалити етап" onclick="removeStageEditorItem(${i})">🗑</button>
+        <button class="danger-icon-btn" type="button" title="Видалити етап" onclick="removeStageEditorItem(${i})">${trashIconSvg()}</button>
       </div>
     </div>`).join('') + `<div class="stage-add-col" onclick="addStageEditorItem()">+ Додати етап</div>`;
 }
@@ -2203,9 +2224,19 @@ function cancelStageEditor(){
   const settingsBtnClose = document.getElementById('pipelineSettingsBtn');
   if(settingsBtnClose) settingsBtnClose.classList.remove('js-hidden');
   document.getElementById('addDealBtn').classList.remove('js-hidden');
+  const boardPipelineSelectEl2 = document.getElementById('boardPipelineSelect');
+  if(boardPipelineSelectEl2) boardPipelineSelectEl2.classList.remove('js-hidden');
+  const ownerFilterEl2 = document.getElementById('pipelineOwnerFilterSelect');
+  if(ownerFilterEl2) ownerFilterEl2.classList.remove('js-hidden');
 }
-function saveStageEditor(){
+async function saveStageEditor(){
   const cp = currentPipeline();
+  const ok = await showConfirmModal({
+    title:'Зберегти зміни воронки',
+    text:`Застосувати зміни до стовпців і назви воронки "${cp.name}"?`,
+    okText:'Зберегти'
+  });
+  if(!ok) return;
   const removed = cp.stages.filter(s => !editingStages.includes(s));
   LEADS.forEach(l => { if((l.pipelineId||'default') === cp.id && removed.includes(l.stage)) l.stage = editingStages[0] || l.stage; });
   cp.stages = editingStages.filter(s => s.trim() !== '');
@@ -2215,7 +2246,7 @@ function saveStageEditor(){
   cancelStageEditor();
   renderBoardPipelineOptions();
   renderBoard();
-  logActivity(`Оновлено структуру воронки "${cp.name}": ${cp.stages.join(' → ')}`, {target:{type:'view', name:'pipeline'}});
+  logActivity(`Оновлено структуру воронки "${cp.name}": ${cp.stages.join(' → ')}`, {target:{type:'view', name:'pipeline'}, silent:true});
   fbScheduleSave();
 }
 async function deletePipelineFromEditor(){
@@ -2245,7 +2276,7 @@ async function deletePipelineFromEditor(){
   cancelStageEditor();
   renderBoardPipelineOptions();
   renderBoard();
-  logActivity(`Видалено воронку "${cp.name}"`, {target:{type:'view', name:'pipeline'}});
+  logActivity(`Видалено воронку "${cp.name}"`, {target:{type:'view', name:'pipeline'}, silent:true});
   fbScheduleSave();
 }
 
@@ -2480,7 +2511,7 @@ function confirmForwardDeal(){
   closeForwardModal();
   renderBoard();
   renderClientsTable();
-  logActivity(`Угоду "${lead.name}" перенесено з воронки "${fromPipeline?fromPipeline.name:'?'} (${fromPipeline?pipelineOwnerName(fromPipeline.ownerId):'?'})" до "${targetPipeline.name} (${pipelineOwnerName(targetPipeline.ownerId)})" (${targetStage})`, {target:{type:'lead', id:lead.id}});
+  logActivity(`Угоду "${lead.name}" перенесено з воронки "${fromPipeline?fromPipeline.name:'?'} (${fromPipeline?pipelineOwnerName(fromPipeline.ownerId):'?'})" до "${targetPipeline.name} (${pipelineOwnerName(targetPipeline.ownerId)})" (${targetStage})`, {target:{type:'lead', id:lead.id}, silent:true});
 }
 
 /* =========================================================
@@ -2821,19 +2852,19 @@ function renderTasksTable(){
       return d && d >= state.taskDateRange.start && d <= state.taskDateRange.end;
     });
   }
-  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="6" class="empty-hint">${state.tasksTab==='done' ? 'Архів виконаних завдань порожній.' : 'Активних завдань немає.'}</td></tr>`; return; }
+  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="7" class="empty-hint">${state.tasksTab==='done' ? 'Архів виконаних завдань порожній.' : 'Активних завдань немає.'}</td></tr>`; return; }
   tbody.innerHTML = rows.map(t => {
     const idx = TASKS.indexOf(t);
     return `
     <tr class="clickable" onclick="openClientCard(${t.leadId})">
+      <td onclick="event.stopPropagation()"><label class="chk" title="${t.done ? 'Повернути в активні' : 'Позначити виконаним'}"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTaskDone(${idx},this.checked)"><span></span></label></td>
       <td>${t.title}</td>
       <td class="link-name">${t.leadName}</td>
       <td data-roles="admin cto">${managerName(t.managerId)}</td>
       <td>${dtChip(t.due)}</td>
       <td>${t.done ? '<span class="badge" style="color:var(--success);background:#1FAE6A1A;">Виконано</span>' : '<span class="badge warn">Активне</span>'}</td>
-      <td onclick="event.stopPropagation()" style="display:flex;gap:8px;align-items:center;">
-        <label class="chk" title="${t.done ? 'Повернути в активні' : 'Позначити виконаним'}"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTaskDone(${idx},this.checked)"><span></span></label>
-        <button type="button" class="danger-icon-btn" title="Видалити завдання" onclick="deleteTask(${idx})">🗑</button>
+      <td onclick="event.stopPropagation()">
+        <button type="button" class="danger-icon-btn" title="Видалити завдання" onclick="deleteTask(${idx})">${trashIconSvg()}</button>
       </td>
     </tr>`;
   }).join('');
@@ -3406,7 +3437,7 @@ function showConfirmModal(opts){
     document.getElementById('confirmModalTitle').textContent = opts.title || 'Підтвердіть дію';
     document.getElementById('confirmModalText').textContent = opts.text || '';
     const iconEl = document.getElementById('confirmModalIcon');
-    iconEl.textContent = opts.icon || (opts.danger ? '🗑' : '❗');
+    iconEl.innerHTML = opts.icon || (opts.danger ? trashIconSvg(20) : '❗');
     iconEl.classList.toggle('danger', !!opts.danger);
     const okBtn = document.getElementById('confirmModalOkBtn');
     const cancelBtn = document.getElementById('confirmModalCancelBtn');
