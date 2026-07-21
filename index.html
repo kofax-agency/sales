@@ -1028,7 +1028,10 @@
       </div>
       <div class="field-row">
         <div class="field"><label>Посилання</label><input id="dealLink" type="text"></div>
-        <div class="field"><label>Дата створення</label><input id="dealCreatedAt" type="text" disabled></div>
+        <div class="field">
+          <label>Дата створення</label>
+          <div id="dealCreatedAt" style="padding:9px 12px;font-size:13px;color:var(--text-muted);font-weight:600;"></div>
+        </div>
       </div>
       <div class="field" data-roles="admin cto" style="max-width:220px;"><label>Сума угоди ($)</label><input id="dealValue" type="text" inputmode="numeric" placeholder="0" oninput="formatMoneyLive(this)"></div>
     </div>
@@ -1606,16 +1609,25 @@ function positionCSelectPopover(el){
   const popover = el.querySelector('.cselect-menu, .calendar-popover');
   if(!trigger || !popover) return;
   const rect = trigger.getBoundingClientRect();
+  // .side-panel і .confirm-modal мають CSS transform, а за специфікацією
+  // transform на предку робить його "containing block" для position:fixed
+  // нащадків. getBoundingClientRect() завжди відносний до вікна, тож без
+  // цієї корекції popover усередині бічної панелі чи модалки рахує координати
+  // від вікна, а рендериться відносно рамки transform-предка — і "вилітає"
+  // за межі екрана, виглядаючи так, ніби взагалі не відкривається.
+  const anchor = el.closest('.side-panel, .confirm-modal');
+  const origin = anchor ? anchor.getBoundingClientRect() : {top:0, left:0, width:window.innerWidth, height:window.innerHeight};
   popover.style.position = 'fixed';
-  popover.style.top = (rect.bottom + 6) + 'px';
+  popover.style.top = (rect.bottom - origin.top + 6) + 'px';
   popover.style.minWidth = rect.width + 'px';
-  let left = rect.left;
+  let left = rect.left - origin.left;
   const popW = popover.offsetWidth || rect.width;
-  if(left + popW > window.innerWidth - 12) left = Math.max(12, window.innerWidth - popW - 12);
+  if(left + popW > origin.width - 12) left = Math.max(12, origin.width - popW - 12);
   popover.style.left = left + 'px';
   const popH = popover.offsetHeight;
-  if(rect.bottom + 6 + popH > window.innerHeight - 12){
-    popover.style.top = Math.max(12, rect.top - popH - 6) + 'px';
+  const topPos = rect.bottom - origin.top + 6;
+  if(topPos + popH > origin.height - 12){
+    popover.style.top = Math.max(12, (rect.top - origin.top) - popH - 6) + 'px';
   }
 }
 // trigger — необов'язковий явний елемент-якір для позиціонування (потрібен,
@@ -2093,7 +2105,7 @@ function openDeal(id, presetStage){
     document.getElementById('dealValue').value = '';
     // Дата створення встановлюється автоматично при збереженні — тут лише
     // показуємо, якою вона буде, полем не можна керувати вручну.
-    document.getElementById('dealCreatedAt').value = new Date().toLocaleDateString('uk-UA') + ' (встановиться при збереженні)';
+    document.getElementById('dealCreatedAt').textContent = new Date().toLocaleDateString('uk-UA') + ' (встановиться при збереженні)';
     document.getElementById('dealNotesList').innerHTML = '<div class="empty-hint">Нотаток ще немає.</div>';
     document.getElementById('dealTasksList').innerHTML = '<div class="empty-hint">Завдань ще немає.</div>';
     document.getElementById('dealAttachList').innerHTML = '<div class="empty-hint">Документів ще немає.</div>';
@@ -2108,7 +2120,7 @@ function openDeal(id, presetStage){
     document.getElementById('dealCompany').value = l.company;
     document.getElementById('dealNiche').value = l.niche;
     document.getElementById('dealLink').value = l.link;
-    document.getElementById('dealCreatedAt').value = l.createdAt;
+    document.getElementById('dealCreatedAt').textContent = l.createdAt;
     document.getElementById('dealValue').value = l.value ? Number(l.value).toLocaleString('en-US') : '';
     renderDealNotes(l);
     renderDealTasks(l);
