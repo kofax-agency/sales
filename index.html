@@ -182,10 +182,6 @@
   .lead-value{font-size:12px;font-weight:700;color:var(--text-muted);margin-right:auto;}
   .card-forward-btn{width:24px;height:24px;border:none;border-radius:6px;background:transparent;color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:background .15s,color .15s;}
   .card-forward-btn:hover{background:var(--surface-2);color:var(--accent-1);}
-  .icon-picker{display:flex;flex-wrap:wrap;gap:8px;}
-  .icon-opt{width:38px;height:38px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,border-color .15s;}
-  .icon-opt:hover{background:var(--surface-hover);}
-  .icon-opt.selected{border-color:var(--accent-1);background:#4C6FFF22;}
   .pipeline-stage-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
   .pipeline-stage-row input{flex:1;padding:9px 12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--radius-sm);font-size:13px;outline:none;}
   .status-icon.red{color:var(--danger);}
@@ -676,7 +672,7 @@
           </div>
           <div data-roles="admin cto" class="cselect" id="boardPipelineSelect">
             <button type="button" class="cselect-trigger" style="border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
-              <span class="cselect-label">📊 Воронка продажів</span>
+              <span class="cselect-label">Воронка продажів</span>
               <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
             </button>
             <ul class="cselect-menu" id="boardPipelineSelectMenu" data-select="boardPipeline"></ul>
@@ -686,6 +682,13 @@
         </div>
 
         <div class="board" id="board"></div>
+        <div id="stageEditorNameRow" style="display:none;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;" class="row-between">
+          <div class="field" style="max-width:320px;margin:0;flex:1;min-width:220px;">
+            <label>Назва воронки</label>
+            <input type="text" id="stageEditorPipelineName" placeholder="Назва воронки">
+          </div>
+          <button class="btn danger-ghost" type="button" onclick="deletePipelineFromEditor()" id="deletePipelineBtn">Видалити воронку</button>
+        </div>
         <div id="stageEditorBoard" style="display:none;"></div>
         <div id="stageEditorActions" style="display:none;margin-top:14px;gap:10px;" class="row-between">
           <div></div>
@@ -767,7 +770,7 @@
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
           <div class="table-scroll"><table>
-            <thead><tr><th>Завдання</th><th>Клієнт</th><th data-roles="admin cto">Менеджер</th><th>Дедлайн</th><th>Статус</th></tr></thead>
+            <thead><tr><th>Завдання</th><th>Клієнт</th><th data-roles="admin cto">Менеджер</th><th>Дедлайн</th><th>Статус</th><th>Дії</th></tr></thead>
             <tbody id="tasksTableBody"></tbody>
           </table></div>
         </div>
@@ -1179,10 +1182,6 @@
   <div class="panel-body">
     <div class="field"><label>Назва воронки</label><input id="pipelineName" type="text" placeholder="Напр. Партнерства"></div>
     <div class="field">
-      <label>Іконка</label>
-      <div class="icon-picker" id="pipelineIconPicker"></div>
-    </div>
-    <div class="field">
       <label>Стовпці воронки</label>
       <div id="pipelineStagesList"></div>
       <button class="btn secondary small" type="button" style="margin-top:4px;" onclick="addNewPipelineStage()">+ Додати стовпець</button>
@@ -1203,7 +1202,7 @@
 // воронці він зараз) окремо від managerId (хто ним займається) і stage
 // (стовпець всередині поточної воронки).
 let PIPELINES = [
-  {id:'default', name:'Воронка продажів', icon:'📊', stages:["Контакт","Передзвонити","Зацікавлений","Переданий - ADS","Переданий - WEB","Переданий - SMM","Відмова"]}
+  {id:'default', name:'Воронка продажів', stages:["Контакт","Передзвонити","Зацікавлений","Переданий - ADS","Переданий - WEB","Переданий - SMM","Відмова"]}
 ];
 
 const USERS = [
@@ -1927,30 +1926,20 @@ function renderBoardPipelineOptions(){
   const menu = document.getElementById('boardPipelineSelectMenu');
   if(!menu) return;
   const cp = currentPipeline();
-  menu.innerHTML = PIPELINES.map(p=>`<li data-value="${p.id}" class="${p.id===state.currentPipelineId?'selected':''}">${p.icon} ${p.name}</li>`).join('')
+  menu.innerHTML = PIPELINES.map(p=>`<li data-value="${p.id}" class="${p.id===state.currentPipelineId?'selected':''}">${p.name}</li>`).join('')
     + `<li class="menu-footer" style="color:var(--accent-1);font-weight:700;" onclick="closeAllDropdowns();openPipelinePanel();">+ Створити воронку</li>`;
   const trigger = document.querySelector('#boardPipelineSelect .cselect-label');
-  if(trigger) trigger.innerHTML = `${cp.icon} ${cp.name}`;
+  if(trigger) trigger.textContent = cp.name;
 }
 
 /* ---- створення нової воронки (тільки admin/cto) ---- */
-const PIPELINE_ICON_OPTIONS = ['📊','📈','🎯','💼','🤝','📞','✉️','🛠','🌐','⭐','🔥','🚀'];
 let newPipelineStages = [];
-let newPipelineIcon = '📊';
 function openPipelinePanel(){
   document.getElementById('pipelineName').value = '';
   newPipelineStages = ['Новий лід','В роботі','Закрито'];
-  newPipelineIcon = '📊';
-  renderPipelineIconPicker();
   renderNewPipelineStages();
   openPanel('pipelinePanel');
 }
-function renderPipelineIconPicker(){
-  document.getElementById('pipelineIconPicker').innerHTML = PIPELINE_ICON_OPTIONS.map(ic=>
-    `<button type="button" class="icon-opt ${ic===newPipelineIcon?'selected':''}" onclick="selectPipelineIcon('${ic}')">${ic}</button>`
-  ).join('');
-}
-function selectPipelineIcon(ic){ newPipelineIcon = ic; renderPipelineIconPicker(); }
 function renderNewPipelineStages(){
   document.getElementById('pipelineStagesList').innerHTML = newPipelineStages.map((s,i)=>`
     <div class="pipeline-stage-row">
@@ -1966,7 +1955,7 @@ function savePipeline(){
   const stages = newPipelineStages.map(s=>s.trim()).filter(Boolean);
   if(!stages.length){ showAlertModal('Додайте хоча б один стовпець.', 'Немає стовпців'); return; }
   const id = 'pl' + Date.now();
-  PIPELINES.push({id, name, icon:newPipelineIcon, stages});
+  PIPELINES.push({id, name, stages});
   state.currentPipelineId = id;
   renderBoardPipelineOptions();
   renderBoard();
@@ -2037,6 +2026,7 @@ function dropCard(e, stage){
 /* ---- stage editor ---- */
 function toggleStageEditor(){
   document.getElementById('board').style.display = 'none';
+  document.getElementById('stageEditorNameRow').style.display = 'flex';
   document.getElementById('stageEditorBoard').style.display = 'flex';
   document.getElementById('stageEditorBoard').style.gap = '14px';
   document.getElementById('stageEditorBoard').style.flexWrap = 'wrap';
@@ -2044,11 +2034,15 @@ function toggleStageEditor(){
   document.getElementById('stageEditorActions').style.display = 'flex';
   document.getElementById('editStagesBtn').classList.add('js-hidden');
   document.getElementById('addDealBtn').classList.add('js-hidden');
+  const delBtn = document.getElementById('deletePipelineBtn');
+  if(delBtn) delBtn.classList.toggle('js-hidden', PIPELINES.length <= 1);
   renderStageEditor();
 }
 let editingStages = [];
 function renderStageEditor(){
   editingStages = [...currentPipeline().stages];
+  const nameInput = document.getElementById('stageEditorPipelineName');
+  if(nameInput) nameInput.value = currentPipeline().name;
   renderStageEditorFromArray();
 }
 function removeStageEditorItem(i){ editingStages.splice(i,1); renderStageEditorFromArray(); }
@@ -2085,6 +2079,7 @@ function renderStageEditorFromArray(){
 }
 function cancelStageEditor(){
   document.getElementById('board').style.display = 'flex';
+  document.getElementById('stageEditorNameRow').style.display = 'none';
   document.getElementById('stageEditorBoard').style.display = 'none';
   document.getElementById('stageEditorActions').style.display = 'none';
   document.getElementById('editStagesBtn').classList.remove('js-hidden');
@@ -2095,9 +2090,42 @@ function saveStageEditor(){
   const removed = cp.stages.filter(s => !editingStages.includes(s));
   LEADS.forEach(l => { if((l.pipelineId||'default') === cp.id && removed.includes(l.stage)) l.stage = editingStages[0] || l.stage; });
   cp.stages = editingStages.filter(s => s.trim() !== '');
+  const nameInput = document.getElementById('stageEditorPipelineName');
+  const newName = nameInput ? nameInput.value.trim() : cp.name;
+  if(newName) cp.name = newName;
   cancelStageEditor();
+  renderBoardPipelineOptions();
   renderBoard();
   logActivity(`Оновлено структуру воронки "${cp.name}": ${cp.stages.join(' → ')}`, {target:{type:'view', name:'pipeline'}});
+  fbScheduleSave();
+}
+async function deletePipelineFromEditor(){
+  if(PIPELINES.length <= 1){
+    showAlertModal('Неможливо видалити останню воронку.', 'Дія недоступна');
+    return;
+  }
+  const cp = currentPipeline();
+  const ok = await showConfirmModal({
+    title:'Видалити воронку',
+    text:`Видалити воронку "${cp.name}"? Всі угоди з неї буде перенесено до іншої воронки.`,
+    okText:'Видалити',
+    danger:true
+  });
+  if(!ok) return;
+  const fallback = PIPELINES.find(p=>p.id!==cp.id);
+  LEADS.forEach(l => {
+    if((l.pipelineId||'default') === cp.id){
+      l.pipelineId = fallback.id;
+      if(!fallback.stages.includes(l.stage)) l.stage = fallback.stages[0];
+    }
+  });
+  PIPELINES = PIPELINES.filter(p=>p.id!==cp.id);
+  state.currentPipelineId = fallback.id;
+  cancelStageEditor();
+  renderBoardPipelineOptions();
+  renderBoard();
+  logActivity(`Видалено воронку "${cp.name}"`, {target:{type:'view', name:'pipeline'}});
+  fbScheduleSave();
 }
 
 /* =========================================================
@@ -2295,10 +2323,10 @@ function openForwardModal(leadId){
 }
 function renderForwardPipelineOptions(list){
   const menu = document.getElementById('forwardPipelineMenu');
-  menu.innerHTML = list.map(p=>`<li data-value="${p.id}" class="${p.id===forwardSelectedPipelineId?'selected':''}">${p.icon} ${p.name}</li>`).join('');
+  menu.innerHTML = list.map(p=>`<li data-value="${p.id}" class="${p.id===forwardSelectedPipelineId?'selected':''}">${p.name}</li>`).join('');
   const trigger = document.querySelector('#forwardPipelineSelect .cselect-label');
   const sel = list.find(p=>p.id===forwardSelectedPipelineId);
-  if(trigger) trigger.textContent = sel ? `${sel.icon} ${sel.name}` : '—';
+  if(trigger) trigger.textContent = sel ? sel.name : '—';
 }
 function renderForwardStageOptions(){
   const p = PIPELINES.find(p=>p.id===forwardSelectedPipelineId);
@@ -2666,15 +2694,45 @@ function renderTasksTable(){
       return d && d >= state.taskDateRange.start && d <= state.taskDateRange.end;
     });
   }
-  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="5" class="empty-hint">${state.tasksTab==='done' ? 'Архів виконаних завдань порожній.' : 'Активних завдань немає.'}</td></tr>`; return; }
-  tbody.innerHTML = rows.map(t => `
+  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="6" class="empty-hint">${state.tasksTab==='done' ? 'Архів виконаних завдань порожній.' : 'Активних завдань немає.'}</td></tr>`; return; }
+  tbody.innerHTML = rows.map(t => {
+    const idx = TASKS.indexOf(t);
+    return `
     <tr class="clickable" onclick="openClientCard(${t.leadId})">
       <td>${t.title}</td>
       <td class="link-name">${t.leadName}</td>
       <td data-roles="admin cto">${managerName(t.managerId)}</td>
       <td>${dtChip(t.due)}</td>
       <td>${t.done ? '<span class="badge" style="color:var(--success);background:#1FAE6A1A;">Виконано</span>' : '<span class="badge warn">Активне</span>'}</td>
-    </tr>`).join('');
+      <td onclick="event.stopPropagation()" style="display:flex;gap:8px;align-items:center;">
+        <label class="chk" title="${t.done ? 'Повернути в активні' : 'Позначити виконаним'}"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTaskDone(${idx},this.checked)"><span></span></label>
+        <button type="button" class="danger-icon-btn" title="Видалити завдання" onclick="deleteTask(${idx})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+async function deleteTask(idx){
+  const t = TASKS[idx];
+  if(!t) return;
+  const ok = await showConfirmModal({
+    title:'Видалити завдання',
+    text:`Видалити завдання "${t.title}" (${t.leadName})?`,
+    okText:'Видалити',
+    danger:true
+  });
+  if(!ok) return;
+  TASKS.splice(idx,1);
+  renderDashboardTasks();
+  renderTasksTable();
+  renderDashboardStats();
+  logActivity(`Видалено завдання "${t.title}" (${t.leadName})`, {target:{type:'task', leadId:t.leadId, tab: t.done ? 'done' : 'active'}});
+  showUndoToast(`Завдання "${t.title}" видалено`, () => {
+    TASKS.splice(idx,0,t);
+    renderDashboardTasks();
+    renderTasksTable();
+    renderDashboardStats();
+    logActivity(`Скасовано видалення завдання "${t.title}"`, {target:{type:'task', leadId:t.leadId, tab: t.done ? 'done' : 'active'}});
+  });
 }
 
 /* =========================================================
