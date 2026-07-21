@@ -373,9 +373,17 @@
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .panel-body textarea{padding:9px 12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--radius-sm);font-size:13px;outline:none;min-height:70px;resize:vertical;width:100%;transition:border-color .15s;}
   .panel-body textarea:focus{border-color:var(--accent-1);}
-  .timeline-item{padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
-  .timeline-item:last-child{border-bottom:none;}
+  #dealNotesList, #dealTasksList, #dealMeetingsList, #dealAttachList, #clientNotesHistory, #clientTasksHistory, #clientAttachHistory, #historyList{display:flex;flex-direction:column;gap:8px;}
+  .timeline-item{padding:11px 13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);font-size:13px;transition:border-color .15s;}
+  .timeline-item:hover{border-color:var(--accent-1);}
   .timeline-meta{color:var(--text-muted);font-size:11.5px;margin-top:3px;}
+  .section-title-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .section-title-row .section-title{margin:0;}
+  .section-title-row svg{color:var(--text-muted);flex-shrink:0;}
+  .inline-add-row{display:flex;gap:8px;align-items:flex-end;margin-top:10px;}
+  .inline-add-row .field{flex:1;min-width:0;}
+  .inline-add-row textarea{flex:1;min-width:0;margin:0;}
+  .inline-add-row .btn{flex-shrink:0;}
   .pw-row{display:flex;gap:8px;align-items:center;}
   .pw-row input{flex:1;}
   .eye-btn{border:1px solid var(--border);background:var(--surface-2);border-radius:var(--radius-sm);width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:background .15s;}
@@ -641,7 +649,7 @@
         <div class="grid-3" style="margin-bottom:16px;">
           <div class="card stat-card"><div class="stat-label">Активні ліди</div><div class="stat-value" id="statActiveLeads">0</div></div>
           <div class="card stat-card"><div class="stat-label">Угоди в роботі</div><div class="stat-value" id="statDealsCount">0</div><div class="stat-sub" data-roles="admin cto" id="statDealsSum">на суму $0</div></div>
-          <div class="card stat-card"><div class="stat-label">Дзвінки сьогодні</div><div class="stat-value" id="statCallsToday">0</div><div class="stat-sub" id="statCallsOverdue" style="color:var(--text-muted);">прострочених немає</div></div>
+          <div class="card stat-card"><div class="stat-label">Заплановані зустрічі</div><div class="stat-value" id="statCallsToday">0</div><div class="stat-sub" id="statCallsOverdue" style="color:var(--text-muted);">прострочених немає</div></div>
         </div>
         <div class="grid-3">
           <div class="card widget">
@@ -649,7 +657,7 @@
             <div id="dashboardTasks"></div>
           </div>
           <div class="card widget">
-            <div class="section-title">Заплановані дзвінки</div>
+            <div class="section-title">Заплановані зустрічі</div>
             <div id="dashboardCalls"></div>
           </div>
           <div class="card widget">
@@ -1043,19 +1051,25 @@
       <div class="field" data-roles="admin cto" style="max-width:220px;"><label>Сума угоди ($)</label><input id="dealValue" type="text" inputmode="numeric" placeholder="0" oninput="formatMoneyLive(this)"></div>
     </div>
     <div class="panel-section">
-      <div class="section-title" style="font-size:13px;">Нотатки</div>
+      <div class="section-title-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        <div class="section-title" style="font-size:13px;">Нотатки</div>
+      </div>
       <div id="dealNotesList"></div>
-      <div style="display:flex;gap:8px;margin-top:8px;">
-        <textarea id="newNoteText" placeholder="Додати нотатку..." style="min-height:50px;"></textarea>
+      <div class="inline-add-row">
+        <textarea id="newNoteText" placeholder="Додати нотатку..." style="min-height:44px;"></textarea>
         <button class="btn secondary" style="white-space:nowrap;" onclick="addDealNote()">Додати</button>
       </div>
     </div>
     <div class="panel-section">
-      <div class="section-title" style="font-size:13px;">Завдання</div>
+      <div class="section-title-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <div class="section-title" style="font-size:13px;">Завдання</div>
+      </div>
       <div id="dealTasksList"></div>
-      <div class="field-row" style="margin-top:8px;">
+      <div class="inline-add-row">
         <div class="field"><label>Назва завдання</label><input id="newTaskTitle" type="text" placeholder="Напр. Передзвонити"></div>
-        <div class="field">
+        <div class="field" style="max-width:180px;">
           <label>Дедлайн</label>
           <div class="cselect" id="newTaskDueSelect">
             <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
@@ -1075,11 +1089,45 @@
           </div>
           <input type="hidden" id="newTaskDue">
         </div>
+        <button class="btn secondary" onclick="addDealTask()">Додати</button>
       </div>
-      <button class="btn secondary" style="margin-top:8px;" onclick="addDealTask()">+ Додати завдання (push-сповіщення)</button>
     </div>
     <div class="panel-section">
-      <div class="section-title" style="font-size:13px;">Документи</div>
+      <div class="section-title-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <div class="section-title" style="font-size:13px;">Зустрічі</div>
+      </div>
+      <div id="dealMeetingsList"></div>
+      <div class="inline-add-row">
+        <div class="field"><label>Тема зустрічі</label><input id="newMeetingTitle" type="text" placeholder="Напр. Дзвінок з клієнтом"></div>
+        <div class="field" style="max-width:180px;">
+          <label>Дата і час</label>
+          <div class="cselect" id="newMeetingDueSelect">
+            <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+              <span class="cselect-label" id="newMeetingDueLabel">Оберіть дату</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+            </button>
+            <div class="calendar-popover">
+              <div class="cal-head"><button type="button" onclick="meetingCalNav(-1)">‹</button><span id="meetingCalMonthLabel"></span><button type="button" onclick="meetingCalNav(1)">›</button></div>
+              <div class="cal-grid" id="meetingCalGrid"></div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;">
+                <div class="stepper"><button type="button" onclick="stepMeetingTime('h',-1)">−</button><input id="meetingHour" type="text" value="09" readonly><button type="button" onclick="stepMeetingTime('h',1)">+</button></div>
+                <span style="font-weight:800;">:</span>
+                <div class="stepper"><button type="button" onclick="stepMeetingTime('m',-1)">−</button><input id="meetingMinute" type="text" value="00" readonly><button type="button" onclick="stepMeetingTime('m',1)">+</button></div>
+              </div>
+              <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearMeetingDate()">Скинути</button><button class="btn small" type="button" onclick="applyMeetingDate()">Застосувати</button></div>
+            </div>
+          </div>
+          <input type="hidden" id="newMeetingDue">
+        </div>
+        <button class="btn secondary" onclick="addDealMeeting()">Додати</button>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        <div class="section-title" style="font-size:13px;">Документи</div>
+      </div>
       <div id="dealAttachList"></div>
       <label class="file-btn" style="margin-top:8px;">📎 Прикріпити документ<input type="file" style="display:none" onchange="addDealAttachment(event)"></label>
     </div>
@@ -1292,6 +1340,8 @@ const state = {
   currentPipelineId: 'default',
   dueCalendarMonth: new Date(2026,6,1),
   duePickedDate: null,
+  meetingCalendarMonth: new Date(2026,6,1),
+  meetingPickedDate: null,
   clientManagerFilter: [],
   dateRange: {start:null, end:null},
   calendarMonth: new Date(2026,6,1),
@@ -1492,6 +1542,7 @@ function completeLogin(user, opts){
   renderDashboardStats();
   renderAccountView();
   renderReminderBanner();
+  scheduleAllUpcomingMeetings();
   // Відновлюємо сторінку, на якій користувач був до оновлення (F5), замість
   // того, щоб завжди кидати на дашборд. 'report-detail' пропускаємо — вона
   // прив'язана до конкретного звіту (state.reportViewId), який не зберігається.
@@ -1915,11 +1966,12 @@ function renderDashboardCalls(){
   if(!el) return;
   let list = CALLS.map(c => ({...c, lead: LEADS.find(l=>l.id===c.leadId)})).filter(c=>c.lead);
   if(state.role === 'manager') list = list.filter(c=>c.lead.managerId===state.managerId);
-  if(!list.length){ el.innerHTML = '<div class="empty-hint">Немає запланованих дзвінків.</div>'; return; }
+  list.sort((a,b)=>(parseFullDateTime(a.due)||0)-(parseFullDateTime(b.due)||0));
+  if(!list.length){ el.innerHTML = '<div class="empty-hint">Немає запланованих зустрічей.</div>'; return; }
   el.innerHTML = list.map(c => `
     <div class="call-item">
-      <span class="row-click" onclick="openClientCard(${c.leadId})">📞 ${c.lead.name}, "${c.lead.stage}"</span>
-      <span class="badge time">${c.time}</span>
+      <span class="row-click" onclick="openClientCard(${c.leadId})">📅 ${c.title || 'Зустріч'} · ${c.lead.name}</span>
+      ${dtChip(c.due)}
     </div>`).join('');
 }
 
@@ -2295,6 +2347,7 @@ function openDeal(id, presetStage){
     document.getElementById('dealCreatedAt').textContent = new Date().toLocaleDateString('uk-UA') + ' (встановиться при збереженні)';
     document.getElementById('dealNotesList').innerHTML = '<div class="empty-hint">Нотаток ще немає.</div>';
     document.getElementById('dealTasksList').innerHTML = '<div class="empty-hint">Завдань ще немає.</div>';
+    document.getElementById('dealMeetingsList').innerHTML = '<div class="empty-hint">Зустрічей ще немає.</div>';
     document.getElementById('dealAttachList').innerHTML = '<div class="empty-hint">Документів ще немає.</div>';
     panel.dataset.presetStage = presetStage || currentPipeline().stages[0];
   } else {
@@ -2311,11 +2364,13 @@ function openDeal(id, presetStage){
     document.getElementById('dealValue').value = l.value ? Number(l.value).toLocaleString('en-US') : '';
     renderDealNotes(l);
     renderDealTasks(l);
+    renderDealMeetings(l);
     renderDealAttachments(l);
   }
   document.getElementById('dealDeleteBtn').style.display = (id === null) ? 'none' : 'inline-flex';
   ['dealName','dealPhone','dealEmail','dealCompany','dealNiche'].forEach(f => setFieldError(document.getElementById(f), null));
   clearDueDate();
+  clearMeetingDate();
   openPanel('dealPanel');
 }
 function renderDealNotes(l){
@@ -2327,6 +2382,12 @@ function renderDealTasks(l){
   document.getElementById('dealTasksList').innerHTML = l.tasks.length
     ? l.tasks.map(t=>`<div class="timeline-item" style="display:flex;align-items:center;gap:10px;justify-content:space-between;">${t.title}${t.done?' · виконано':''} ${dtChip(t.due)}</div>`).join('')
     : '<div class="empty-hint">Завдань ще немає.</div>';
+}
+function renderDealMeetings(l){
+  const list = CALLS.filter(c=>c.leadId===l.id).sort((a,b)=>(parseFullDateTime(a.due)||0)-(parseFullDateTime(b.due)||0));
+  document.getElementById('dealMeetingsList').innerHTML = list.length
+    ? list.map(c=>`<div class="timeline-item" style="display:flex;align-items:center;gap:10px;justify-content:space-between;">${c.title} ${dtChip(c.due)}</div>`).join('')
+    : '<div class="empty-hint">Зустрічей ще немає.</div>';
 }
 function renderDealAttachments(l){
   document.getElementById('dealAttachList').innerHTML = l.attachments.length
@@ -2369,6 +2430,26 @@ function addDealTask(){
   logActivity(`Додано завдання "${title}" для ${leadName}`, state.currentDealId !== null ? {target:{type:'task', leadId:state.currentDealId, tab:'active'}} : {});
   document.getElementById('newTaskTitle').value='';
   clearDueDate();
+}
+function addDealMeeting(){
+  const title = document.getElementById('newMeetingTitle').value.trim();
+  const due = document.getElementById('newMeetingDue').value.trim();
+  if(!title || !due) return;
+  const mgrId = state.currentDealId ? LEADS.find(l=>l.id===state.currentDealId).managerId : (state.managerId || 'oksana');
+  const leadName = state.currentDealId ? LEADS.find(l=>l.id===state.currentDealId).name : (document.getElementById('dealName').value || 'Нова угода');
+  const meeting = {id: Date.now()+Math.random(), leadId: state.currentDealId, leadName, managerId: mgrId, title, due, notified:false};
+  CALLS.unshift(meeting);
+  if(state.currentDealId !== null){
+    renderDealMeetings(LEADS.find(l=>l.id===state.currentDealId));
+  } else {
+    document.getElementById('dealMeetingsList').insertAdjacentHTML('beforeend', `<div class="timeline-item" style="display:flex;align-items:center;gap:10px;justify-content:space-between;">${title} ${dtChip(due)}</div>`);
+  }
+  renderDashboardCalls();
+  renderDashboardStats();
+  scheduleMeetingNotification(meeting);
+  logActivity(`Заплановано зустріч "${title}" для ${leadName}`, state.currentDealId !== null ? {target:{type:'lead', id:state.currentDealId}} : {});
+  document.getElementById('newMeetingTitle').value='';
+  clearMeetingDate();
 }
 function addDealAttachment(e){
   const file = e.target.files[0];
@@ -2748,6 +2829,70 @@ function applyDueDate(){
 }
 renderDueCalendar();
 
+/* ---- дата й час зустрічі: окремий календар (аналогічно дедлайну завдання) ---- */
+let meetingHour = 9, meetingMinute = 0;
+function renderMeetingCalendar(){
+  const monthLabel = document.getElementById('meetingCalMonthLabel');
+  const grid = document.getElementById('meetingCalGrid');
+  if(!monthLabel || !grid) return;
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const m = state.meetingCalendarMonth;
+  monthLabel.textContent = monthNames[m.getMonth()] + ' ' + m.getFullYear();
+  const firstDay = new Date(m.getFullYear(), m.getMonth(), 1);
+  let startOffset = firstDay.getDay();
+  startOffset = (startOffset === 0) ? 6 : startOffset - 1;
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+  const dows = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day muted"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(m.getFullYear(), m.getMonth(), day);
+    let cls = 'cal-day';
+    if(isToday(d)) cls += ' today';
+    if(state.meetingPickedDate && +d === +state.meetingPickedDate) cls += ' range-edge';
+    html += `<div class="${cls}" onclick="pickMeetingDate(event,${m.getFullYear()},${m.getMonth()},${day})">${day}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function meetingCalNav(dir){
+  state.meetingCalendarMonth = new Date(state.meetingCalendarMonth.getFullYear(), state.meetingCalendarMonth.getMonth()+dir, 1);
+  renderMeetingCalendar();
+}
+function pickMeetingDate(e,y,mo,d){
+  if(e) e.stopPropagation();
+  state.meetingPickedDate = new Date(y,mo,d);
+  renderMeetingCalendar();
+}
+function stepMeetingTime(unit, delta){
+  if(unit === 'h'){
+    meetingHour = (meetingHour + delta + 24) % 24;
+    document.getElementById('meetingHour').value = String(meetingHour).padStart(2,'0');
+  } else {
+    meetingMinute = (meetingMinute + delta*5 + 60) % 60;
+    document.getElementById('meetingMinute').value = String(meetingMinute).padStart(2,'0');
+  }
+}
+function clearMeetingDate(){
+  state.meetingPickedDate = null;
+  meetingHour = 9; meetingMinute = 0;
+  const h = document.getElementById('meetingHour'), mi = document.getElementById('meetingMinute');
+  if(h) h.value = '09';
+  if(mi) mi.value = '00';
+  renderMeetingCalendar();
+  const hidden = document.getElementById('newMeetingDue');
+  const label = document.getElementById('newMeetingDueLabel');
+  if(hidden) hidden.value = '';
+  if(label) label.textContent = 'Оберіть дату';
+}
+function applyMeetingDate(){
+  if(!state.meetingPickedDate){ closeAllDropdowns(); return; }
+  const full = fmtDate(state.meetingPickedDate) + ' ' + String(meetingHour).padStart(2,'0') + ':' + String(meetingMinute).padStart(2,'0');
+  document.getElementById('newMeetingDue').value = full;
+  document.getElementById('newMeetingDueLabel').textContent = full;
+  closeAllDropdowns();
+}
+renderMeetingCalendar();
+
 /* =========================================================
    TASKS PAGE (окрема сторінка "Завдання" — фільтри дата+менеджер,
    як на сторінці звітності; активні + архів виконаних)
@@ -2836,6 +2981,45 @@ function parseTaskDueDate(due){
   const m = String(due||'').match(/^(\d{2})\.(\d{2})\.(\d{4})/);
   if(!m) return null;
   return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
+}
+// Повний парсинг дати+часу зустрічі ("дд.мм.рррр гг:хх") — потрібен для
+// точного планування push-сповіщення за 30 хв до зустрічі.
+function parseFullDateTime(due){
+  const m = String(due||'').match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if(!m) return null;
+  const [, dd, mm, yyyy, hh, mi] = m;
+  return new Date(Number(yyyy), Number(mm)-1, Number(dd), hh?Number(hh):0, mi?Number(mi):0);
+}
+
+/* =========================================================
+   PUSH-СПОВІЩЕННЯ В БРАУЗЕРІ ЗА 30 ХВ ДО ЗУСТРІЧІ
+   Використовує Notification API. Працює лише поки вкладка
+   відкрита (без service worker) — обмеження статичного прототипу.
+   ========================================================= */
+const scheduledMeetingTimers = {};
+function requestMeetingNotifyPermission(){
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'default') Notification.requestPermission();
+}
+function scheduleMeetingNotification(meeting){
+  if(!('Notification' in window)) return;
+  if(!meeting || !meeting.id || meeting.notified) return;
+  const dt = parseFullDateTime(meeting.due);
+  if(!dt) return;
+  const fireAt = dt.getTime() - 30*60*1000;
+  const delay = fireAt - Date.now();
+  if(delay <= 0 || delay > 2147000000) return; // минуло, або занадто далеко (ліміт setTimeout)
+  if(scheduledMeetingTimers[meeting.id]) clearTimeout(scheduledMeetingTimers[meeting.id]);
+  scheduledMeetingTimers[meeting.id] = setTimeout(()=>{
+    if(Notification.permission === 'granted'){
+      new Notification('Зустріч через 30 хвилин', {body: `${meeting.title} — ${meeting.leadName || ''}`});
+    }
+    delete scheduledMeetingTimers[meeting.id];
+  }, delay);
+}
+function scheduleAllUpcomingMeetings(){
+  requestMeetingNotifyPermission();
+  CALLS.forEach(c => scheduleMeetingNotification(c));
 }
 function renderTasksTable(){
   const tbody = document.getElementById('tasksTableBody');
@@ -3701,6 +3885,7 @@ function fbApplyRemoteData(data){
       renderManagerMultiOptions();
       renderTaskManagerMultiOptions();
       renderReportManagerMultiOptions();
+      scheduleAllUpcomingMeetings();
     }
   } finally {
     fbApplyingRemote = false;
