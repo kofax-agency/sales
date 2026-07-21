@@ -141,6 +141,7 @@
 
   .widget{padding:18px;margin-bottom:16px;transition:box-shadow .15s;}
   .widget:hover{box-shadow:0 6px 24px rgba(16,24,64,.10);}
+  .widget-scroll{max-height:320px;overflow-y:auto;padding-right:4px;margin-right:-4px;}
   .task-item, .call-item, .notif-item{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--border);font-size:13.5px;}
   .task-item:last-child, .call-item:last-child, .notif-item:last-child{border-bottom:none;}
   .empty-hint{color:var(--text-muted);font-size:12.5px;padding:8px 4px;}
@@ -654,15 +655,15 @@
         <div class="grid-3">
           <div class="card widget">
             <div class="section-title">Мої таски на сьогодні</div>
-            <div id="dashboardTasks"></div>
+            <div id="dashboardTasks" class="widget-scroll"></div>
           </div>
           <div class="card widget">
             <div class="section-title">Заплановані зустрічі</div>
-            <div id="dashboardCalls"></div>
+            <div id="dashboardCalls" class="widget-scroll"></div>
           </div>
           <div class="card widget">
             <div class="section-title">Push-сповіщення</div>
-            <div id="dashboardNotifs"></div>
+            <div id="dashboardNotifs" class="widget-scroll"></div>
           </div>
         </div>
       </section>
