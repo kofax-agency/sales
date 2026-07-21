@@ -7,6 +7,8 @@
 <link rel="icon" type="image/png" href="logo-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --radius: 14px;
@@ -1391,6 +1393,7 @@ function logActivity(action, opts){
   }
   renderNotifications();
   renderHistory();
+  fbScheduleSave();
 }
 // Сповіщення персональні для кожного акаунта: ownerId===null означає
 // загальне демо-сповіщення (видиме всім), інакше видиме лише власнику.
@@ -1710,6 +1713,7 @@ function markNotifRead(id){
   const n = NOTIFICATIONS.find(n=>n.id===id);
   if(n) n.read = true;
   renderNotifications();
+  fbScheduleSave();
 }
 // Клік на сповіщення позначає його прочитаним і, якщо є ціль (n.target),
 // одразу відкриває відповідну картку/сторінку (лід, звіт, розділ СРМ тощо).
@@ -1722,6 +1726,7 @@ function handleNotifClick(id){
   if(!n) return;
   n.read = true;
   renderNotifications();
+  fbScheduleSave();
   closeAllDropdowns();
   const t = n.target;
   if(!t) return;
@@ -1739,6 +1744,7 @@ function handleNotifClick(id){
 function markAllNotifRead(){
   visibleNotifications().forEach(n=>n.read=true);
   renderNotifications();
+  fbScheduleSave();
 }
 function renderDashboardNotifs(){
   const el = document.getElementById('dashboardNotifs');
@@ -1839,6 +1845,7 @@ async function toggleTaskDone(idx, checked){
     renderDashboardTasks();
     renderTasksTable();
     renderDashboardStats();
+    fbScheduleSave();
   }
 }
 // Верхні картки дашборда (Активні ліди / Угоди в роботі / Дзвінки сьогодні)
@@ -2024,7 +2031,7 @@ function dropCard(e, stage){
   dragEnterDepth = 0;
   e.currentTarget.classList.remove('drag-over');
   const lead = LEADS.find(l=>l.id===draggedLeadId);
-  if(lead){ lead.stage = stage; renderBoard(); }
+  if(lead){ lead.stage = stage; renderBoard(); fbScheduleSave(); }
 }
 
 /* ---- stage editor ---- */
@@ -3377,6 +3384,113 @@ function seedReminderNotification(role){
     : `${name}, нагадування: місячний зведений звіт потрібно підготувати до кінця місяця`;
   NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text, time:'зараз', read:false, ownerId: me ? me.id : null});
 }
+
+/* =========================================================
+   FIREBASE SYNC (спільна хмарна база — Firestore)
+   Один спільний документ на весь СРМ: ліди/задачі/дзвінки/звіти/
+   сповіщення/історія/користувачі/воронки. Будь-яка зміна на одному
+   пристрої/акаунті зберігається в хмару і в реальному часі
+   підтягується на всіх інших — це і є "справжня база", а не лише
+   пам'ять браузера, яка зникала при оновленні сторінки.
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCxxiK3pakUxH-4zOEvZwOd68t5TOmHb4s",
+  authDomain: "sales-crm-c8ce0.firebaseapp.com",
+  projectId: "sales-crm-c8ce0",
+  storageBucket: "sales-crm-c8ce0.firebasestorage.app",
+  messagingSenderId: "640026534738",
+  appId: "1:640026534738:web:d1cf57fac2d3411bdcd08b",
+  measurementId: "G-JL1DT5LSBX"
+};
+let fbDocRef = null;
+let fbApplyingRemote = false;
+let fbSaveTimer = null;
+
+function fbInit(){
+  try{
+    if(typeof firebase === 'undefined') return;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    // enablePersistence повертає Promise — .catch() (не try/catch), інакше
+    // відмова (кілька вкладок, приватний режим) лишає необроблений reject.
+    db.enablePersistence({synchronizeTabs:true}).catch(function(err){ /* не критично — просто без офлайн-кешу */ });
+    fbDocRef = db.collection('kofax').doc('crm');
+    fbDocRef.onSnapshot(function(snap){
+      if(!snap.exists){ fbSaveNow(); return; }
+      fbApplyRemoteData(snap.data());
+    }, function(err){
+      console.error('Firestore sync error:', err);
+    });
+  }catch(err){
+    console.error('Firebase init failed:', err);
+  }
+}
+// Застосовує дані, що прийшли з хмари (від будь-якого пристрою/акаунта),
+// до локального стану і перемальовує все, якщо користувач вже увійшов.
+// fbApplyingRemote захищає від зайвого зворотного запису в хмару того,
+// що ми щойно з неї ж і отримали.
+function fbApplyRemoteData(data){
+  fbApplyingRemote = true;
+  try{
+    if(Array.isArray(data.leads)) LEADS = data.leads;
+    if(Array.isArray(data.tasks)) TASKS = data.tasks;
+    if(Array.isArray(data.calls)) CALLS = data.calls;
+    if(Array.isArray(data.reports)) REPORTS = data.reports;
+    if(Array.isArray(data.notifications)) NOTIFICATIONS = data.notifications;
+    if(Array.isArray(data.history)) HISTORY = data.history;
+    if(Array.isArray(data.users) && data.users.length){ USERS.length = 0; data.users.forEach(u=>USERS.push(u)); }
+    if(Array.isArray(data.pipelines) && data.pipelines.length){ PIPELINES.length = 0; data.pipelines.forEach(p=>PIPELINES.push(p)); }
+    if(typeof data.nextLeadId === 'number') nextLeadId = Math.max(nextLeadId, data.nextLeadId);
+    if(typeof data.nextReportId === 'number') nextReportId = Math.max(nextReportId, data.nextReportId);
+
+    if(state.userId){
+      renderBoard();
+      renderClientsTable();
+      renderTasksTable();
+      renderReportsTable();
+      renderCampaignsTable();
+      renderManagersTable();
+      renderCredentialsTable();
+      renderDashboardStats();
+      renderDashboardTasks();
+      renderDashboardCalls();
+      renderNotifications();
+      renderHistory();
+      renderBoardPipelineOptions();
+      renderPipelineSelectOptions();
+      renderManagerMultiOptions();
+      renderTaskManagerMultiOptions();
+      renderReportManagerMultiOptions();
+    }
+  } finally {
+    fbApplyingRemote = false;
+  }
+}
+// Дебаунс: кілька змін підряд (напр. кілька полів у формі) шлють у хмару
+// одним запитом за 400мс замість запиту на кожен окремий виклик.
+function fbScheduleSave(){
+  if(fbApplyingRemote || !fbDocRef) return;
+  clearTimeout(fbSaveTimer);
+  fbSaveTimer = setTimeout(fbSaveNow, 400);
+}
+function fbSaveNow(){
+  if(!fbDocRef) return;
+  const payload = {
+    leads: LEADS,
+    tasks: TASKS,
+    calls: CALLS,
+    reports: REPORTS,
+    notifications: NOTIFICATIONS.slice(0,300),
+    history: HISTORY.slice(0,200),
+    users: USERS,
+    pipelines: PIPELINES,
+    nextLeadId: nextLeadId,
+    nextReportId: nextReportId,
+    updatedAt: Date.now()
+  };
+  fbDocRef.set(payload, {merge:true}).catch(function(err){ console.error('Firestore save failed:', err); });
+}
+fbInit();
 
 // Якщо є збережена сесія ("Запам'ятати мене") — відразу відновлюємо вхід,
 // без показу екрана логіну.
