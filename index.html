@@ -360,7 +360,7 @@
   .panel-overlay.open{opacity:1;pointer-events:auto;}
   .side-panel{position:fixed;top:0;right:0;height:100vh;height:100dvh;background:var(--surface);box-shadow:-10px 0 34px rgba(0,0,0,.18);transform:translateX(100%);transition:transform .25s ease;z-index:60;display:flex;flex-direction:column;}
   .side-panel.open{transform:translateX(0);}
-  .side-panel.wide{width:58%;min-width:480px;}
+  .side-panel.wide{width:70%;min-width:620px;}
   .side-panel.narrow{width:420px;}
   @media (max-width:960px){ .side-panel.wide{width:94%;} .side-panel.narrow{width:88%;} }
   .panel-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);}
@@ -369,6 +369,23 @@
   .panel-foot{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;}
   .panel-section{border-top:1px solid var(--border);padding-top:18px;}
   .panel-section:first-child{border-top:none;padding-top:0;}
+  .panel-tabs{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;}
+  .panel-tab-btn{background:none;border:none;padding:13px 14px;font-size:13px;font-weight:700;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:6px;}
+  .panel-tab-btn:hover{color:var(--text);}
+  .panel-tab-btn.active{color:var(--accent-1);border-bottom-color:var(--accent-1);}
+  .tab-count{font-size:10.5px;font-weight:800;background:var(--surface-2);color:var(--text-muted);border-radius:999px;padding:1px 7px;}
+  .tab-count:empty{display:none;}
+  .panel-tab-btn.active .tab-count{background:var(--accent-1);color:#fff;}
+  .panel-tab-pane{display:flex;flex-direction:column;gap:20px;}
+  .row-icon-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,color .15s;}
+  .row-icon-btn:hover{background:var(--surface-hover);color:var(--text);}
+  .row-icon-btn.danger{color:var(--danger);}
+  .row-icon-btn.danger:hover{background:#E5484D1f;}
+  .task-row, .meeting-row{display:flex;align-items:center;gap:10px;}
+  .task-row-title{flex:1;min-width:0;font-size:13px;}
+  .task-row.is-done .task-row-title{text-decoration:line-through;color:var(--text-muted);}
+  .doc-row, .note-row{display:flex;align-items:center;gap:10px;justify-content:space-between;}
+  .doc-row span, .note-row .note-row-main{min-width:0;overflow:hidden;text-overflow:ellipsis;}
   .close-btn{background:transparent;border:none;color:var(--text-muted);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background .15s;}
   .close-btn:hover{background:var(--surface-2);}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -1027,110 +1044,127 @@
 <!-- ================= DEAL PANEL (half-page) ================= -->
 <aside class="side-panel wide" id="dealPanel">
   <div class="panel-head"><h3 id="dealPanelTitle">Нова угода</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-tabs" id="dealPanelTabs">
+    <button type="button" class="panel-tab-btn active" data-tab="info" onclick="setDealPanelTab('info')">Інфо</button>
+    <button type="button" class="panel-tab-btn" data-tab="notes" onclick="setDealPanelTab('notes')">Нотатки <span class="tab-count" id="dealTabCountNotes"></span></button>
+    <button type="button" class="panel-tab-btn" data-tab="tasks" onclick="setDealPanelTab('tasks')">Завдання <span class="tab-count" id="dealTabCountTasks"></span></button>
+    <button type="button" class="panel-tab-btn" data-tab="meetings" onclick="setDealPanelTab('meetings')">Зустрічі <span class="tab-count" id="dealTabCountMeetings"></span></button>
+    <button type="button" class="panel-tab-btn" data-tab="docs" onclick="setDealPanelTab('docs')">Документи <span class="tab-count" id="dealTabCountDocs"></span></button>
+  </div>
   <div class="panel-body">
-    <div class="panel-section">
-      <div class="section-title" style="font-size:13px;">Контактна особа</div>
-      <div class="field-row" style="margin-bottom:12px;">
-        <div class="field"><label>Ім'я *</label><input id="dealName" type="text" onblur="validateRequiredField(this,'Вкажіть ім\'я')"></div>
-        <div class="field"><label>Телефон *</label><input id="dealPhone" type="text" placeholder="+380 XX XXX XX XX" oninput="formatPhoneLive(this)" onblur="validatePhoneField(this); validateRequiredField(this,'Вкажіть телефон')"></div>
-      </div>
-      <div class="field"><label>Email</label><input id="dealEmail" type="text" placeholder="name@example.com" onblur="validateEmailField(this)"></div>
-    </div>
-    <div class="panel-section">
-      <div class="section-title" style="font-size:13px;">Компанія</div>
-      <div class="field-row" style="margin-bottom:12px;">
-        <div class="field"><label>Назва компанії *</label><input id="dealCompany" type="text" onblur="validateRequiredField(this,'Вкажіть назву компанії')"></div>
-        <div class="field"><label>Ніша *</label><input id="dealNiche" type="text" onblur="validateRequiredField(this,'Вкажіть нішу компанії')"></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Посилання</label><input id="dealLink" type="text"></div>
-        <div class="field">
-          <label>Дата створення</label>
-          <div id="dealCreatedAt" style="padding:9px 12px;font-size:13px;color:var(--text-muted);font-weight:600;"></div>
+    <div class="panel-tab-pane" data-tab-pane="info">
+      <div class="panel-section">
+        <div class="section-title" style="font-size:13px;">Контактна особа</div>
+        <div class="field-row" style="margin-bottom:12px;">
+          <div class="field"><label>Ім'я *</label><input id="dealName" type="text" onblur="validateRequiredField(this,'Вкажіть ім\'я')"></div>
+          <div class="field"><label>Телефон *</label><input id="dealPhone" type="text" placeholder="+380 XX XXX XX XX" oninput="formatPhoneLive(this)" onblur="validatePhoneField(this); validateRequiredField(this,'Вкажіть телефон')"></div>
         </div>
+        <div class="field"><label>Email</label><input id="dealEmail" type="text" placeholder="name@example.com" onblur="validateEmailField(this)"></div>
       </div>
-      <div class="field" data-roles="admin cto" style="max-width:220px;"><label>Сума угоди ($)</label><input id="dealValue" type="text" inputmode="numeric" placeholder="0" oninput="formatMoneyLive(this)"></div>
-    </div>
-    <div class="panel-section">
-      <div class="section-title-row">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-        <div class="section-title" style="font-size:13px;">Нотатки</div>
-      </div>
-      <div id="dealNotesList"></div>
-      <div class="inline-add-row">
-        <textarea id="newNoteText" placeholder="Додати нотатку..." style="min-height:44px;"></textarea>
-        <button class="btn secondary" style="white-space:nowrap;" onclick="addDealNote()">Додати</button>
-      </div>
-    </div>
-    <div class="panel-section">
-      <div class="section-title-row">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        <div class="section-title" style="font-size:13px;">Завдання</div>
-      </div>
-      <div id="dealTasksList"></div>
-      <div class="inline-add-row">
-        <div class="field"><label>Назва завдання</label><input id="newTaskTitle" type="text" placeholder="Напр. Передзвонити"></div>
-        <div class="field" style="max-width:180px;">
-          <label>Дедлайн</label>
-          <div class="cselect" id="newTaskDueSelect">
-            <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
-              <span class="cselect-label" id="newTaskDueLabel">Оберіть дедлайн</span>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-            </button>
-            <div class="calendar-popover">
-              <div class="cal-head"><button type="button" onclick="dueCalNav(-1)">‹</button><span id="dueCalMonthLabel"></span><button type="button" onclick="dueCalNav(1)">›</button></div>
-              <div class="cal-grid" id="dueCalGrid"></div>
-              <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;">
-                <div class="stepper"><button type="button" onclick="stepDueTime('h',-1)">−</button><input id="dueHour" type="text" value="09" readonly><button type="button" onclick="stepDueTime('h',1)">+</button></div>
-                <span style="font-weight:800;">:</span>
-                <div class="stepper"><button type="button" onclick="stepDueTime('m',-1)">−</button><input id="dueMinute" type="text" value="00" readonly><button type="button" onclick="stepDueTime('m',1)">+</button></div>
-              </div>
-              <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearDueDate()">Скинути</button><button class="btn small" type="button" onclick="applyDueDate()">Застосувати</button></div>
-            </div>
+      <div class="panel-section">
+        <div class="section-title" style="font-size:13px;">Компанія</div>
+        <div class="field-row" style="margin-bottom:12px;">
+          <div class="field"><label>Назва компанії *</label><input id="dealCompany" type="text" onblur="validateRequiredField(this,'Вкажіть назву компанії')"></div>
+          <div class="field"><label>Ніша *</label><input id="dealNiche" type="text" onblur="validateRequiredField(this,'Вкажіть нішу компанії')"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Посилання</label><input id="dealLink" type="text"></div>
+          <div class="field">
+            <label>Дата створення</label>
+            <div id="dealCreatedAt" style="padding:9px 12px;font-size:13px;color:var(--text-muted);font-weight:600;"></div>
           </div>
-          <input type="hidden" id="newTaskDue">
         </div>
-        <button class="btn secondary" onclick="addDealTask()">Додати</button>
+        <div class="field" data-roles="admin cto" style="max-width:220px;"><label>Сума угоди ($)</label><input id="dealValue" type="text" inputmode="numeric" placeholder="0" oninput="formatMoneyLive(this)"></div>
       </div>
     </div>
-    <div class="panel-section">
-      <div class="section-title-row">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-        <div class="section-title" style="font-size:13px;">Зустрічі</div>
+    <div class="panel-tab-pane js-hidden" data-tab-pane="notes">
+      <div class="panel-section">
+        <div class="section-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+          <div class="section-title" style="font-size:13px;">Нотатки</div>
+        </div>
+        <div id="dealNotesList"></div>
+        <div class="inline-add-row">
+          <textarea id="newNoteText" placeholder="Додати нотатку..." style="min-height:44px;"></textarea>
+          <button class="btn secondary" style="white-space:nowrap;" onclick="addDealNote()">Додати</button>
+        </div>
       </div>
-      <div id="dealMeetingsList"></div>
-      <div class="inline-add-row">
-        <div class="field"><label>Тема зустрічі</label><input id="newMeetingTitle" type="text" placeholder="Напр. Дзвінок з клієнтом"></div>
-        <div class="field" style="max-width:180px;">
-          <label>Дата і час</label>
-          <div class="cselect" id="newMeetingDueSelect">
-            <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
-              <span class="cselect-label" id="newMeetingDueLabel">Оберіть дату</span>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-            </button>
-            <div class="calendar-popover">
-              <div class="cal-head"><button type="button" onclick="meetingCalNav(-1)">‹</button><span id="meetingCalMonthLabel"></span><button type="button" onclick="meetingCalNav(1)">›</button></div>
-              <div class="cal-grid" id="meetingCalGrid"></div>
-              <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;">
-                <div class="stepper"><button type="button" onclick="stepMeetingTime('h',-1)">−</button><input id="meetingHour" type="text" value="09" readonly><button type="button" onclick="stepMeetingTime('h',1)">+</button></div>
-                <span style="font-weight:800;">:</span>
-                <div class="stepper"><button type="button" onclick="stepMeetingTime('m',-1)">−</button><input id="meetingMinute" type="text" value="00" readonly><button type="button" onclick="stepMeetingTime('m',1)">+</button></div>
+    </div>
+    <div class="panel-tab-pane js-hidden" data-tab-pane="tasks">
+      <div class="panel-section">
+        <div class="section-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <div class="section-title" style="font-size:13px;">Завдання</div>
+        </div>
+        <div id="dealTasksList"></div>
+        <div class="inline-add-row">
+          <div class="field"><label>Назва завдання</label><input id="newTaskTitle" type="text" placeholder="Напр. Передзвонити"></div>
+          <div class="field" style="max-width:180px;">
+            <label>Дедлайн</label>
+            <div class="cselect" id="newTaskDueSelect">
+              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="newTaskDueLabel">Оберіть дедлайн</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              </button>
+              <div class="calendar-popover">
+                <div class="cal-head"><button type="button" onclick="dueCalNav(-1)">‹</button><span id="dueCalMonthLabel"></span><button type="button" onclick="dueCalNav(1)">›</button></div>
+                <div class="cal-grid" id="dueCalGrid"></div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;">
+                  <div class="stepper"><button type="button" onclick="stepDueTime('h',-1)">−</button><input id="dueHour" type="text" value="09" readonly><button type="button" onclick="stepDueTime('h',1)">+</button></div>
+                  <span style="font-weight:800;">:</span>
+                  <div class="stepper"><button type="button" onclick="stepDueTime('m',-1)">−</button><input id="dueMinute" type="text" value="00" readonly><button type="button" onclick="stepDueTime('m',1)">+</button></div>
+                </div>
+                <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearDueDate()">Скинути</button><button class="btn small" type="button" onclick="applyDueDate()">Застосувати</button></div>
               </div>
-              <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearMeetingDate()">Скинути</button><button class="btn small" type="button" onclick="applyMeetingDate()">Застосувати</button></div>
             </div>
+            <input type="hidden" id="newTaskDue">
           </div>
-          <input type="hidden" id="newMeetingDue">
+          <button class="btn secondary" id="addTaskBtn" onclick="addDealTask()">Додати</button>
         </div>
-        <button class="btn secondary" onclick="addDealMeeting()">Додати</button>
       </div>
     </div>
-    <div class="panel-section">
-      <div class="section-title-row">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-        <div class="section-title" style="font-size:13px;">Документи</div>
+    <div class="panel-tab-pane js-hidden" data-tab-pane="meetings">
+      <div class="panel-section">
+        <div class="section-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          <div class="section-title" style="font-size:13px;">Зустрічі</div>
+        </div>
+        <div id="dealMeetingsList"></div>
+        <div class="inline-add-row">
+          <div class="field"><label>Тема зустрічі</label><input id="newMeetingTitle" type="text" placeholder="Напр. Дзвінок з клієнтом"></div>
+          <div class="field" style="max-width:180px;">
+            <label>Дата і час</label>
+            <div class="cselect" id="newMeetingDueSelect">
+              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="newMeetingDueLabel">Оберіть дату</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              </button>
+              <div class="calendar-popover">
+                <div class="cal-head"><button type="button" onclick="meetingCalNav(-1)">‹</button><span id="meetingCalMonthLabel"></span><button type="button" onclick="meetingCalNav(1)">›</button></div>
+                <div class="cal-grid" id="meetingCalGrid"></div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;">
+                  <div class="stepper"><button type="button" onclick="stepMeetingTime('h',-1)">−</button><input id="meetingHour" type="text" value="09" readonly><button type="button" onclick="stepMeetingTime('h',1)">+</button></div>
+                  <span style="font-weight:800;">:</span>
+                  <div class="stepper"><button type="button" onclick="stepMeetingTime('m',-1)">−</button><input id="meetingMinute" type="text" value="00" readonly><button type="button" onclick="stepMeetingTime('m',1)">+</button></div>
+                </div>
+                <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearMeetingDate()">Скинути</button><button class="btn small" type="button" onclick="applyMeetingDate()">Застосувати</button></div>
+              </div>
+            </div>
+            <input type="hidden" id="newMeetingDue">
+          </div>
+          <button class="btn secondary" id="addMeetingBtn" onclick="addDealMeeting()">Додати</button>
+        </div>
       </div>
-      <div id="dealAttachList"></div>
-      <label class="file-btn" style="margin-top:8px;">📎 Прикріпити документ<input type="file" style="display:none" onchange="addDealAttachment(event)"></label>
+    </div>
+    <div class="panel-tab-pane js-hidden" data-tab-pane="docs">
+      <div class="panel-section">
+        <div class="section-title-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          <div class="section-title" style="font-size:13px;">Документи</div>
+        </div>
+        <div id="dealAttachList"></div>
+        <label class="file-btn" style="margin-top:8px;">📎 Прикріпити документ<input type="file" style="display:none" onchange="addDealAttachment(event)"></label>
+      </div>
     </div>
   </div>
   <div class="panel-foot">
@@ -1343,6 +1377,10 @@ const state = {
   duePickedDate: null,
   meetingCalendarMonth: new Date(2026,6,1),
   meetingPickedDate: null,
+  dealPanelTab: 'info',
+  editingDealTaskIdx: null,
+  editingDealMeetingId: null,
+  dealDoneTasksOpen: false,
   clientManagerFilter: [],
   dateRange: {start:null, end:null},
   calendarMonth: new Date(2026,6,1),
@@ -1388,6 +1426,10 @@ function nameBadge(name, isAdmin){
 function trashIconSvg(size){
   size = size || 14;
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+}
+function editIconSvg(size){
+  size = size || 14;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>`;
 }
 function managerName(id){
   const u = USERS.find(u=>u.id===id);
@@ -1909,12 +1951,16 @@ async function toggleTaskDone(idx, checked){
       return;
     }
     t.done = true;
+    let m = findLeadTaskMatch(t);
+    if(m){ m.lead.tasks[m.idx].done = true; if(state.currentDealId === m.lead.id) renderDealTasks(m.lead); }
     logActivity(`Виконано завдання "${t.title}" (${t.leadName})`, {target:{type:'task', leadId:t.leadId, tab:'done'}});
     renderDashboardTasks();
     renderTasksTable();
     renderDashboardStats();
     showUndoToast(`Завдання "${t.title}" виконано і переміщено в архів`, () => {
       t.done = false;
+      const m2 = findLeadTaskMatch(t);
+      if(m2){ m2.lead.tasks[m2.idx].done = false; if(state.currentDealId === m2.lead.id) renderDealTasks(m2.lead); }
       renderDashboardTasks();
       renderTasksTable();
       renderDashboardStats();
@@ -1922,6 +1968,8 @@ async function toggleTaskDone(idx, checked){
     });
   } else {
     t.done = false;
+    const m = findLeadTaskMatch(t);
+    if(m){ m.lead.tasks[m.idx].done = false; if(state.currentDealId === m.lead.id) renderDealTasks(m.lead); }
     renderDashboardTasks();
     renderTasksTable();
     renderDashboardStats();
@@ -2339,6 +2387,10 @@ async function deletePipelineFromEditor(){
 function openDeal(id, presetStage){
   state.currentDealId = id;
   const panel = document.getElementById('dealPanel');
+  cancelDealTaskEdit();
+  cancelDealMeetingEdit();
+  state.dealDoneTasksOpen = false;
+  setDealPanelTab('info');
   if(id === null){
     document.getElementById('dealPanelTitle').textContent = 'Нова угода';
     ['dealName','dealPhone','dealEmail','dealCompany','dealNiche','dealLink'].forEach(f=>document.getElementById(f).value='');
@@ -2350,6 +2402,7 @@ function openDeal(id, presetStage){
     document.getElementById('dealTasksList').innerHTML = '<div class="empty-hint">Завдань ще немає.</div>';
     document.getElementById('dealMeetingsList').innerHTML = '<div class="empty-hint">Зустрічей ще немає.</div>';
     document.getElementById('dealAttachList').innerHTML = '<div class="empty-hint">Документів ще немає.</div>';
+    updateDealPanelTabCounts(null);
     panel.dataset.presetStage = presetStage || currentPipeline().stages[0];
   } else {
     const l = LEADS.find(l=>l.id===id);
@@ -2374,26 +2427,191 @@ function openDeal(id, presetStage){
   clearMeetingDate();
   openPanel('dealPanel');
 }
+// Перемикач вкладок бічної панелі угоди (Інфо/Нотатки/Завдання/Зустрічі/Документи).
+function setDealPanelTab(tab){
+  state.dealPanelTab = tab;
+  document.querySelectorAll('#dealPanelTabs .panel-tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('#dealPanel .panel-tab-pane').forEach(p=>p.classList.toggle('js-hidden', p.dataset.tabPane!==tab));
+}
+function updateDealPanelTabCounts(l){
+  const setCount = (id, n) => { const el = document.getElementById(id); if(el) el.textContent = n>0 ? n : ''; };
+  if(!l){
+    ['dealTabCountNotes','dealTabCountTasks','dealTabCountMeetings','dealTabCountDocs'].forEach(id=>setCount(id,0));
+    return;
+  }
+  setCount('dealTabCountNotes', l.notes.length);
+  setCount('dealTabCountTasks', l.tasks.filter(t=>!t.done).length);
+  setCount('dealTabCountMeetings', CALLS.filter(c=>c.leadId===l.id).length);
+  setCount('dealTabCountDocs', l.attachments.length);
+}
 function renderDealNotes(l){
   document.getElementById('dealNotesList').innerHTML = l.notes.length
-    ? l.notes.map(n=>`<div class="timeline-item">${n.text}<div class="timeline-meta">${n.author} · ${n.date}</div></div>`).join('')
+    ? l.notes.map((n,i)=>`<div class="timeline-item note-row"><div class="note-row-main">${n.text}<div class="timeline-meta">${n.author} · ${n.date}</div></div><button type="button" class="row-icon-btn danger" title="Видалити нотатку" onclick="deleteDealNote(${l.id},${i})">${trashIconSvg(14)}</button></div>`).join('')
     : '<div class="empty-hint">Нотаток ще немає.</div>';
+  updateDealPanelTabCounts(l);
 }
+async function deleteDealNote(leadId, idx){
+  const l = LEADS.find(l=>l.id===leadId);
+  if(!l) return;
+  const n = l.notes[idx];
+  if(!n) return;
+  const ok = await showConfirmModal({title:'Видалити нотатку', text:'Видалити цю нотатку? Дію не можна скасувати.', okText:'Видалити', danger:true});
+  if(!ok) return;
+  l.notes.splice(idx,1);
+  renderDealNotes(l);
+  logActivity(`Видалено нотатку до угоди "${l.name}"`, {target:{type:'lead', id:l.id}});
+}
+// Завдання угоди: чекбокс "виконано", редагування (підвантажує форму вище) і
+// видалення. Виконані завдання згортаються за замовчуванням, щоб не займали
+// весь блок — розкриваються кнопкою "Показати виконані".
 function renderDealTasks(l){
-  document.getElementById('dealTasksList').innerHTML = l.tasks.length
-    ? l.tasks.map(t=>`<div class="timeline-item" style="display:flex;align-items:center;gap:10px;justify-content:space-between;">${t.title}${t.done?' · виконано':''} ${dtChip(t.due)}</div>`).join('')
-    : '<div class="empty-hint">Завдань ще немає.</div>';
+  const items = l.tasks.map((t,i)=>({...t, i}));
+  const active = items.filter(t=>!t.done);
+  const done = items.filter(t=>t.done);
+  const row = t => `
+    <div class="timeline-item task-row${t.done?' is-done':''}">
+      <label class="chk"><input type="checkbox" ${t.done?'checked':''} onchange="toggleDealTaskDone(${l.id},${t.i})"><span></span></label>
+      <div class="task-row-title">${t.title}</div>
+      ${dtChip(t.due)}
+      <button type="button" class="row-icon-btn" title="Редагувати" onclick="editDealTask(${l.id},${t.i})">${editIconSvg(14)}</button>
+      <button type="button" class="row-icon-btn danger" title="Видалити" onclick="deleteDealTask(${l.id},${t.i})">${trashIconSvg(14)}</button>
+    </div>`;
+  let html = active.length ? active.map(row).join('') : '<div class="empty-hint">Активних завдань немає.</div>';
+  if(done.length){
+    html += `<button type="button" class="btn secondary small" style="margin-top:4px;" onclick="toggleDealDoneTasks()">${state.dealDoneTasksOpen ? 'Сховати виконані' : 'Показати виконані'} (${done.length})</button>`;
+    if(state.dealDoneTasksOpen) html += `<div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">${done.map(row).join('')}</div>`;
+  }
+  document.getElementById('dealTasksList').innerHTML = html;
+  updateDealPanelTabCounts(l);
 }
+function toggleDealDoneTasks(){
+  state.dealDoneTasksOpen = !state.dealDoneTasksOpen;
+  const l = LEADS.find(l=>l.id===state.currentDealId);
+  if(l) renderDealTasks(l);
+}
+function findLeadTaskMatch(t){
+  if(t == null || t.leadId == null) return null;
+  const l = LEADS.find(l=>l.id===t.leadId);
+  if(!l) return null;
+  const idx = t.id ? l.tasks.findIndex(x=>x.id===t.id) : l.tasks.findIndex(x=>x.title===t.title && x.due===t.due);
+  if(idx === -1) return null;
+  return {lead:l, idx};
+}
+function toggleDealTaskDone(leadId, idx){
+  const l = LEADS.find(l=>l.id===leadId);
+  if(!l) return;
+  const t = l.tasks[idx];
+  if(!t) return;
+  t.done = !t.done;
+  const gt = t.id ? TASKS.find(x=>x.id===t.id) : TASKS.find(x=>x.leadId===l.id && x.title===t.title && x.due===t.due);
+  if(gt) gt.done = t.done;
+  renderDealTasks(l);
+  renderDashboardTasks();
+  renderTasksTable();
+  renderDashboardStats();
+  logActivity(`${t.done?'Виконано':'Відновлено'} завдання "${t.title}" (${l.name})`, {target:{type:'task', leadId:l.id, tab: t.done?'done':'active'}});
+}
+function editDealTask(leadId, idx){
+  const l = LEADS.find(l=>l.id===leadId);
+  if(!l) return;
+  const t = l.tasks[idx];
+  if(!t) return;
+  state.editingDealTaskIdx = idx;
+  document.getElementById('newTaskTitle').value = t.title;
+  document.getElementById('newTaskDue').value = t.due === 'без дедлайну' ? '' : t.due;
+  document.getElementById('newTaskDueLabel').textContent = (t.due && t.due !== 'без дедлайну') ? t.due : 'Оберіть дедлайн';
+  const btn = document.getElementById('addTaskBtn');
+  if(btn) btn.textContent = 'Зберегти';
+  document.getElementById('newTaskTitle').focus();
+}
+function cancelDealTaskEdit(){
+  state.editingDealTaskIdx = null;
+  const titleEl = document.getElementById('newTaskTitle');
+  if(titleEl) titleEl.value = '';
+  clearDueDate();
+  const btn = document.getElementById('addTaskBtn');
+  if(btn) btn.textContent = 'Додати';
+}
+async function deleteDealTask(leadId, idx){
+  const l = LEADS.find(l=>l.id===leadId);
+  if(!l) return;
+  const t = l.tasks[idx];
+  if(!t) return;
+  const ok = await showConfirmModal({title:'Видалити завдання', text:`Видалити завдання "${t.title}"?`, okText:'Видалити', danger:true});
+  if(!ok) return;
+  l.tasks.splice(idx,1);
+  const gi = t.id ? TASKS.findIndex(x=>x.id===t.id) : TASKS.findIndex(x=>x.leadId===l.id && x.title===t.title && x.due===t.due);
+  if(gi>-1) TASKS.splice(gi,1);
+  if(state.editingDealTaskIdx === idx) cancelDealTaskEdit();
+  renderDealTasks(l);
+  renderDashboardTasks();
+  renderTasksTable();
+  renderDashboardStats();
+  logActivity(`Видалено завдання "${t.title}" (${l.name})`, {target:{type:'lead', id:l.id}});
+}
+// Зустрічі угоди: аналогічний патерн (редагувати/видалити), дані живуть у
+// глобальному CALLS (leadId-прив'язка), тому шукаємо за id зустрічі.
 function renderDealMeetings(l){
   const list = CALLS.filter(c=>c.leadId===l.id).sort((a,b)=>(parseFullDateTime(a.due)||0)-(parseFullDateTime(b.due)||0));
   document.getElementById('dealMeetingsList').innerHTML = list.length
-    ? list.map(c=>`<div class="timeline-item" style="display:flex;align-items:center;gap:10px;justify-content:space-between;">${c.title} ${dtChip(c.due)}</div>`).join('')
+    ? list.map(c=>`
+      <div class="timeline-item meeting-row">
+        <div class="task-row-title">${c.title}</div>
+        ${dtChip(c.due)}
+        <button type="button" class="row-icon-btn" title="Редагувати" onclick="editDealMeeting(${c.id})">${editIconSvg(14)}</button>
+        <button type="button" class="row-icon-btn danger" title="Видалити" onclick="deleteDealMeeting(${c.id})">${trashIconSvg(14)}</button>
+      </div>`).join('')
     : '<div class="empty-hint">Зустрічей ще немає.</div>';
+  updateDealPanelTabCounts(l);
+}
+function editDealMeeting(callId){
+  const m = CALLS.find(c=>c.id===callId);
+  if(!m) return;
+  state.editingDealMeetingId = callId;
+  document.getElementById('newMeetingTitle').value = m.title;
+  document.getElementById('newMeetingDue').value = m.due;
+  document.getElementById('newMeetingDueLabel').textContent = m.due || 'Оберіть дату';
+  const btn = document.getElementById('addMeetingBtn');
+  if(btn) btn.textContent = 'Зберегти';
+  document.getElementById('newMeetingTitle').focus();
+}
+function cancelDealMeetingEdit(){
+  state.editingDealMeetingId = null;
+  const titleEl = document.getElementById('newMeetingTitle');
+  if(titleEl) titleEl.value = '';
+  clearMeetingDate();
+  const btn = document.getElementById('addMeetingBtn');
+  if(btn) btn.textContent = 'Додати';
+}
+async function deleteDealMeeting(callId){
+  const m = CALLS.find(c=>c.id===callId);
+  if(!m) return;
+  const ok = await showConfirmModal({title:'Видалити зустріч', text:`Видалити зустріч "${m.title}"?`, okText:'Видалити', danger:true});
+  if(!ok) return;
+  CALLS = CALLS.filter(c=>c.id!==callId);
+  if(scheduledMeetingTimers[callId]){ clearTimeout(scheduledMeetingTimers[callId]); delete scheduledMeetingTimers[callId]; }
+  if(state.editingDealMeetingId === callId) cancelDealMeetingEdit();
+  if(state.currentDealId !== null){ const l = LEADS.find(l=>l.id===state.currentDealId); if(l) renderDealMeetings(l); }
+  renderDashboardCalls();
+  renderDashboardStats();
+  logActivity(`Видалено зустріч "${m.title}"`, state.currentDealId!==null ? {target:{type:'lead', id:state.currentDealId}} : {});
 }
 function renderDealAttachments(l){
   document.getElementById('dealAttachList').innerHTML = l.attachments.length
-    ? l.attachments.map(a=>`<div class="timeline-item">📎 ${a.name}</div>`).join('')
+    ? l.attachments.map((a,i)=>`<div class="timeline-item doc-row"><span>📎 ${a.name}</span><button type="button" class="row-icon-btn danger" title="Видалити" onclick="deleteDealAttachment(${l.id},${i})">${trashIconSvg(14)}</button></div>`).join('')
     : '<div class="empty-hint">Документів ще немає.</div>';
+  updateDealPanelTabCounts(l);
+}
+async function deleteDealAttachment(leadId, idx){
+  const l = LEADS.find(l=>l.id===leadId);
+  if(!l) return;
+  const a = l.attachments[idx];
+  if(!a) return;
+  const ok = await showConfirmModal({title:'Видалити документ', text:`Видалити документ "${a.name}"?`, okText:'Видалити', danger:true});
+  if(!ok) return;
+  l.attachments.splice(idx,1);
+  renderDealAttachments(l);
+  logActivity(`Видалено документ "${a.name}" з угоди "${l.name}"`, {target:{type:'lead', id:l.id}});
 }
 function addDealNote(){
   const text = document.getElementById('newNoteText').value.trim();
@@ -2414,9 +2632,28 @@ function addDealTask(){
   const title = document.getElementById('newTaskTitle').value.trim();
   const due = document.getElementById('newTaskDue').value.trim() || 'без дедлайну';
   if(!title) return;
+  // Редагування наявного завдання: форма додавання виступає формою
+  // редагування, поки не збережемо/не скасуємо.
+  if(state.currentDealId !== null && state.editingDealTaskIdx !== null){
+    const l = LEADS.find(l=>l.id===state.currentDealId);
+    const t = l ? l.tasks[state.editingDealTaskIdx] : null;
+    if(t){
+      const gt = t.id ? TASKS.find(x=>x.id===t.id) : TASKS.find(x=>x.leadId===l.id && x.title===t.title && x.due===t.due);
+      t.title = title; t.due = due;
+      if(gt){ gt.title = title; gt.due = due; }
+      renderDealTasks(l);
+      renderDashboardTasks();
+      renderTasksTable();
+      renderDashboardStats();
+      logActivity(`Відредаговано завдання "${title}" (${l.name})`, {target:{type:'task', leadId:l.id, tab: t.done?'done':'active'}});
+    }
+    cancelDealTaskEdit();
+    return;
+  }
   const mgrId = state.currentDealId ? LEADS.find(l=>l.id===state.currentDealId).managerId : (state.managerId || 'oksana');
   const leadName = state.currentDealId ? LEADS.find(l=>l.id===state.currentDealId).name : (document.getElementById('dealName').value || 'Нова угода');
-  const task = {title, due, done:false};
+  const id = Date.now()+Math.random();
+  const task = {id, title, due, done:false};
   if(state.currentDealId !== null){
     const l = LEADS.find(l=>l.id===state.currentDealId);
     l.tasks.push(task);
@@ -2436,6 +2673,19 @@ function addDealMeeting(){
   const title = document.getElementById('newMeetingTitle').value.trim();
   const due = document.getElementById('newMeetingDue').value.trim();
   if(!title || !due) return;
+  if(state.editingDealMeetingId !== null){
+    const m = CALLS.find(c=>c.id===state.editingDealMeetingId);
+    if(m){
+      m.title = title; m.due = due; m.notified = false;
+      scheduleMeetingNotification(m);
+      if(state.currentDealId !== null){ const l = LEADS.find(l=>l.id===state.currentDealId); if(l) renderDealMeetings(l); }
+      renderDashboardCalls();
+      renderDashboardStats();
+      logActivity(`Відредаговано зустріч "${title}"`, state.currentDealId!==null ? {target:{type:'lead', id:state.currentDealId}} : {});
+    }
+    cancelDealMeetingEdit();
+    return;
+  }
   const mgrId = state.currentDealId ? LEADS.find(l=>l.id===state.currentDealId).managerId : (state.managerId || 'oksana');
   const leadName = state.currentDealId ? LEADS.find(l=>l.id===state.currentDealId).name : (document.getElementById('dealName').value || 'Нова угода');
   const meeting = {id: Date.now()+Math.random(), leadId: state.currentDealId, leadName, managerId: mgrId, title, due, notified:false};
@@ -3065,12 +3315,16 @@ async function deleteTask(idx){
   });
   if(!ok) return;
   TASKS.splice(idx,1);
+  const m = findLeadTaskMatch(t);
+  let removedTask = null;
+  if(m){ removedTask = m.lead.tasks.splice(m.idx,1)[0]; if(state.currentDealId === m.lead.id) renderDealTasks(m.lead); }
   renderDashboardTasks();
   renderTasksTable();
   renderDashboardStats();
   logActivity(`Видалено завдання "${t.title}" (${t.leadName})`, {target:{type:'task', leadId:t.leadId, tab: t.done ? 'done' : 'active'}});
   showUndoToast(`Завдання "${t.title}" видалено`, () => {
     TASKS.splice(idx,0,t);
+    if(m && removedTask){ m.lead.tasks.splice(m.idx,0,removedTask); if(state.currentDealId === m.lead.id) renderDealTasks(m.lead); }
     renderDashboardTasks();
     renderTasksTable();
     renderDashboardStats();
