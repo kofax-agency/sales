@@ -1954,7 +1954,8 @@ function savePipeline(){
   if(!name){ showAlertModal('Вкажіть назву воронки.', 'Немає назви'); return; }
   const stages = newPipelineStages.map(s=>s.trim()).filter(Boolean);
   if(!stages.length){ showAlertModal('Додайте хоча б один стовпець.', 'Немає стовпців'); return; }
-  const id = 'pl' + Date.now();
+  let id;
+  do { id = 'pl' + Date.now() + Math.floor(Math.random()*10000); } while(PIPELINES.some(p=>p.id===id));
   PIPELINES.push({id, name, stages});
   state.currentPipelineId = id;
   renderBoardPipelineOptions();
@@ -3489,6 +3490,7 @@ function fbInit(){
 // що ми щойно з неї ж і отримали.
 function fbApplyRemoteData(data){
   fbApplyingRemote = true;
+  let needsRepairSave = false;
   try{
     if(Array.isArray(data.leads)) LEADS = data.leads;
     if(Array.isArray(data.tasks)) TASKS = data.tasks;
@@ -3500,6 +3502,24 @@ function fbApplyRemoteData(data){
     if(Array.isArray(data.pipelines) && data.pipelines.length){ PIPELINES.length = 0; data.pipelines.forEach(p=>PIPELINES.push(p)); }
     if(typeof data.nextLeadId === 'number') nextLeadId = Math.max(nextLeadId, data.nextLeadId);
     if(typeof data.nextReportId === 'number') nextReportId = Math.max(nextReportId, data.nextReportId);
+
+    // Захист від дублікатів id серед воронок (могли лишитись з попередніх
+    // сценаріїв синхронізації) — якщо дві воронки мають однаковий id, будь-яка
+    // зміна (перейменування, редагування стовпців) в одній виглядає так, ніби
+    // вона одночасно застосовується і до другої. Другому й наступним записам
+    // з тим самим id присвоюємо новий унікальний id, а якщо поточно вибрана
+    // воронка внаслідок цього "загубилась" — повертаємось на першу доступну.
+    const seenPipelineIds = new Set();
+    PIPELINES.forEach(p => {
+      if(seenPipelineIds.has(p.id)){
+        p.id = 'pl' + Date.now() + Math.floor(Math.random()*10000);
+        needsRepairSave = true;
+      }
+      seenPipelineIds.add(p.id);
+    });
+    if(PIPELINES.length && !PIPELINES.some(p=>p.id===state.currentPipelineId)){
+      state.currentPipelineId = PIPELINES[0].id;
+    }
 
     if(state.userId){
       renderBoard();
@@ -3523,6 +3543,7 @@ function fbApplyRemoteData(data){
   } finally {
     fbApplyingRemote = false;
   }
+  if(needsRepairSave) fbScheduleSave();
 }
 // Дебаунс: кілька змін підряд (напр. кілька полів у формі) шлють у хмару
 // одним запитом за 400мс замість запиту на кожен окремий виклик.
