@@ -176,8 +176,16 @@
   .lead-card:active{cursor:grabbing;}
   .lead-title{font-weight:700;margin-bottom:2px;}
   .lead-sub{color:var(--text-muted);font-size:12px;}
-  .lead-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
-  .lead-value{font-size:12px;font-weight:700;color:var(--text-muted);}
+  .lead-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;}
+  .lead-value{font-size:12px;font-weight:700;color:var(--text-muted);margin-right:auto;}
+  .card-forward-btn{width:24px;height:24px;border:none;border-radius:6px;background:transparent;color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:background .15s,color .15s;}
+  .card-forward-btn:hover{background:var(--surface-2);color:var(--accent-1);}
+  .icon-picker{display:flex;flex-wrap:wrap;gap:8px;}
+  .icon-opt{width:38px;height:38px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,border-color .15s;}
+  .icon-opt:hover{background:var(--surface-hover);}
+  .icon-opt.selected{border-color:var(--accent-1);background:#4C6FFF22;}
+  .pipeline-stage-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+  .pipeline-stage-row input{flex:1;padding:9px 12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--radius-sm);font-size:13px;outline:none;}
   .status-icon.red{color:var(--danger);}
   .status-icon.yellow{color:var(--warning);}
   .add-card-btn{width:100%;border:1px dashed var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-muted);padding:9px;font-size:13px;font-weight:700;display:flex;justify-content:center;margin-top:8px;transition:background .15s,color .15s,border-color .15s;}
@@ -664,6 +672,13 @@
             </button>
             <ul class="cselect-menu" id="pipelineSelectMenu" data-select="pipeline"></ul>
           </div>
+          <div data-roles="admin cto" class="cselect" id="boardPipelineSelect">
+            <button type="button" class="cselect-trigger" style="border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+              <span class="cselect-label">📊 Воронка продажів</span>
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <ul class="cselect-menu" id="boardPipelineSelectMenu" data-select="boardPipeline"></ul>
+          </div>
           <button class="btn secondary" data-roles="admin cto" onclick="toggleStageEditor()" id="editStagesBtn">Редагувати стовпці</button>
           <button class="btn" style="margin-left:auto" onclick="openDeal(null)" id="addDealBtn">+ Нова угода</button>
         </div>
@@ -962,6 +977,37 @@
   </div>
 </div>
 
+<!-- ================= FORWARD DEAL TO ANOTHER PIPELINE (модалка) ================= -->
+<div class="modal-overlay" id="forwardOverlay" onclick="closeForwardModal()"></div>
+<div class="confirm-modal" id="forwardModal">
+  <div class="confirm-modal-title">Переслати угоду</div>
+  <div class="confirm-modal-text" style="margin-bottom:16px;">Оберіть воронку та стовпець призначення.</div>
+  <div class="field" style="margin-bottom:14px;">
+    <label>Воронка</label>
+    <div class="cselect" id="forwardPipelineSelect">
+      <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+        <span class="cselect-label">—</span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <ul class="cselect-menu" id="forwardPipelineMenu" data-select="forwardPipeline"></ul>
+    </div>
+  </div>
+  <div class="field">
+    <label>Стовпець</label>
+    <div class="cselect" id="forwardStageSelect">
+      <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+        <span class="cselect-label">—</span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <ul class="cselect-menu" id="forwardStageMenu" data-select="forwardStage"></ul>
+    </div>
+  </div>
+  <div class="confirm-modal-actions">
+    <button class="btn secondary" onclick="closeForwardModal()">Скасувати</button>
+    <button class="btn" onclick="confirmForwardDeal()">Перенести</button>
+  </div>
+</div>
+
 <!-- ================= DEAL PANEL (half-page) ================= -->
 <aside class="side-panel wide" id="dealPanel">
   <div class="panel-head"><h3 id="dealPanelTitle">Нова угода</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
@@ -999,7 +1045,26 @@
       <div id="dealTasksList"></div>
       <div class="field-row" style="margin-top:8px;">
         <div class="field"><label>Назва завдання</label><input id="newTaskTitle" type="text" placeholder="Напр. Передзвонити"></div>
-        <div class="field"><label>Дедлайн</label><input id="newTaskDue" type="text" placeholder="дд.мм.рррр гг:хх"></div>
+        <div class="field">
+          <label>Дедлайн</label>
+          <div class="cselect" id="newTaskDueSelect">
+            <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+              <span class="cselect-label" id="newTaskDueLabel">Оберіть дедлайн</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+            </button>
+            <div class="calendar-popover">
+              <div class="cal-head"><button type="button" onclick="dueCalNav(-1)">‹</button><span id="dueCalMonthLabel"></span><button type="button" onclick="dueCalNav(1)">›</button></div>
+              <div class="cal-grid" id="dueCalGrid"></div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;">
+                <div class="stepper"><button type="button" onclick="stepDueTime('h',-1)">−</button><input id="dueHour" type="text" value="09" readonly><button type="button" onclick="stepDueTime('h',1)">+</button></div>
+                <span style="font-weight:800;">:</span>
+                <div class="stepper"><button type="button" onclick="stepDueTime('m',-1)">−</button><input id="dueMinute" type="text" value="00" readonly><button type="button" onclick="stepDueTime('m',1)">+</button></div>
+              </div>
+              <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearDueDate()">Скинути</button><button class="btn small" type="button" onclick="applyDueDate()">Застосувати</button></div>
+            </div>
+          </div>
+          <input type="hidden" id="newTaskDue">
+        </div>
       </div>
       <button class="btn secondary" style="margin-top:8px;" onclick="addDealTask()">+ Додати завдання (push-сповіщення)</button>
     </div>
@@ -1103,11 +1168,38 @@
   </div>
 </aside>
 
+<!-- ================= NEW PIPELINE DRAWER (narrow) — тільки admin/cto ================= -->
+<aside class="side-panel narrow" id="pipelinePanel">
+  <div class="panel-head"><h3>Нова воронка</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="field"><label>Назва воронки</label><input id="pipelineName" type="text" placeholder="Напр. Партнерства"></div>
+    <div class="field">
+      <label>Іконка</label>
+      <div class="icon-picker" id="pipelineIconPicker"></div>
+    </div>
+    <div class="field">
+      <label>Стовпці воронки</label>
+      <div id="pipelineStagesList"></div>
+      <button class="btn secondary small" type="button" style="margin-top:4px;" onclick="addNewPipelineStage()">+ Додати стовпець</button>
+    </div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn secondary" onclick="closeAllPanels()">Скасувати</button>
+    <button class="btn" onclick="savePipeline()">Створити воронку</button>
+  </div>
+</aside>
+
 <script>
 /* =========================================================
    DATA MODEL (in-memory demo data)
    ========================================================= */
-let STAGES = ["Контакт","Передзвонити","Зацікавлений","Переданий - ADS","Переданий - WEB","Переданий - SMM","Відмова"];
+// Воронки (PIPELINES) — керівник відділу і CTO можуть створювати нові, кожна
+// зі своєю назвою, іконкою і набором стовпців. У ліда є pipelineId (у якій
+// воронці він зараз) окремо від managerId (хто ним займається) і stage
+// (стовпець всередині поточної воронки).
+let PIPELINES = [
+  {id:'default', name:'Воронка продажів', icon:'📊', stages:["Контакт","Передзвонити","Зацікавлений","Переданий - ADS","Переданий - WEB","Переданий - SMM","Відмова"]}
+];
 
 const USERS = [
   {id:'ostap', name:'Остап', role:'cto', login:'ostap.booodnar@gmail.com', password:'Adm!n2026Xz'},
@@ -1185,6 +1277,9 @@ const state = {
   userId: null,
   managerId: null,
   pipelineFilter: 'admin',
+  currentPipelineId: 'default',
+  dueCalendarMonth: new Date(2026,6,1),
+  duePickedDate: null,
   clientManagerFilter: [],
   dateRange: {start:null, end:null},
   calendarMonth: new Date(2026,6,1),
@@ -1335,6 +1430,7 @@ function completeLogin(user, opts){
   state.role = role;
   state.userId = user.id;
   state.managerId = role === 'manager' ? user.id : null;
+  state.currentPipelineId = 'default';
 
   document.body.setAttribute('data-role', role);
   const labels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
@@ -1347,6 +1443,7 @@ function completeLogin(user, opts){
   document.getElementById('appRoot').classList.add('ready');
 
   renderPipelineSelectOptions();
+  renderBoardPipelineOptions();
   renderManagerMultiOptions();
   renderTaskManagerMultiOptions();
   renderReportManagerMultiOptions();
@@ -1365,7 +1462,13 @@ function completeLogin(user, opts){
   renderDashboardStats();
   renderAccountView();
   renderReminderBanner();
-  showView(null, 'dashboard');
+  // Відновлюємо сторінку, на якій користувач був до оновлення (F5), замість
+  // того, щоб завжди кидати на дашборд. 'report-detail' пропускаємо — вона
+  // прив'язана до конкретного звіту (state.reportViewId), який не зберігається.
+  const savedView = (location.hash || '').replace('#','');
+  const navLi = savedView ? document.querySelector('.nav li[data-nav="' + savedView + '"]') : null;
+  const canRestore = savedView && savedView !== 'report-detail' && document.getElementById('view-' + savedView) && (!navLi || navLi.offsetParent !== null || getComputedStyle(navLi).display !== 'none');
+  showView(null, canRestore ? savedView : 'dashboard');
 }
 // Реальна автентифікація за email + пароль з таблиці USERS (та сама база,
 // що редагується в "База даних для входу"). Якщо позначено "Запам'ятати
@@ -1461,6 +1564,10 @@ function showView(e, name){
   if(name === 'analytics') renderAnalytics();
   if(name === 'campaigns') renderCampaignsTable();
   if(name === 'admin') updateAdminPageLabels();
+  // Запам'ятовуємо активну сторінку в хеші URL (без додавання запису в
+  // історію), щоб оновлення сторінки (F5) залишало користувача там само,
+  // а не кидало на дашборд.
+  try{ history.replaceState(null, '', '#' + name); }catch(err){ /* ignore */ }
 }
 
 /* =========================================================
@@ -1567,6 +1674,8 @@ document.addEventListener('click', function(e){
   menu.parentElement.classList.remove('open');
 
   if(selectType === 'pipeline'){ state.pipelineFilter = li.dataset.value; renderBoard(); }
+  if(selectType === 'boardPipeline'){ state.currentPipelineId = li.dataset.value; renderBoardPipelineOptions(); renderBoard(); }
+  if(selectType === 'forwardPipeline'){ forwardSelectedPipelineId = li.dataset.value; renderForwardStageOptions(); }
 });
 
 /* =========================================================
@@ -1789,15 +1898,73 @@ function currentPipelineOwner(){
   return state.pipelineFilter;
 }
 
+// Поточна ВОРОНКА (набір стовпців, назва, іконка) — окремо від "власника"
+// дошки (адмін/конкретний менеджер) вище. Менеджер завжди сидить у 'default',
+// перемикач воронок бачать лише керівник відділу і CTO.
+function currentPipeline(){
+  return PIPELINES.find(p=>p.id===state.currentPipelineId) || PIPELINES[0];
+}
+function renderBoardPipelineOptions(){
+  const menu = document.getElementById('boardPipelineSelectMenu');
+  if(!menu) return;
+  const cp = currentPipeline();
+  menu.innerHTML = PIPELINES.map(p=>`<li data-value="${p.id}" class="${p.id===state.currentPipelineId?'selected':''}">${p.icon} ${p.name}</li>`).join('')
+    + `<li class="menu-footer" style="color:var(--accent-1);font-weight:700;" onclick="closeAllDropdowns();openPipelinePanel();">+ Створити воронку</li>`;
+  const trigger = document.querySelector('#boardPipelineSelect .cselect-label');
+  if(trigger) trigger.innerHTML = `${cp.icon} ${cp.name}`;
+}
+
+/* ---- створення нової воронки (тільки admin/cto) ---- */
+const PIPELINE_ICON_OPTIONS = ['📊','📈','🎯','💼','🤝','📞','✉️','🛠','🌐','⭐','🔥','🚀'];
+let newPipelineStages = [];
+let newPipelineIcon = '📊';
+function openPipelinePanel(){
+  document.getElementById('pipelineName').value = '';
+  newPipelineStages = ['Новий лід','В роботі','Закрито'];
+  newPipelineIcon = '📊';
+  renderPipelineIconPicker();
+  renderNewPipelineStages();
+  openPanel('pipelinePanel');
+}
+function renderPipelineIconPicker(){
+  document.getElementById('pipelineIconPicker').innerHTML = PIPELINE_ICON_OPTIONS.map(ic=>
+    `<button type="button" class="icon-opt ${ic===newPipelineIcon?'selected':''}" onclick="selectPipelineIcon('${ic}')">${ic}</button>`
+  ).join('');
+}
+function selectPipelineIcon(ic){ newPipelineIcon = ic; renderPipelineIconPicker(); }
+function renderNewPipelineStages(){
+  document.getElementById('pipelineStagesList').innerHTML = newPipelineStages.map((s,i)=>`
+    <div class="pipeline-stage-row">
+      <input type="text" value="${s}" oninput="newPipelineStages[${i}]=this.value" placeholder="Назва стовпця">
+      <button type="button" class="danger-icon-btn" title="Видалити" onclick="removeNewPipelineStage(${i})">🗑</button>
+    </div>`).join('');
+}
+function addNewPipelineStage(){ newPipelineStages.push('Новий етап'); renderNewPipelineStages(); }
+function removeNewPipelineStage(i){ newPipelineStages.splice(i,1); renderNewPipelineStages(); }
+function savePipeline(){
+  const name = document.getElementById('pipelineName').value.trim();
+  if(!name){ showAlertModal('Вкажіть назву воронки.', 'Немає назви'); return; }
+  const stages = newPipelineStages.map(s=>s.trim()).filter(Boolean);
+  if(!stages.length){ showAlertModal('Додайте хоча б один стовпець.', 'Немає стовпців'); return; }
+  const id = 'pl' + Date.now();
+  PIPELINES.push({id, name, icon:newPipelineIcon, stages});
+  state.currentPipelineId = id;
+  renderBoardPipelineOptions();
+  renderBoard();
+  closeAllPanels();
+  logActivity(`Створено нову воронку "${name}" (${stages.join(' → ')})`, {target:{type:'view', name:'pipeline'}});
+}
+
 function renderBoard(){
   const board = document.getElementById('board');
   const owner = currentPipelineOwner();
+  const cp = currentPipeline();
   // Суми угод ($) показуються лише у воронці Керівника відділу (owner==='admin').
   // CTO бачить суми, коли переглядає саме цю воронку. У воронках менеджерів
   // сум немає взагалі.
   const showValue = owner === 'admin';
-  board.innerHTML = STAGES.map(stage => {
-    const cards = LEADS.filter(l => l.stage === stage && l.managerId === owner);
+  board.innerHTML = cp.stages.map(stage => {
+    const cards = LEADS.filter(l => l.stage === stage && l.managerId === owner && (l.pipelineId||'default') === cp.id);
     let meta = `${cards.length} ${cards.length===1?'угода':'угоди'}`;
     if(showValue){
       const sum = cards.reduce((s,c)=>s+Number(c.value||0),0);
@@ -1811,6 +1978,7 @@ function renderBoard(){
           ${showValue ? `<span class="lead-value">$${Number(c.value||0).toLocaleString('en-US')}</span>` : '<span></span>'}
           ${c.flag === 'red' ? '<span class="status-icon red">●</span>' : ''}
           ${c.flag === 'yellow' ? '<span class="status-icon yellow">⚠</span>' : ''}
+          ${(state.role==='admin'||state.role==='cto') ? `<button type="button" class="card-forward-btn" title="Переслати до іншої воронки" onclick="event.stopPropagation(); openForwardModal(${c.id})">↪</button>` : ''}
         </div>
       </div>`).join('');
     return `
@@ -1861,7 +2029,7 @@ function toggleStageEditor(){
 }
 let editingStages = [];
 function renderStageEditor(){
-  editingStages = [...STAGES];
+  editingStages = [...currentPipeline().stages];
   renderStageEditorFromArray();
 }
 function removeStageEditorItem(i){ editingStages.splice(i,1); renderStageEditorFromArray(); }
@@ -1904,12 +2072,13 @@ function cancelStageEditor(){
   document.getElementById('addDealBtn').classList.remove('js-hidden');
 }
 function saveStageEditor(){
-  const removed = STAGES.filter(s => !editingStages.includes(s));
-  LEADS.forEach(l => { if(removed.includes(l.stage)) l.stage = editingStages[0] || l.stage; });
-  STAGES = editingStages.filter(s => s.trim() !== '');
+  const cp = currentPipeline();
+  const removed = cp.stages.filter(s => !editingStages.includes(s));
+  LEADS.forEach(l => { if((l.pipelineId||'default') === cp.id && removed.includes(l.stage)) l.stage = editingStages[0] || l.stage; });
+  cp.stages = editingStages.filter(s => s.trim() !== '');
   cancelStageEditor();
   renderBoard();
-  logActivity(`Оновлено структуру воронки: ${STAGES.join(' → ')}`, {target:{type:'view', name:'pipeline'}});
+  logActivity(`Оновлено структуру воронки "${cp.name}": ${cp.stages.join(' → ')}`, {target:{type:'view', name:'pipeline'}});
 }
 
 /* =========================================================
@@ -1928,7 +2097,7 @@ function openDeal(id, presetStage){
     document.getElementById('dealNotesList').innerHTML = '<div class="empty-hint">Нотаток ще немає.</div>';
     document.getElementById('dealTasksList').innerHTML = '<div class="empty-hint">Завдань ще немає.</div>';
     document.getElementById('dealAttachList').innerHTML = '<div class="empty-hint">Документів ще немає.</div>';
-    panel.dataset.presetStage = presetStage || STAGES[0];
+    panel.dataset.presetStage = presetStage || currentPipeline().stages[0];
   } else {
     const l = LEADS.find(l=>l.id===id);
     if(!l) return;
@@ -1947,6 +2116,7 @@ function openDeal(id, presetStage){
   }
   document.getElementById('dealDeleteBtn').style.display = (id === null) ? 'none' : 'inline-flex';
   ['dealName','dealPhone','dealEmail','dealCompany','dealNiche'].forEach(f => setFieldError(document.getElementById(f), null));
+  clearDueDate();
   openPanel('dealPanel');
 }
 function renderDealNotes(l){
@@ -1999,7 +2169,7 @@ function addDealTask(){
   renderDashboardStats();
   logActivity(`Додано завдання "${title}" для ${leadName}`, state.currentDealId !== null ? {target:{type:'task', leadId:state.currentDealId, tab:'active'}} : {});
   document.getElementById('newTaskTitle').value='';
-  document.getElementById('newTaskDue').value='';
+  clearDueDate();
 }
 function addDealAttachment(e){
   const file = e.target.files[0];
@@ -2045,9 +2215,10 @@ function saveDeal(){
     const dup = LEADS.find(l => dupKey(l.name,l.phone,l.email) === dupKey(name,phone,email));
     if(dup){ showAlertModal(`Такий лід вже існує в базі (${dup.name}, ${dup.company}). Перевірте дублікат перед створенням.`, 'Дублікат ліда'); return; }
     const owner = currentPipelineOwner();
-    const stage = document.getElementById('dealPanel').dataset.presetStage || STAGES[0];
+    const cp = currentPipeline();
+    const stage = document.getElementById('dealPanel').dataset.presetStage || cp.stages[0];
     const newId = nextLeadId++;
-    LEADS.push({id:newId, name, phone, email, company, niche, link, stage, value, managerId: owner, createdAt: new Date().toLocaleDateString('uk-UA'), notes:[], tasks:[], attachments:[]});
+    LEADS.push({id:newId, name, phone, email, company, niche, link, stage, value, pipelineId: cp.id, managerId: owner, createdAt: new Date().toLocaleDateString('uk-UA'), notes:[], tasks:[], attachments:[]});
     logActivity(`Створено нову угоду "${name}" (${company||'без компанії'})`, {target:{type:'lead', id:newId}});
   } else {
     const l = LEADS.find(l=>l.id===state.currentDealId);
@@ -2085,6 +2256,57 @@ async function deleteDeal(){
     renderDashboardStats();
     logActivity(`Відновлено угоду "${l.name}" (скасовано видалення)`);
   });
+}
+
+/* ---- переслати угоду до іншої воронки (тільки admin/cto) ---- */
+let forwardLeadId = null;
+let forwardSelectedPipelineId = null;
+function openForwardModal(leadId){
+  const lead = LEADS.find(l=>l.id===leadId);
+  if(!lead) return;
+  forwardLeadId = leadId;
+  const currentPlId = lead.pipelineId || 'default';
+  const others = PIPELINES.filter(p=>p.id !== currentPlId);
+  const targets = others.length ? others : PIPELINES;
+  forwardSelectedPipelineId = targets[0].id;
+  renderForwardPipelineOptions(targets);
+  renderForwardStageOptions();
+  document.getElementById('forwardOverlay').classList.add('open');
+  document.getElementById('forwardModal').classList.add('open');
+}
+function renderForwardPipelineOptions(list){
+  const menu = document.getElementById('forwardPipelineMenu');
+  menu.innerHTML = list.map(p=>`<li data-value="${p.id}" class="${p.id===forwardSelectedPipelineId?'selected':''}">${p.icon} ${p.name}</li>`).join('');
+  const trigger = document.querySelector('#forwardPipelineSelect .cselect-label');
+  const sel = list.find(p=>p.id===forwardSelectedPipelineId);
+  if(trigger) trigger.textContent = sel ? `${sel.icon} ${sel.name}` : '—';
+}
+function renderForwardStageOptions(){
+  const p = PIPELINES.find(p=>p.id===forwardSelectedPipelineId);
+  const menu = document.getElementById('forwardStageMenu');
+  if(!p){ menu.innerHTML=''; return; }
+  menu.innerHTML = p.stages.map((s,i)=>`<li data-value="${s}" class="${i===0?'selected':''}">${s}</li>`).join('');
+  const trigger = document.querySelector('#forwardStageSelect .cselect-label');
+  if(trigger) trigger.textContent = p.stages[0] || '—';
+}
+function closeForwardModal(){
+  document.getElementById('forwardOverlay').classList.remove('open');
+  document.getElementById('forwardModal').classList.remove('open');
+  forwardLeadId = null;
+}
+function confirmForwardDeal(){
+  const lead = LEADS.find(l=>l.id===forwardLeadId);
+  const targetPipeline = PIPELINES.find(p=>p.id===forwardSelectedPipelineId);
+  const stageTrigger = document.querySelector('#forwardStageSelect .cselect-label');
+  const targetStage = stageTrigger ? stageTrigger.textContent : (targetPipeline ? targetPipeline.stages[0] : null);
+  if(!lead || !targetPipeline || !targetStage) return;
+  const fromPipeline = PIPELINES.find(p=>p.id===(lead.pipelineId||'default'));
+  lead.pipelineId = targetPipeline.id;
+  lead.stage = targetStage;
+  closeForwardModal();
+  renderBoard();
+  renderClientsTable();
+  logActivity(`Угоду "${lead.name}" перенесено з воронки "${fromPipeline?fromPipeline.name:'?'}" до "${targetPipeline.name}" (${targetStage})`, {target:{type:'lead', id:lead.id}});
 }
 
 /* =========================================================
@@ -2256,6 +2478,70 @@ function fmtDate(d){ return String(d.getDate()).padStart(2,'0')+'.'+String(d.get
 renderCalendar();
 renderTaskCalendar();
 renderReportCalendar();
+
+/* ---- дедлайн завдання: кастомний календар (одна дата) + година/хвилина ---- */
+let dueHour = 9, dueMinute = 0;
+function renderDueCalendar(){
+  const monthLabel = document.getElementById('dueCalMonthLabel');
+  const grid = document.getElementById('dueCalGrid');
+  if(!monthLabel || !grid) return;
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const m = state.dueCalendarMonth;
+  monthLabel.textContent = monthNames[m.getMonth()] + ' ' + m.getFullYear();
+  const firstDay = new Date(m.getFullYear(), m.getMonth(), 1);
+  let startOffset = firstDay.getDay();
+  startOffset = (startOffset === 0) ? 6 : startOffset - 1;
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+  const dows = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day muted"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(m.getFullYear(), m.getMonth(), day);
+    let cls = 'cal-day';
+    if(isToday(d)) cls += ' today';
+    if(state.duePickedDate && +d === +state.duePickedDate) cls += ' range-edge';
+    html += `<div class="${cls}" onclick="pickDueDate(event,${m.getFullYear()},${m.getMonth()},${day})">${day}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function dueCalNav(dir){
+  state.dueCalendarMonth = new Date(state.dueCalendarMonth.getFullYear(), state.dueCalendarMonth.getMonth()+dir, 1);
+  renderDueCalendar();
+}
+function pickDueDate(e,y,mo,d){
+  if(e) e.stopPropagation();
+  state.duePickedDate = new Date(y,mo,d);
+  renderDueCalendar();
+}
+function stepDueTime(unit, delta){
+  if(unit === 'h'){
+    dueHour = (dueHour + delta + 24) % 24;
+    document.getElementById('dueHour').value = String(dueHour).padStart(2,'0');
+  } else {
+    dueMinute = (dueMinute + delta*5 + 60) % 60;
+    document.getElementById('dueMinute').value = String(dueMinute).padStart(2,'0');
+  }
+}
+function clearDueDate(){
+  state.duePickedDate = null;
+  dueHour = 9; dueMinute = 0;
+  const h = document.getElementById('dueHour'), mi = document.getElementById('dueMinute');
+  if(h) h.value = '09';
+  if(mi) mi.value = '00';
+  renderDueCalendar();
+  const hidden = document.getElementById('newTaskDue');
+  const label = document.getElementById('newTaskDueLabel');
+  if(hidden) hidden.value = '';
+  if(label) label.textContent = 'Оберіть дедлайн';
+}
+function applyDueDate(){
+  if(!state.duePickedDate){ closeAllDropdowns(); return; }
+  const full = fmtDate(state.duePickedDate) + ' ' + String(dueHour).padStart(2,'0') + ':' + String(dueMinute).padStart(2,'0');
+  document.getElementById('newTaskDue').value = full;
+  document.getElementById('newTaskDueLabel').textContent = full;
+  closeAllDropdowns();
+}
+renderDueCalendar();
 
 /* =========================================================
    TASKS PAGE (окрема сторінка "Завдання" — фільтри дата+менеджер,
