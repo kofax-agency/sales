@@ -2027,23 +2027,24 @@ function renderBoardPipelineOptions(){
     state.currentPipelineId = visiblePipelines.length ? visiblePipelines[0].id : (PIPELINES[0] ? PIPELINES[0].id : null);
   }
   const cp = currentPipeline();
-  // Підпис власника біля назви показуємо, коли в списку можуть бути воронки
-  // різних людей (інакше й так зрозуміло, чия це воронка).
-  const showOwnerLabel = state.role !== 'manager' && state.pipelineOwnerFilter.length !== 1;
-  menu.innerHTML = visiblePipelines.map(p=>`<li data-value="${p.id}" class="${p.id===state.currentPipelineId?'selected':''}">${p.name}${showOwnerLabel ? ' — ' + pipelineOwnerName(p.ownerId) : ''}</li>`).join('')
+  // Формат "Назва воронки — Власник" — завжди однаковий, і в списку, і в
+  // самому перемикачі, і в заголовку сторінки (щоб не було різнобою).
+  const pipelineLabel = p => `${p.name} — ${pipelineOwnerName(p.ownerId)}`;
+  menu.innerHTML = visiblePipelines.map(p=>`<li data-value="${p.id}" class="${p.id===state.currentPipelineId?'selected':''}">${pipelineLabel(p)}</li>`).join('')
     + `<li class="menu-footer" style="color:var(--accent-1);font-weight:700;" onclick="closeAllDropdowns();openPipelinePanel();">+ Створити воронку</li>`;
   const trigger = document.querySelector('#boardPipelineSelect .cselect-label');
-  if(trigger) trigger.textContent = cp ? cp.name : '—';
+  if(trigger) trigger.textContent = cp ? pipelineLabel(cp) : '—';
   updatePipelinePageTitle();
 }
 // Синхронізує заголовок сторінки (вгорі) з назвою поточної воронки —
 // оновлюється і при вході, і при кожній зміні вибору воронки/фільтра.
+// Формат ідентичний перемикачу нижче: "Назва — Власник".
 function updatePipelinePageTitle(){
   const titleEl = document.getElementById('pageTitle');
   const view = document.getElementById('view-pipeline');
   if(!titleEl || !view || !view.classList.contains('active')) return;
   const cp = currentPipeline();
-  titleEl.textContent = cp ? cp.name : 'Воронка продажів';
+  titleEl.textContent = cp ? `${cp.name} — ${pipelineOwnerName(cp.ownerId)}` : 'Воронка продажів';
 }
 
 /* ---- створення нової воронки (тільки admin/cto) ---- */
