@@ -1198,11 +1198,15 @@
    DATA MODEL (in-memory demo data)
    ========================================================= */
 // Воронки (PIPELINES) — керівник відділу і CTO можуть створювати нові, кожна
-// зі своєю назвою, іконкою і набором стовпців. У ліда є pipelineId (у якій
-// воронці він зараз) окремо від managerId (хто ним займається) і stage
-// (стовпець всередині поточної воронки).
+// зі своєю назвою і набором стовпців. Кожна воронка належить конкретному
+// власнику (ownerId: 'admin' для керівника відділу, або id менеджера) — це
+// саме те значення, яке зберігається в LEADS.managerId (див. currentPipelineOwner()).
+// Завдяки цьому воронка керівника і воронка кожного менеджера — завжди різні,
+// окремі об'єкти, навіть якщо мають однакову назву й однакові стовпці.
+// У ліда є pipelineId (у якій воронці він зараз) окремо від managerId (хто
+// ним займається) і stage (стовпець всередині поточної воронки).
 let PIPELINES = [
-  {id:'default', name:'Воронка продажів', stages:["Контакт","Передзвонити","Зацікавлений","Переданий - ADS","Переданий - WEB","Переданий - SMM","Відмова"]}
+  {id:'default', name:'Воронка продажів', ownerId:'admin', stages:["Контакт","Передзвонити","Зацікавлений","Переданий - ADS","Переданий - WEB","Переданий - SMM","Відмова"]}
 ];
 
 const USERS = [
@@ -1435,6 +1439,7 @@ function completeLogin(user, opts){
   state.role = role;
   state.userId = user.id;
   state.managerId = role === 'manager' ? user.id : null;
+  state.pipelineFilter = 'admin';
   state.currentPipelineId = 'default';
 
   document.body.setAttribute('data-role', role);
@@ -1447,6 +1452,7 @@ function completeLogin(user, opts){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appRoot').classList.add('ready');
 
+  if(ensurePipelineIntegrity()) fbScheduleSave();
   renderPipelineSelectOptions();
   renderBoardPipelineOptions();
   renderManagerMultiOptions();
@@ -1687,7 +1693,7 @@ document.addEventListener('click', function(e){
   if(trigger) trigger.innerHTML = li.innerHTML;
   menu.parentElement.classList.remove('open');
 
-  if(selectType === 'pipeline'){ state.pipelineFilter = li.dataset.value; renderBoard(); }
+  if(selectType === 'pipeline'){ state.pipelineFilter = li.dataset.value; renderBoardPipelineOptions(); renderBoard(); }
   if(selectType === 'boardPipeline'){ state.currentPipelineId = li.dataset.value; renderBoardPipelineOptions(); renderBoard(); }
   if(selectType === 'forwardPipeline'){ forwardSelectedPipelineId = li.dataset.value; renderForwardStageOptions(); }
 });
@@ -1902,13 +1908,18 @@ function renderPipelineSelectOptions(){
   const managers = USERS.filter(u=>u.role==='manager');
   const adminUser = USERS.find(u=>u.role==='admin');
   const adminLabel = nameBadge(adminUser ? adminUser.name : 'Керівник відділу', true);
-  let html = `<li data-value="admin" class="selected">${adminLabel}</li>`;
-  managers.forEach(m => html += `<li data-value="${m.id}">Менеджер ${m.name}</li>`);
+  // Не скидаємо вже вибраного власника при повторних викликах (напр. після
+  // синхронізації з Firebase) — лише якщо збережене значення більше не є
+  // валідним (звільнений менеджер тощо), повертаємось на керівника відділу.
+  const isValidTarget = state.pipelineFilter === 'admin' || managers.some(m=>m.id===state.pipelineFilter);
+  if(!isValidTarget) state.pipelineFilter = 'admin';
+  let html = `<li data-value="admin" class="${state.pipelineFilter==='admin'?'selected':''}">${adminLabel}</li>`;
+  managers.forEach(m => html += `<li data-value="${m.id}" class="${state.pipelineFilter===m.id?'selected':''}">Менеджер ${m.name}</li>`);
   menu.setAttribute('data-select','pipeline');
   menu.innerHTML = html;
-  state.pipelineFilter = 'admin';
   const trigger = document.querySelector('#pipelineSelect .cselect-label');
-  if(trigger) trigger.innerHTML = adminLabel;
+  const selectedManager = managers.find(m=>m.id===state.pipelineFilter);
+  if(trigger) trigger.innerHTML = state.pipelineFilter === 'admin' ? adminLabel : `Менеджер ${selectedManager ? selectedManager.name : ''}`;
 }
 
 function currentPipelineOwner(){
@@ -1916,20 +1927,66 @@ function currentPipelineOwner(){
   return state.pipelineFilter;
 }
 
-// Поточна ВОРОНКА (набір стовпців, назва, іконка) — окремо від "власника"
-// дошки (адмін/конкретний менеджер) вище. Менеджер завжди сидить у 'default',
-// перемикач воронок бачать лише керівник відділу і CTO.
+// Кожна воронка належить рівно одному власнику (ownerId) — керівнику
+// відділу ('admin') або конкретному менеджеру (його id). Це гарантує, що
+// воронка Богдана і воронка Володимира — завжди різні об'єкти, навіть якщо
+// названі однаково і мають однакові стовпці: перейменування/редагування
+// однієї ніколи не зачіпає іншу.
+function pipelineOwnerName(ownerId){
+  if(ownerId === 'admin'){
+    const a = USERS.find(u=>u.role==='admin');
+    return a ? a.name : 'Керівник відділу';
+  }
+  const u = USERS.find(u=>u.id===ownerId);
+  return u ? u.name : 'Менеджер';
+}
+// Гарантує цілісність даних воронок: (1) легасі-записи без ownerId
+// (з попередніх версій, коли воронки ще не мали власника) вважаємо
+// воронкою керівника відділу — саме там історично зберігались угоди;
+// (2) кожен керівник відділу і кожен менеджер повинні мати хоча б одну
+// свою воронку — якщо немає, створюємо з тими самими стовпцями, що й
+// перша наявна воронка в системі. Повертає true, якщо щось змінилось
+// (і тому варто зберегти стан у Firebase).
+function ensurePipelineIntegrity(){
+  let changed = false;
+  PIPELINES.forEach(p => {
+    if(!p.ownerId){ p.ownerId = 'admin'; changed = true; }
+  });
+  const owners = ['admin', ...USERS.filter(u=>u.role==='manager').map(u=>u.id)];
+  const templateStages = (PIPELINES[0] && PIPELINES[0].stages) ||
+    ["Контакт","Передзвонити","Зацікавлений","Переданий - ADS","Переданий - WEB","Переданий - SMM","Відмова"];
+  owners.forEach(ownerId => {
+    if(!PIPELINES.some(p=>p.ownerId===ownerId)){
+      let id;
+      do { id = 'pl' + Date.now() + Math.floor(Math.random()*10000); } while(PIPELINES.some(p=>p.id===id));
+      PIPELINES.push({id, name:'Воронка продажів', ownerId, stages:[...templateStages]});
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+// Поточна ВОРОНКА (набір стовпців, назва) — окремо від "власника" дошки
+// (адмін/конкретний менеджер) вище. Менеджер завжди сидить у своїй власній
+// воронці, перемикач воронок бачать лише керівник відділу і CTO.
 function currentPipeline(){
   return PIPELINES.find(p=>p.id===state.currentPipelineId) || PIPELINES[0];
 }
 function renderBoardPipelineOptions(){
   const menu = document.getElementById('boardPipelineSelectMenu');
   if(!menu) return;
+  const owner = currentPipelineOwner();
+  const ownerPipelines = PIPELINES.filter(p=>p.ownerId===owner);
+  // Якщо після перемикання власника ("Менеджер") поточно вибрана воронка
+  // йому не належить — переходимо на першу воронку цього власника.
+  if(!ownerPipelines.some(p=>p.id===state.currentPipelineId)){
+    state.currentPipelineId = ownerPipelines.length ? ownerPipelines[0].id : (PIPELINES[0] ? PIPELINES[0].id : null);
+  }
   const cp = currentPipeline();
-  menu.innerHTML = PIPELINES.map(p=>`<li data-value="${p.id}" class="${p.id===state.currentPipelineId?'selected':''}">${p.name}</li>`).join('')
+  menu.innerHTML = ownerPipelines.map(p=>`<li data-value="${p.id}" class="${p.id===state.currentPipelineId?'selected':''}">${p.name}</li>`).join('')
     + `<li class="menu-footer" style="color:var(--accent-1);font-weight:700;" onclick="closeAllDropdowns();openPipelinePanel();">+ Створити воронку</li>`;
   const trigger = document.querySelector('#boardPipelineSelect .cselect-label');
-  if(trigger) trigger.textContent = cp.name;
+  if(trigger) trigger.textContent = cp ? cp.name : '—';
 }
 
 /* ---- створення нової воронки (тільки admin/cto) ---- */
@@ -1956,12 +2013,13 @@ function savePipeline(){
   if(!stages.length){ showAlertModal('Додайте хоча б один стовпець.', 'Немає стовпців'); return; }
   let id;
   do { id = 'pl' + Date.now() + Math.floor(Math.random()*10000); } while(PIPELINES.some(p=>p.id===id));
-  PIPELINES.push({id, name, stages});
+  const ownerId = currentPipelineOwner();
+  PIPELINES.push({id, name, ownerId, stages});
   state.currentPipelineId = id;
   renderBoardPipelineOptions();
   renderBoard();
   closeAllPanels();
-  logActivity(`Створено нову воронку "${name}" (${stages.join(' → ')})`, {target:{type:'view', name:'pipeline'}});
+  logActivity(`Створено нову воронку "${name}" для ${pipelineOwnerName(ownerId)} (${stages.join(' → ')})`, {target:{type:'view', name:'pipeline'}});
 }
 
 function renderBoard(){
@@ -2036,7 +2094,7 @@ function toggleStageEditor(){
   document.getElementById('editStagesBtn').classList.add('js-hidden');
   document.getElementById('addDealBtn').classList.add('js-hidden');
   const delBtn = document.getElementById('deletePipelineBtn');
-  if(delBtn) delBtn.classList.toggle('js-hidden', PIPELINES.length <= 1);
+  if(delBtn) delBtn.classList.toggle('js-hidden', PIPELINES.filter(p=>p.ownerId===currentPipelineOwner()).length <= 1);
   renderStageEditor();
 }
 let editingStages = [];
@@ -2101,19 +2159,21 @@ function saveStageEditor(){
   fbScheduleSave();
 }
 async function deletePipelineFromEditor(){
-  if(PIPELINES.length <= 1){
-    showAlertModal('Неможливо видалити останню воронку.', 'Дія недоступна');
+  const owner = currentPipelineOwner();
+  const ownerPipelines = PIPELINES.filter(p=>p.ownerId===owner);
+  if(ownerPipelines.length <= 1){
+    showAlertModal('Неможливо видалити останню воронку цього власника.', 'Дія недоступна');
     return;
   }
   const cp = currentPipeline();
   const ok = await showConfirmModal({
     title:'Видалити воронку',
-    text:`Видалити воронку "${cp.name}"? Всі угоди з неї буде перенесено до іншої воронки.`,
+    text:`Видалити воронку "${cp.name}"? Всі угоди з неї буде перенесено до іншої воронки цього ж власника.`,
     okText:'Видалити',
     danger:true
   });
   if(!ok) return;
-  const fallback = PIPELINES.find(p=>p.id!==cp.id);
+  const fallback = ownerPipelines.find(p=>p.id!==cp.id);
   LEADS.forEach(l => {
     if((l.pipelineId||'default') === cp.id){
       l.pipelineId = fallback.id;
@@ -2324,10 +2384,12 @@ function openForwardModal(leadId){
 }
 function renderForwardPipelineOptions(list){
   const menu = document.getElementById('forwardPipelineMenu');
-  menu.innerHTML = list.map(p=>`<li data-value="${p.id}" class="${p.id===forwardSelectedPipelineId?'selected':''}">${p.name}</li>`).join('');
+  // Показуємо власника поруч з назвою — переслати можна в БУДЬ-ЯКУ воронку
+  // в системі, і різні власники можуть мати воронки з однаковою назвою.
+  menu.innerHTML = list.map(p=>`<li data-value="${p.id}" class="${p.id===forwardSelectedPipelineId?'selected':''}">${p.name} — ${pipelineOwnerName(p.ownerId)}</li>`).join('');
   const trigger = document.querySelector('#forwardPipelineSelect .cselect-label');
   const sel = list.find(p=>p.id===forwardSelectedPipelineId);
-  if(trigger) trigger.textContent = sel ? sel.name : '—';
+  if(trigger) trigger.textContent = sel ? `${sel.name} — ${pipelineOwnerName(sel.ownerId)}` : '—';
 }
 function renderForwardStageOptions(){
   const p = PIPELINES.find(p=>p.id===forwardSelectedPipelineId);
@@ -2350,11 +2412,15 @@ function confirmForwardDeal(){
   if(!lead || !targetPipeline || !targetStage) return;
   const fromPipeline = PIPELINES.find(p=>p.id===(lead.pipelineId||'default'));
   lead.pipelineId = targetPipeline.id;
+  // Воронка належить конкретному власнику — тому переслана угода переходить
+  // і на дошку цього власника (інакше вона "загубилась" би: лишилась би
+  // прив'язаною до старого менеджера, але у воронці нового).
+  lead.managerId = targetPipeline.ownerId;
   lead.stage = targetStage;
   closeForwardModal();
   renderBoard();
   renderClientsTable();
-  logActivity(`Угоду "${lead.name}" перенесено з воронки "${fromPipeline?fromPipeline.name:'?'}" до "${targetPipeline.name}" (${targetStage})`, {target:{type:'lead', id:lead.id}});
+  logActivity(`Угоду "${lead.name}" перенесено з воронки "${fromPipeline?fromPipeline.name:'?'} (${fromPipeline?pipelineOwnerName(fromPipeline.ownerId):'?'})" до "${targetPipeline.name} (${pipelineOwnerName(targetPipeline.ownerId)})" (${targetStage})`, {target:{type:'lead', id:lead.id}});
 }
 
 /* =========================================================
@@ -3105,9 +3171,11 @@ function saveManager(){
     USERS.push({id:(role==='admin'?'a':'m')+Date.now(), name, role, login:email, password:pass});
     logActivity(`Створено ${roleLabels[role]} ${name} (${email})`, {target:{type:'view', name:'admin'}});
   }
+  ensurePipelineIntegrity(); // одразу створює воронку новому менеджеру, якщо ще немає
   renderManagersTable();
   renderCredentialsTable();
   renderPipelineSelectOptions();
+  renderBoardPipelineOptions();
   renderManagerMultiOptions();
   renderTaskManagerMultiOptions();
   renderReportManagerMultiOptions();
@@ -3520,6 +3588,9 @@ function fbApplyRemoteData(data){
     if(PIPELINES.length && !PIPELINES.some(p=>p.id===state.currentPipelineId)){
       state.currentPipelineId = PIPELINES[0].id;
     }
+    // Гарантуємо, що кожна воронка має власника і що в кожного керівника й
+    // менеджера є хоча б одна своя воронка (див. ensurePipelineIntegrity()).
+    if(ensurePipelineIntegrity()) needsRepairSave = true;
 
     if(state.userId){
       renderBoard();
