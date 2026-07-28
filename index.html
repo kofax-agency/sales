@@ -220,8 +220,11 @@
   .filters-bar{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;padding:18px;}
   .field{display:flex;flex-direction:column;gap:6px;}
   .field label{font-size:11.5px;font-weight:700;color:var(--text-muted);}
-  .field input, .field textarea{padding:9px 12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--radius-sm);font-size:13px;outline:none;transition:border-color .15s;}
+  .field input, .field textarea{padding:9px 12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--radius-sm);font-size:13px;outline:none;transition:border-color .15s,background .15s,color .15s;}
   .field input:focus, .field textarea:focus{border-color:var(--accent-1);}
+  /* Заблоковані поля мають виглядати явно недоступними (сірішими), щоб було
+     одразу видно, яке поле реально можна редагувати після "Редагувати". */
+  .field input:disabled, .field textarea:disabled{background:var(--surface-2);color:var(--text-muted);cursor:not-allowed;}
 
   [data-roles][data-roles]{display:none;}
   body[data-role="manager"] [data-roles~="manager"]{display:revert;}
@@ -432,6 +435,14 @@
   .sidebar-overlay{display:none;position:fixed;inset:0;background:transparent;z-index:58;}
   .sidebar-overlay.open{display:block;}
   .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  /* Розсилки: одержувачі у кілька стовпчиків замість одного довгого списку,
+     щоб сторінка не розтягувалась вертикально при великій базі. */
+  .campaign-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
+  .campaign-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);min-width:0;}
+  .campaign-item-info{min-width:0;overflow:hidden;}
+  .campaign-item-name{display:block;font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .campaign-item-email{display:block;font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .campaign-item-mgr{display:block;font-size:11px;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
   @media (max-width:900px){
     .mobile-menu-btn{display:flex;}
@@ -515,14 +526,18 @@
      використовуємо — вона вмикає "новий" рендер скролбару в Chrome/Edge на
      Windows, який домальовує напівпрозорий чорний ореол навколо повзунка
      (саме те "затемнення біля скролбару", на яке скаржились). Лишаємо лише
-     старі webkit-псевдоелементи — вони дають той самий синій колір без
-     цього артефакту. */
-  :not(.board)::-webkit-scrollbar{height:10px;width:10px;}
+     старі webkit-псевдоелементи.
+     За замовчуванням — простий непомітний сірий скрол (для випадаючих
+     меню, внутрішніх списків, таблиць, бічних панелей тощо), щоб дрібні
+     скроли не впадали в очі. Градієнтний акцентний варіант лишаємо лише
+     для головного скролу сторінки (.content) — див. нижче. */
+  :not(.board)::-webkit-scrollbar{height:8px;width:8px;}
   :not(.board)::-webkit-scrollbar-track{background:transparent;}
-  /* Градієнтний повзунок (той самий accent-1→accent-2, що й на кнопках) —
-     цікавіше за суцільний синій колір. */
-  :not(.board)::-webkit-scrollbar-thumb{background:var(--accent-grad);border-radius:999px;border:2px solid transparent;background-clip:padding-box;}
-  :not(.board)::-webkit-scrollbar-thumb:hover{background:linear-gradient(135deg,var(--accent-2) 0%,var(--accent-1) 100%);background-clip:padding-box;}
+  :not(.board)::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;}
+  :not(.board)::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
+  .content::-webkit-scrollbar{width:10px;}
+  .content::-webkit-scrollbar-thumb{background:var(--accent-grad);border-radius:999px;border:2px solid transparent;background-clip:padding-box;}
+  .content::-webkit-scrollbar-thumb:hover{background:linear-gradient(135deg,var(--accent-2) 0%,var(--accent-1) 100%);background-clip:padding-box;}
 </style>
 </head>
 <body data-role="cto">
@@ -953,12 +968,13 @@
           <div class="field" style="margin-bottom:12px;"><label>Опис / текст листа</label><textarea style="min-height:80px;" placeholder="Текст розсилки..."></textarea></div>
           <div style="color:var(--text-muted);font-size:13px;">Розсилка пачками по 50–100 листів, з нерівномірною затримкою між відправками (напр. 10, 2, 5, 3, 7 хв)</div>
         </div>
-        <div class="card" style="padding:8px 4px;">
-          <div class="table-scroll"><table>
-            <thead><tr><th style="width:36px"></th><th>Лід</th><th>Email</th><th data-roles="admin cto">Менеджер</th></tr></thead>
-            <tbody id="campaignsTableBody"></tbody>
-          </table></div>
-          <div style="padding:14px;"><button class="btn">Запустити розсилку</button></div>
+        <div class="row-between" style="margin-bottom:14px;">
+          <div class="section-title" style="margin:0;">Отримувачі</div>
+          <button class="btn secondary" id="campaignSelectAllBtn" onclick="toggleCampaignSelectAll()">Обрати всіх</button>
+        </div>
+        <div class="card" style="padding:16px;">
+          <div class="campaign-grid" id="campaignsGrid"></div>
+          <div style="padding-top:14px;"><button class="btn">Запустити розсилку</button></div>
         </div>
       </section>
 
@@ -980,7 +996,6 @@
       <section class="view" id="view-account">
         <div class="row-between" style="margin-bottom:16px;">
           <div class="section-title" style="margin:0;">Особистий кабінет</div>
-          <button class="btn secondary" id="acctEditBtn" onclick="toggleAccountEdit()">Редагувати</button>
         </div>
         <div class="card" style="padding:22px;max-width:520px;margin-bottom:20px;">
           <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
@@ -995,6 +1010,7 @@
           <div class="field" style="margin-bottom:4px;"><label>Роль</label><input id="acctRole" type="text" disabled></div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:10px;" data-roles="manager">Логін і пароль може змінити лише керівник відділу або CTO.</div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:10px;" data-roles="admin cto">Змінити пароль можна нижче, у таблиці "База даних для входу".</div>
+          <button class="btn secondary" id="acctEditBtn" style="margin-top:16px;" onclick="toggleAccountEdit()">Редагувати</button>
           <div id="acctEditActions" style="display:none;gap:10px;margin-top:16px;">
             <button class="btn secondary" onclick="cancelAccountEdit()">Скасувати</button>
             <button class="btn" onclick="saveAccountEdit()">Зберегти зміни</button>
@@ -3418,16 +3434,36 @@ function renderCampaignsTable(){
   if(state.role === 'manager'){
     rows = rows.filter(l=>l.managerId===state.managerId);
   }
-  const tbody = document.getElementById('campaignsTableBody');
-  if(!tbody) return;
-  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="4" class="empty-hint">Немає клієнтів для розсилки.</td></tr>'; return; }
-  tbody.innerHTML = rows.map((l,i) => `
-    <tr>
-      <td><label class="chk"><input type="checkbox" ${i<2?'checked':''}><span></span></label></td>
-      <td>${l.name}</td>
-      <td>${l.email}</td>
-      <td data-roles="admin cto">${managerName(l.managerId)}</td>
-    </tr>`).join('');
+  const grid = document.getElementById('campaignsGrid');
+  if(!grid) return;
+  if(!rows.length){ grid.innerHTML = '<div class="empty-hint">Немає клієнтів для розсилки.</div>'; updateCampaignSelectAllLabel(); return; }
+  grid.innerHTML = rows.map((l,i) => `
+    <div class="campaign-item">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${i<2?'checked':''} onchange="updateCampaignSelectAllLabel()"><span></span></label>
+      <div class="campaign-item-info">
+        <span class="campaign-item-name">${l.name}</span>
+        <span class="campaign-item-email">${l.email}</span>
+        <span class="campaign-item-mgr" data-roles="admin cto">${managerName(l.managerId)}</span>
+      </div>
+    </div>`).join('');
+  updateCampaignSelectAllLabel();
+}
+// "Обрати всіх" перемикає геть усі чекбокси одразу; повторний клік знімає
+// позначки з усіх (типовий toggle select-all). Текст кнопки завжди
+// відображає, яка дія відбудеться при наступному кліку.
+function toggleCampaignSelectAll(){
+  const boxes = document.querySelectorAll('#campaignsGrid input[type=checkbox]');
+  if(!boxes.length) return;
+  const allChecked = Array.from(boxes).every(cb=>cb.checked);
+  boxes.forEach(cb=>{ cb.checked = !allChecked; });
+  updateCampaignSelectAllLabel();
+}
+function updateCampaignSelectAllLabel(){
+  const btn = document.getElementById('campaignSelectAllBtn');
+  if(!btn) return;
+  const boxes = document.querySelectorAll('#campaignsGrid input[type=checkbox]');
+  const allChecked = boxes.length > 0 && Array.from(boxes).every(cb=>cb.checked);
+  btn.textContent = allChecked ? 'Зняти всі' : 'Обрати всіх';
 }
 function parseUkDate(s){
   const [d,m,y] = s.split('.').map(Number);
@@ -4209,7 +4245,7 @@ function renderAccountView(){
   document.getElementById('acctEmail').value = me.login;
   document.getElementById('acctEditActions').style.display = 'none';
   const editBtn = document.getElementById('acctEditBtn');
-  if(editBtn){ editBtn.textContent = 'Редагувати'; editBtn.disabled = false; }
+  if(editBtn){ editBtn.style.display = ''; editBtn.textContent = 'Редагувати'; editBtn.disabled = false; }
   const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
   document.getElementById('acctRole').value = roleLabels[state.role];
   updateHeaderAvatars();
@@ -4217,14 +4253,16 @@ function renderAccountView(){
 }
 // Ім'я може змінити будь-яка роль. Зміна пароля для CTO/керівника відділу
 // відбувається окремо, нижче — через "База даних для входу" (Редагувати),
-// щоб не дублювати цю дію у двох місцях.
+// щоб не дублювати цю дію у двох місцях. Кнопка "Редагувати" ховається і
+// поступається місцем "Скасувати"/"Зберегти зміни" — обидва стани живуть в
+// одному й тому самому місці під формою, а не розбіжно (кнопка згори,
+// дії знизу), як було раніше.
 function toggleAccountEdit(){
   acctEditing = true;
   document.getElementById('acctName').disabled = false;
   document.getElementById('acctEditActions').style.display = 'flex';
   const editBtn = document.getElementById('acctEditBtn');
-  editBtn.textContent = 'Редагування...';
-  editBtn.disabled = true;
+  if(editBtn) editBtn.style.display = 'none';
 }
 function cancelAccountEdit(){
   renderAccountView();
