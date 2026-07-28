@@ -438,7 +438,8 @@
   /* Розсилки: одержувачі у кілька стовпчиків замість одного довгого списку,
      щоб сторінка не розтягувалась вертикально при великій базі. */
   .campaign-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
-  .campaign-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);min-width:0;}
+  .campaign-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);min-width:0;cursor:pointer;user-select:none;transition:background .1s,border-color .1s;}
+  .campaign-item.is-checked{border-color:var(--accent-1);background:var(--surface-2);}
   .campaign-item-info{min-width:0;overflow:hidden;}
   .campaign-item-name{display:block;font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .campaign-item-email{display:block;font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -535,9 +536,12 @@
   :not(.board)::-webkit-scrollbar-track{background:transparent;}
   :not(.board)::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;}
   :not(.board)::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
+  /* Простий суцільний синій, без градієнта/рамки-обрізки (border+
+     background-clip у деяких браузерах давав нерівний/темний вигляд) —
+     прямі, мінімально заокруглені кути. */
   .content::-webkit-scrollbar{width:10px;}
-  .content::-webkit-scrollbar-thumb{background:var(--accent-grad);border-radius:999px;border:2px solid transparent;background-clip:padding-box;}
-  .content::-webkit-scrollbar-thumb:hover{background:linear-gradient(135deg,var(--accent-2) 0%,var(--accent-1) 100%);background-clip:padding-box;}
+  .content::-webkit-scrollbar-thumb{background:var(--accent-1);border-radius:3px;}
+  .content::-webkit-scrollbar-thumb:hover{background:var(--accent-2);}
 </style>
 </head>
 <body data-role="cto">
@@ -973,7 +977,7 @@
           <button class="btn secondary" id="campaignSelectAllBtn" onclick="toggleCampaignSelectAll()">Обрати всіх</button>
         </div>
         <div class="card" style="padding:16px;">
-          <div class="campaign-grid" id="campaignsGrid"></div>
+          <div class="campaign-grid" id="campaignsGrid" onmousedown="campaignItemMouseDown(event)" onmouseover="campaignItemMouseOver(event)"></div>
           <div style="padding-top:14px;"><button class="btn">Запустити розсилку</button></div>
         </div>
       </section>
@@ -3438,8 +3442,8 @@ function renderCampaignsTable(){
   if(!grid) return;
   if(!rows.length){ grid.innerHTML = '<div class="empty-hint">Немає клієнтів для розсилки.</div>'; updateCampaignSelectAllLabel(); return; }
   grid.innerHTML = rows.map((l,i) => `
-    <div class="campaign-item">
-      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${i<2?'checked':''} onchange="updateCampaignSelectAllLabel()"><span></span></label>
+    <div class="campaign-item${i<2?' is-checked':''}">
+      <label class="chk"><input type="checkbox" ${i<2?'checked':''} onchange="this.closest('.campaign-item').classList.toggle('is-checked', this.checked); updateCampaignSelectAllLabel();"><span></span></label>
       <div class="campaign-item-info">
         <span class="campaign-item-name">${l.name}</span>
         <span class="campaign-item-email">${l.email}</span>
@@ -3452,12 +3456,50 @@ function renderCampaignsTable(){
 // позначки з усіх (типовий toggle select-all). Текст кнопки завжди
 // відображає, яка дія відбудеться при наступному кліку.
 function toggleCampaignSelectAll(){
-  const boxes = document.querySelectorAll('#campaignsGrid input[type=checkbox]');
-  if(!boxes.length) return;
-  const allChecked = Array.from(boxes).every(cb=>cb.checked);
-  boxes.forEach(cb=>{ cb.checked = !allChecked; });
+  const items = document.querySelectorAll('#campaignsGrid .campaign-item');
+  if(!items.length) return;
+  const allChecked = Array.from(items).every(el=>el.querySelector('input[type=checkbox]').checked);
+  items.forEach(el=>{
+    const cb = el.querySelector('input[type=checkbox]');
+    cb.checked = !allChecked;
+    el.classList.toggle('is-checked', cb.checked);
+  });
   updateCampaignSelectAllLabel();
 }
+// Клік будь-де на картці позначає/знімає позначку; затиснувши курсор і
+// протягнувши по кількох картках — виділяються (чи знімаються) всі, по
+// яких пройшовся курсор, як у файлових менеджерах. preventDefault на
+// mousedown придушує нативне перемикання чекбокса кліком — далі станом
+// керуємо виключно самі (інакше було б подвійне, взаємоскасовувальне
+// перемикання при кліку прямо по чекбоксу).
+let campaignDragMode = null;
+let campaignIsDragging = false;
+function campaignItemMouseDown(e){
+  const item = e.target.closest('.campaign-item');
+  if(!item) return;
+  e.preventDefault();
+  const cb = item.querySelector('input[type=checkbox]');
+  if(!cb) return;
+  campaignIsDragging = true;
+  campaignDragMode = !cb.checked;
+  cb.checked = campaignDragMode;
+  item.classList.toggle('is-checked', cb.checked);
+  updateCampaignSelectAllLabel();
+}
+function campaignItemMouseOver(e){
+  if(!campaignIsDragging) return;
+  const item = e.target.closest('.campaign-item');
+  if(!item) return;
+  const cb = item.querySelector('input[type=checkbox]');
+  if(!cb) return;
+  cb.checked = campaignDragMode;
+  item.classList.toggle('is-checked', cb.checked);
+  updateCampaignSelectAllLabel();
+}
+document.addEventListener('mouseup', function(){
+  campaignIsDragging = false;
+  campaignDragMode = null;
+});
 function updateCampaignSelectAllLabel(){
   const btn = document.getElementById('campaignSelectAllBtn');
   if(!btn) return;
