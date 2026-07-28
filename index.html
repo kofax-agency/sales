@@ -638,7 +638,7 @@
             <span class="role-pill" id="rolePill">CTO</span>
           </div>
           <div class="dropdown-panel" id="accountMenu" style="width:220px;">
-            <div class="menu-list">
+            <div class="menu-list" id="accountMenuMain">
               <div class="menu-item mobile-only-menu-item" onclick="toggleDropdown('notifPanel', document.querySelector('.account-trigger'))">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                 Сповіщення
@@ -652,10 +652,25 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
                 Особистий кабінет
               </div>
+              <div class="menu-item js-hidden" id="switchAccountMenuItem" onclick="openAccountSwitchList()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                Змінити акаунт
+              </div>
+              <div class="menu-item js-hidden" id="returnToCtoItem" onclick="switchAccount(state.originalCtoId)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                <span id="returnToCtoLabel">Повернутись до свого акаунта</span>
+              </div>
               <div class="menu-item danger" onclick="logout()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
                 Вийти
               </div>
+            </div>
+            <div class="menu-list js-hidden" id="accountSwitchList">
+              <div class="menu-item" onclick="closeAccountSwitchList()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                Назад
+              </div>
+              <div id="accountSwitchItems"></div>
             </div>
           </div>
         </div>
@@ -1376,6 +1391,7 @@ const USERS = [
 // в пам'яті і скидається при перезавантаженні, як і задумано для прототипу.
 function loadStoredPhotos(){
   USERS.forEach(u => {
+    if(u.photo) return; // хмара вже дала фото (свіжіше, крос-девайс) — локальний кеш не чіпаємо
     try{
       const saved = localStorage.getItem('kofax_photo_' + u.id);
       if(saved) u.photo = saved;
@@ -1441,6 +1457,10 @@ const state = {
   role: 'cto',
   userId: null,
   managerId: null,
+  // Якщо CTO скористався швидким перемиканням акаунтів (без пароля) — тут
+  // лишається id його СПРАВЖНЬОГО акаунта, щоб показати "Повернутись" і
+  // щоб знати, що поточна сесія — це акт імперсонації, а не реальний вхід.
+  originalCtoId: null,
   // Порожній масив = "Усі воронки" (без фільтра за власником); інакше —
   // список власників ('admin' і/або id менеджерів), чиї воронки показувати.
   pipelineOwnerFilter: [],
@@ -1542,14 +1562,33 @@ function changeOwnPhoto(e){
   if(!file.type.startsWith('image/')){ showAlertModal('Будь ласка, оберіть файл зображення (JPG/PNG).', 'Невірний формат файлу'); return; }
   const reader = new FileReader();
   reader.onload = function(ev){
-    const me = currentUserRecord();
-    if(!me) return;
-    me.photo = ev.target.result;
-    try{ localStorage.setItem('kofax_photo_' + me.id, me.photo); }catch(err){ /* сховище недоступне — фото діє лише в цій сесії */ }
-    updateHeaderAvatars();
-    renderManagersTable();
-    renderCredentialsTable();
-    logActivity(`Оновлено фото профілю (${me.name})`, {target:{type:'account'}});
+    const img = new Image();
+    img.onload = function(){
+      // Зменшуємо фото до розумного розміру перед збереженням — інакше
+      // велике фото в base64 роздуває спільний документ Firestore (ліміт
+      // 1МБ) і може зірвати збереження решти бази без видимої помилки.
+      const maxSize = 240;
+      let w = img.width, h = img.height;
+      if(w > h){ if(w > maxSize){ h = Math.round(h * maxSize / w); w = maxSize; } }
+      else { if(h > maxSize){ w = Math.round(w * maxSize / h); h = maxSize; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      const me = currentUserRecord();
+      if(!me) return;
+      me.photo = dataUrl;
+      try{ localStorage.setItem('kofax_photo_' + me.id, me.photo); }catch(err){ /* сховище недоступне — фото діє лише в цій сесії */ }
+      updateHeaderAvatars();
+      renderManagersTable();
+      renderCredentialsTable();
+      logActivity(`Оновлено фото профілю (${me.name})`, {target:{type:'account'}});
+      // Синхронізуємо фото в хмару — раніше цього не було, тому воно жило
+      // лише в localStorage цього браузера і губилось, щойно приходили
+      // реальні дані з Firestore (USERS повністю перезаписувався без фото).
+      fbScheduleSave();
+    };
+    img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -1660,6 +1699,7 @@ function completeLogin(user, opts){
   renderAccountView();
   renderReminderBanner();
   scheduleAllUpcomingMeetings();
+  updateAccountSwitchUI();
   // Відновлюємо сторінку, на якій користувач був до оновлення (F5), замість
   // того, щоб завжди кидати на дашборд. 'report-detail' пропускаємо — вона
   // прив'язана до конкретного звіту (state.reportViewId), який не зберігається.
@@ -1667,6 +1707,63 @@ function completeLogin(user, opts){
   const navLi = savedView ? document.querySelector('.nav li[data-nav="' + savedView + '"]') : null;
   const canRestore = savedView && savedView !== 'report-detail' && document.getElementById('view-' + savedView) && (!navLi || navLi.offsetParent !== null || getComputedStyle(navLi).display !== 'none');
   showView(null, canRestore ? savedView : 'dashboard');
+}
+// Швидке перемикання акаунтів (лише для CTO) — дозволяє миттєво "стати"
+// іншим користувачем без введення пароля, щоб перевірити, що бачить
+// керівник відділу чи менеджер, і так само швидко повернутись назад.
+// Сесія в localStorage ("Запам'ятати мене") при цьому НЕ чіпається — тому
+// оновлення сторінки завжди повертає до справжнього акаунта.
+function openAccountSwitchList(){
+  document.getElementById('accountMenuMain').classList.add('js-hidden');
+  document.getElementById('accountSwitchList').classList.remove('js-hidden');
+  renderAccountSwitchList();
+}
+function closeAccountSwitchList(){
+  document.getElementById('accountSwitchList').classList.add('js-hidden');
+  document.getElementById('accountMenuMain').classList.remove('js-hidden');
+}
+function renderAccountSwitchList(){
+  const container = document.getElementById('accountSwitchItems');
+  if(!container) return;
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
+  container.innerHTML = USERS.map(u => `
+    <div class="menu-item" onclick="switchAccount('${u.id}')" style="justify-content:flex-start;gap:10px;">
+      <div class="avatar" style="width:22px;height:22px;font-size:9px;flex-shrink:0;">${avatarContent(u)}</div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u.name}${u.id===state.userId ? ' (поточний)' : ''}</span>
+      <span style="font-size:11px;color:var(--text-muted);flex-shrink:0;">${roleLabels[u.role]}</span>
+    </div>`).join('');
+}
+function switchAccount(userId){
+  if(!userId) return;
+  const user = USERS.find(u=>u.id===userId);
+  if(!user){ closeAllDropdowns(); return; }
+  closeAllDropdowns();
+  if(user.id === state.userId) return;
+  // Запам'ятовуємо справжній CTO-акаунт лише один раз — якщо вже в процесі
+  // перемикання (originalCtoId вже встановлено), не перезаписуємо його,
+  // інакше "Повернутись" почне вести не туди після кількох перемикань підряд.
+  if(state.role === 'cto' && !state.originalCtoId) state.originalCtoId = state.userId;
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
+  const realCto = state.originalCtoId ? USERS.find(u=>u.id===state.originalCtoId) : null;
+  logActivity(`Швидке перемикання акаунта${realCto ? ' (' + realCto.name + ')' : ''}: → ${user.name} (${roleLabels[user.role]})`, {silent:true});
+  completeLogin(user, {showReminder:false});
+}
+// Показує/ховає пункти "Змінити акаунт" і "Повернутись до свого акаунта" —
+// прив'язано не до поточної ролі (вона може бути "manager" під час
+// імперсонації), а до того, чи це справжній CTO, чи CTO, що зараз
+// прикидається кимось іншим.
+function updateAccountSwitchUI(){
+  const isRealCto = state.role === 'cto' && !state.originalCtoId;
+  const isImpersonating = !!state.originalCtoId && state.originalCtoId !== state.userId;
+  const switchItem = document.getElementById('switchAccountMenuItem');
+  if(switchItem) switchItem.classList.toggle('js-hidden', !(isRealCto || isImpersonating));
+  const returnItem = document.getElementById('returnToCtoItem');
+  if(returnItem) returnItem.classList.toggle('js-hidden', !isImpersonating);
+  if(isImpersonating){
+    const ctoUser = USERS.find(u=>u.id===state.originalCtoId);
+    const label = document.getElementById('returnToCtoLabel');
+    if(label) label.textContent = ctoUser ? `Повернутись: ${ctoUser.name} (CTO)` : 'Повернутись до свого акаунта';
+  }
 }
 // Реальна автентифікація за email + пароль з таблиці USERS (та сама база,
 // що редагується в "База даних для входу"). Якщо позначено "Запам'ятати
@@ -1689,6 +1786,7 @@ function login(){
     else localStorage.removeItem('kofax_session');
   }catch(err){ /* localStorage недоступний — просто без автовходу наступного разу */ }
   offerBrowserPasswordSave(email, password, user.name);
+  state.originalCtoId = null; // справжній вхід за паролем — скидаємо будь-яку попередню імперсонацію
   completeLogin(user, {showReminder:true});
 }
 // Явно просимо браузер (Chrome/Edge) запропонувати зберегти пароль у власному
@@ -1726,6 +1824,7 @@ function logout(){
   try{ localStorage.removeItem('kofax_session'); }catch(err){}
   state.userId = null;
   state.managerId = null;
+  state.originalCtoId = null;
 }
 
 /* =========================================================
@@ -1779,6 +1878,11 @@ function showView(e, name){
 function closeAllDropdowns(){
   document.querySelectorAll('.cselect.open').forEach(el => el.classList.remove('open'));
   document.querySelectorAll('.dropdown-panel.open').forEach(el => el.classList.remove('open'));
+  // Скидаємо меню акаунта назад до головного списку (не залишаємо його
+  // відкритим на екрані "Змінити акаунт" наступного разу).
+  const switchList = document.getElementById('accountSwitchList');
+  const mainList = document.getElementById('accountMenuMain');
+  if(switchList && mainList){ switchList.classList.add('js-hidden'); mainList.classList.remove('js-hidden'); }
 }
 
 /* =========================================================
@@ -4466,7 +4570,13 @@ function fbApplyRemoteData(data){
     if(Array.isArray(data.reports)) REPORTS = data.reports;
     if(Array.isArray(data.notifications)) NOTIFICATIONS = data.notifications;
     if(Array.isArray(data.history)) HISTORY = data.history;
-    if(Array.isArray(data.users) && data.users.length){ USERS.length = 0; data.users.forEach(u=>USERS.push(u)); }
+    if(Array.isArray(data.users) && data.users.length){
+      USERS.length = 0; data.users.forEach(u=>USERS.push(u));
+      // USERS щойно повністю замінено хмарними об'єктами — якщо в когось
+      // фото ще не встигло синхронізуватись у хмару (або дію виконано на
+      // іншому пристрої), підхоплюємо його з локального кешу цього браузера.
+      loadStoredPhotos();
+    }
     if(Array.isArray(data.pipelines) && data.pipelines.length){ PIPELINES.length = 0; data.pipelines.forEach(p=>PIPELINES.push(p)); }
     if(typeof data.nextLeadId === 'number') nextLeadId = Math.max(nextLeadId, data.nextLeadId);
     if(typeof data.nextReportId === 'number') nextReportId = Math.max(nextReportId, data.nextReportId);
@@ -4512,6 +4622,8 @@ function fbApplyRemoteData(data){
       renderTaskManagerMultiOptions();
       renderReportManagerMultiOptions();
       scheduleAllUpcomingMeetings();
+      updateHeaderAvatars();
+      updateAccountSwitchUI();
     }
   } finally {
     fbApplyingRemote = false;
