@@ -503,11 +503,16 @@
     .undo-toast{left:12px;right:12px;max-width:none;}
   }
 
-  html{scrollbar-width:thin;scrollbar-color:var(--accent-1) transparent;}
-  ::-webkit-scrollbar{height:10px;width:10px;}
-  ::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:var(--accent-1);border-radius:999px;border:2px solid transparent;background-clip:padding-box;}
-  ::-webkit-scrollbar-thumb:hover{background:var(--accent-2);background-clip:padding-box;}
+  /* Стандартну властивість scrollbar-color/-width на html навмисно НЕ
+     використовуємо — вона вмикає "новий" рендер скролбару в Chrome/Edge на
+     Windows, який домальовує напівпрозорий чорний ореол навколо повзунка
+     (саме те "затемнення біля скролбару", на яке скаржились). Лишаємо лише
+     старі webkit-псевдоелементи — вони дають той самий синій колір без
+     цього артефакту. */
+  :not(.board)::-webkit-scrollbar{height:10px;width:10px;}
+  :not(.board)::-webkit-scrollbar-track{background:transparent;}
+  :not(.board)::-webkit-scrollbar-thumb{background:var(--accent-1);border-radius:999px;border:2px solid transparent;background-clip:padding-box;}
+  :not(.board)::-webkit-scrollbar-thumb:hover{background:var(--accent-2);background-clip:padding-box;}
 </style>
 </head>
 <body data-role="cto">
@@ -656,10 +661,6 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
                 Змінити акаунт
               </div>
-              <div class="menu-item js-hidden" id="returnToCtoItem" onclick="switchAccount(state.originalCtoId)">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-                <span id="returnToCtoLabel">Повернутись до свого акаунта</span>
-              </div>
               <div class="menu-item danger" onclick="logout()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
                 Вийти
@@ -782,10 +783,10 @@
               <ul class="cselect-menu" id="clientsPipelineMultiMenu"></ul>
             </div>
           </div>
+          <button class="btn" onclick="renderClientsTable()">Застосувати фільтр</button>
           <div style="margin-left:auto;display:flex;gap:8px;">
             <button class="btn secondary" data-roles="admin cto" onclick="openImportPanel()">Імпорт з Pipedrive</button>
             <button class="btn secondary" data-roles="admin cto" onclick="exportClientsCSV()">Експорт в CSV</button>
-            <button class="btn secondary" onclick="renderClientsTable()">Застосувати фільтр</button>
           </div>
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
@@ -1457,10 +1458,10 @@ const state = {
   role: 'cto',
   userId: null,
   managerId: null,
-  // Якщо CTO скористався швидким перемиканням акаунтів (без пароля) — тут
-  // лишається id його СПРАВЖНЬОГО акаунта, щоб показати "Повернутись" і
-  // щоб знати, що поточна сесія — це акт імперсонації, а не реальний вхід.
-  originalCtoId: null,
+  // Якщо CTO або керівник відділу скористався швидким перемиканням акаунтів
+  // (без пароля) — тут лишається id його СПРАВЖНЬОГО акаунта, щоб знати, що
+  // поточна сесія — це акт імперсонації, а не реальний вхід.
+  originalUserId: null,
   // Порожній масив = "Усі воронки" (без фільтра за власником); інакше —
   // список власників ('admin' і/або id менеджерів), чиї воронки показувати.
   pipelineOwnerFilter: [],
@@ -1708,11 +1709,22 @@ function completeLogin(user, opts){
   const canRestore = savedView && savedView !== 'report-detail' && document.getElementById('view-' + savedView) && (!navLi || navLi.offsetParent !== null || getComputedStyle(navLi).display !== 'none');
   showView(null, canRestore ? savedView : 'dashboard');
 }
-// Швидке перемикання акаунтів (лише для CTO) — дозволяє миттєво "стати"
-// іншим користувачем без введення пароля, щоб перевірити, що бачить
-// керівник відділу чи менеджер, і так само швидко повернутись назад.
+// Швидке перемикання акаунтів (CTO і керівник відділу) — дозволяє миттєво
+// "стати" іншим користувачем без введення пароля. CTO бачить усіх; керівник
+// відділу бачить лише себе і менеджерів (не CTO і не інших керівників
+// відділу) — саме на це коло і обмежений accountSwitchPool() нижче.
 // Сесія в localStorage ("Запам'ятати мене") при цьому НЕ чіпається — тому
 // оновлення сторінки завжди повертає до справжнього акаунта.
+function realIdentityUser(){
+  return USERS.find(u=>u.id===(state.originalUserId || state.userId)) || null;
+}
+function accountSwitchPool(){
+  const real = realIdentityUser();
+  if(!real) return [];
+  if(real.role === 'cto') return USERS.slice();
+  if(real.role === 'admin') return USERS.filter(u=>u.role==='manager' || u.id===real.id);
+  return [];
+}
 function openAccountSwitchList(){
   document.getElementById('accountMenuMain').classList.add('js-hidden');
   document.getElementById('accountSwitchList').classList.remove('js-hidden');
@@ -1726,7 +1738,8 @@ function renderAccountSwitchList(){
   const container = document.getElementById('accountSwitchItems');
   if(!container) return;
   const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
-  container.innerHTML = USERS.map(u => `
+  const pool = accountSwitchPool();
+  container.innerHTML = pool.map(u => `
     <div class="menu-item" onclick="switchAccount('${u.id}')" style="justify-content:flex-start;gap:10px;">
       <div class="avatar" style="width:22px;height:22px;font-size:9px;flex-shrink:0;">${avatarContent(u)}</div>
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u.name}${u.id===state.userId ? ' (поточний)' : ''}</span>
@@ -1739,31 +1752,30 @@ function switchAccount(userId){
   if(!user){ closeAllDropdowns(); return; }
   closeAllDropdowns();
   if(user.id === state.userId) return;
-  // Запам'ятовуємо справжній CTO-акаунт лише один раз — якщо вже в процесі
-  // перемикання (originalCtoId вже встановлено), не перезаписуємо його,
-  // інакше "Повернутись" почне вести не туди після кількох перемикань підряд.
-  if(state.role === 'cto' && !state.originalCtoId) state.originalCtoId = state.userId;
+  // Перевіряємо дозволене коло ще раз тут (не лише при рендері списку) —
+  // щоб ніхто не міг "перемкнутись" на заборонений акаунт в обхід UI.
+  if(!accountSwitchPool().some(u=>u.id===user.id)) return;
+  // Запам'ятовуємо справжній акаунт лише один раз — якщо вже в процесі
+  // перемикання (originalUserId вже встановлено), не перезаписуємо його,
+  // інакше повернення почне вести не туди після кількох перемикань підряд.
+  if(!state.originalUserId) state.originalUserId = state.userId;
+  // Якщо обрали саме той акаунт, з якого починали перемикання — це і є
+  // повернення "додому": більше не в режимі імперсонації.
+  if(user.id === state.originalUserId) state.originalUserId = null;
   const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
-  const realCto = state.originalCtoId ? USERS.find(u=>u.id===state.originalCtoId) : null;
-  logActivity(`Швидке перемикання акаунта${realCto ? ' (' + realCto.name + ')' : ''}: → ${user.name} (${roleLabels[user.role]})`, {silent:true});
+  logActivity(`Швидке перемикання акаунта: → ${user.name} (${roleLabels[user.role]})`, {silent:true});
   completeLogin(user, {showReminder:false});
 }
-// Показує/ховає пункти "Змінити акаунт" і "Повернутись до свого акаунта" —
-// прив'язано не до поточної ролі (вона може бути "manager" під час
-// імперсонації), а до того, чи це справжній CTO, чи CTO, що зараз
-// прикидається кимось іншим.
+// Показує/ховає пункт "Змінити акаунт" — прив'язано не до поточної ролі
+// (вона може бути "manager" під час імперсонації), а до РЕАЛЬНОЇ особи, що
+// зараз перемикається (realIdentityUser()). Повернутись до свого акаунта
+// так само обирають зі списку "Змінити акаунт" — окремого пункту
+// "Повернутись" немає навмисно.
 function updateAccountSwitchUI(){
-  const isRealCto = state.role === 'cto' && !state.originalCtoId;
-  const isImpersonating = !!state.originalCtoId && state.originalCtoId !== state.userId;
+  const real = realIdentityUser();
+  const canSwitch = !!real && (real.role === 'cto' || real.role === 'admin');
   const switchItem = document.getElementById('switchAccountMenuItem');
-  if(switchItem) switchItem.classList.toggle('js-hidden', !(isRealCto || isImpersonating));
-  const returnItem = document.getElementById('returnToCtoItem');
-  if(returnItem) returnItem.classList.toggle('js-hidden', !isImpersonating);
-  if(isImpersonating){
-    const ctoUser = USERS.find(u=>u.id===state.originalCtoId);
-    const label = document.getElementById('returnToCtoLabel');
-    if(label) label.textContent = ctoUser ? `Повернутись: ${ctoUser.name} (CTO)` : 'Повернутись до свого акаунта';
-  }
+  if(switchItem) switchItem.classList.toggle('js-hidden', !canSwitch);
 }
 // Реальна автентифікація за email + пароль з таблиці USERS (та сама база,
 // що редагується в "База даних для входу"). Якщо позначено "Запам'ятати
@@ -1786,7 +1798,7 @@ function login(){
     else localStorage.removeItem('kofax_session');
   }catch(err){ /* localStorage недоступний — просто без автовходу наступного разу */ }
   offerBrowserPasswordSave(email, password, user.name);
-  state.originalCtoId = null; // справжній вхід за паролем — скидаємо будь-яку попередню імперсонацію
+  state.originalUserId = null; // справжній вхід за паролем — скидаємо будь-яку попередню імперсонацію
   completeLogin(user, {showReminder:true});
 }
 // Явно просимо браузер (Chrome/Edge) запропонувати зберегти пароль у власному
@@ -1824,7 +1836,7 @@ function logout(){
   try{ localStorage.removeItem('kofax_session'); }catch(err){}
   state.userId = null;
   state.managerId = null;
-  state.originalCtoId = null;
+  state.originalUserId = null;
 }
 
 /* =========================================================
