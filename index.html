@@ -531,20 +531,20 @@
      За замовчуванням — простий непомітний сірий скрол (для випадаючих
      меню, внутрішніх списків, таблиць, бічних панелей тощо), щоб дрібні
      скроли не впадали в очі. .content насправді не має власного скролу
-     (.app лише min-height:100vh, тому скролиться сам document/html) —
-     головний скрол сторінки стилізуємо через html нижче, з тим самим
-     рівнем специфічності (:not(.board)), інакше загальне сіре правило
-     вище перекриє його. */
-  :not(.board):not(html)::-webkit-scrollbar{height:8px;width:8px;}
-  :not(.board):not(html)::-webkit-scrollbar-track{background:transparent;}
-  :not(.board):not(html)::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;}
-  :not(.board):not(html)::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
+     (.app лише min-height:100vh, тому скролиться viewport, а браузер може
+     прив'язувати цей скрол як до html, так і до body — стилізуємо обидва) —
+     головний скрол сторінки нижче, з тим самим рівнем специфічності
+     (:not(.board)), інакше загальне сіре правило вище перекриє його. */
+  :not(.board):not(html):not(body)::-webkit-scrollbar{height:8px;width:8px;}
+  :not(.board):not(html):not(body)::-webkit-scrollbar-track{background:transparent;}
+  :not(.board):not(html):not(body)::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;}
+  :not(.board):not(html):not(body)::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
   /* Головний скрол сторінки: простий суцільний синій, без градієнта, без
      заокруглення, без hover-ефекту. */
-  html::-webkit-scrollbar{width:10px;}
-  html::-webkit-scrollbar-track{background:transparent;}
-  html::-webkit-scrollbar-thumb{background:var(--accent-1);border-radius:0;}
-  html::-webkit-scrollbar-thumb:hover{background:var(--accent-1);}
+  html::-webkit-scrollbar, body::-webkit-scrollbar{width:10px;}
+  html::-webkit-scrollbar-track, body::-webkit-scrollbar-track{background:transparent;}
+  html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb{background:var(--accent-1);border-radius:0;}
+  html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover{background:var(--accent-1);}
 </style>
 </head>
 <body data-role="cto">
