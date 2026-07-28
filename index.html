@@ -356,7 +356,7 @@
   .confirm-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;}
 
   /* ---------- Side panels ---------- */
-  .panel-overlay{position:fixed;inset:0;background:rgba(10,11,20,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:55;}
+  .panel-overlay{position:fixed;inset:0;background:transparent;opacity:0;pointer-events:none;transition:opacity .2s;z-index:55;}
   .panel-overlay.open{opacity:1;pointer-events:auto;}
   .side-panel{position:fixed;top:0;right:0;height:100vh;height:100dvh;background:var(--surface);box-shadow:-10px 0 34px rgba(0,0,0,.18);transform:translateX(100%);transition:transform .25s ease;z-index:60;display:flex;flex-direction:column;}
   .side-panel.open{transform:translateX(0);}
@@ -421,7 +421,7 @@
   /* ---------- Mobile: hamburger sidebar + horizontal-scroll tables ---------- */
   .mobile-menu-btn{display:none;}
   .mobile-only-menu-item{display:none;}
-  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(10,11,20,.45);z-index:58;}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:transparent;z-index:58;}
   .sidebar-overlay.open{display:block;}
   .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 
@@ -503,8 +503,11 @@
     .undo-toast{left:12px;right:12px;max-width:none;}
   }
 
-  ::-webkit-scrollbar{height:8px;width:8px;}
-  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+  html{scrollbar-width:thin;scrollbar-color:var(--accent-1) transparent;}
+  ::-webkit-scrollbar{height:10px;width:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--accent-1);border-radius:999px;border:2px solid transparent;background-clip:padding-box;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent-2);background-clip:padding-box;}
 </style>
 </head>
 <body data-role="cto">
