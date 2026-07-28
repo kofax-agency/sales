@@ -536,12 +536,9 @@
   :not(.board)::-webkit-scrollbar-track{background:transparent;}
   :not(.board)::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;}
   :not(.board)::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
-  /* Простий суцільний синій, без градієнта/рамки-обрізки (border+
-     background-clip у деяких браузерах давав нерівний/темний вигляд) —
-     прямі, мінімально заокруглені кути. */
+  /* Простий суцільний синій, без градієнта, без заокруглення, без hover-ефекту. */
   .content::-webkit-scrollbar{width:10px;}
-  .content::-webkit-scrollbar-thumb{background:var(--accent-1);border-radius:3px;}
-  .content::-webkit-scrollbar-thumb:hover{background:var(--accent-2);}
+  .content::-webkit-scrollbar-thumb{background:var(--accent-1);border-radius:0;}
 </style>
 </head>
 <body data-role="cto">
