@@ -754,7 +754,11 @@
               <ul class="cselect-menu" id="managerMultiMenu"></ul>
             </div>
           </div>
-          <button class="btn secondary" style="margin-left:auto" onclick="renderClientsTable()">Застосувати фільтр</button>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="btn secondary" data-roles="admin cto" onclick="openImportPanel()">Імпорт з Pipedrive</button>
+            <button class="btn secondary" data-roles="admin cto" onclick="exportClientsCSV()">Експорт в CSV</button>
+            <button class="btn secondary" onclick="renderClientsTable()">Застосувати фільтр</button>
+          </div>
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
           <div class="table-scroll"><table>
@@ -1202,6 +1206,46 @@
   <div class="panel-foot">
     <button class="btn secondary" onclick="closeAllPanels()">Закрити</button>
     <button class="btn" onclick="editFromClientCard()">Редагувати угоду</button>
+  </div>
+</aside>
+
+<!-- ================= IMPORT FROM PIPEDRIVE PANEL ================= -->
+<aside class="side-panel wide" id="importPanel">
+  <div class="panel-head"><h3>Імпорт з Pipedrive</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="panel-section">
+      <div class="section-title" style="font-size:13px;">Файли експорту</div>
+      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">
+        Завантаж CSV-файли з Pipedrive (акаунт → Інструменти та застосунки → Експорт даних). Угоди — обов'язково. Контакти й Нотатки — за бажанням: без "Контактів" не буде телефону/email, без "Нотаток" не перенесеться історія нотаток.
+      </div>
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Угоди (CSV) *</label>
+          <label class="file-btn">📄 <span id="pdDealsFileName">Обрати файл</span><input type="file" accept=".csv" style="display:none" id="pdDealsFile" onchange="pdFilePicked('pdDealsFile','pdDealsFileName')"></label>
+        </div>
+        <div class="field">
+          <label>Контакти (CSV)</label>
+          <label class="file-btn">📄 <span id="pdPeopleFileName">Обрати файл</span><input type="file" accept=".csv" style="display:none" id="pdPeopleFile" onchange="pdFilePicked('pdPeopleFile','pdPeopleFileName')"></label>
+        </div>
+      </div>
+      <div class="field" style="max-width:260px;">
+        <label>Нотатки (CSV)</label>
+        <label class="file-btn">📄 <span id="pdNotesFileName">Обрати файл</span><input type="file" accept=".csv" style="display:none" id="pdNotesFile" onchange="pdFilePicked('pdNotesFile','pdNotesFileName')"></label>
+      </div>
+      <button class="btn secondary" style="margin-top:14px;" onclick="previewPipedriveImport()">Перевірити файли</button>
+    </div>
+    <div class="panel-section js-hidden" id="pdPreviewSection">
+      <div class="section-title" style="font-size:13px;">Перевірка перед імпортом</div>
+      <div id="pdPreviewSummary" style="font-size:13px;margin-bottom:12px;line-height:1.5;"></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Ім'я</th><th>Телефон</th><th>Email</th><th>Компанія</th><th>Сума</th></tr></thead>
+        <tbody id="pdPreviewTableBody"></tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn secondary" onclick="closeAllPanels()">Скасувати</button>
+    <button class="btn" id="pdImportBtn" onclick="commitPipedriveImport()" disabled>Імпортувати</button>
   </div>
 </aside>
 
@@ -2930,6 +2974,221 @@ function renderClientsTable(){
     </tr>`).join('');
   closeAllDropdowns();
 }
+
+/* =========================================================
+   ІМПОРТ З PIPEDRIVE (CSV) / ЕКСПОРТ БАЗИ КЛІЄНТІВ (CSV)
+   Працює повністю в браузері: файли парсяться локально через
+   FileReader, нічого нікуди не відправляється.
+   ========================================================= */
+// Простий, але коректний CSV-парсер: враховує лапки навколо полів,
+// екрановані лапки ("") та коми/переноси рядків усередині лапок —
+// саме так Pipedrive експортує свої CSV.
+function parseCSV(text){
+  if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // BOM від Pipedrive
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ row.push(field); field=''; }
+      else if(c === '\r'){ /* ігноруємо, чекаємо \n */ }
+      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  if(!rows.length) return {headers:[], rows:[]};
+  const headers = rows[0];
+  const dataRows = rows.slice(1).filter(r => r.some(v => (v||'').trim() !== ''));
+  return { headers, rows: dataRows.map(r => { const o={}; headers.forEach((h,i)=>o[h]=r[i]!==undefined?r[i]:''); return o; }) };
+}
+function csvGet(row, keys){
+  for(const k of keys){ if(row[k] !== undefined && row[k] !== '') return row[k]; }
+  return '';
+}
+function readFileAsText(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsText(file, 'utf-8');
+  });
+}
+// Pipedrive віддає дати як "2026-04-22 09:59:23" — переводимо у формат
+// "дд.мм.рррр", яким уже користується весь СРМ (l.createdAt).
+function pdFormatDate(s){
+  const m = String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return new Date().toLocaleDateString('uk-UA');
+  return `${m[3]}.${m[2]}.${m[1]}`;
+}
+let pdStagedImport = null;
+function pdFilePicked(inputId, labelId){
+  const input = document.getElementById(inputId);
+  const label = document.getElementById(labelId);
+  label.textContent = (input.files && input.files[0]) ? input.files[0].name : 'Обрати файл';
+  document.getElementById('pdPreviewSection').classList.add('js-hidden');
+  document.getElementById('pdImportBtn').disabled = true;
+  pdStagedImport = null;
+}
+function openImportPanel(){
+  ['pdDealsFile','pdPeopleFile','pdNotesFile'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['pdDealsFileName','pdPeopleFileName','pdNotesFileName'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent='Обрати файл'; });
+  document.getElementById('pdPreviewSection').classList.add('js-hidden');
+  document.getElementById('pdImportBtn').disabled = true;
+  pdStagedImport = null;
+  openPanel('importPanel');
+}
+async function previewPipedriveImport(){
+  const dealsInput = document.getElementById('pdDealsFile');
+  if(!dealsInput.files[0]){ showAlertModal('Оберіть хоча б файл угод (CSV) — це обов\'язковий файл.', 'Не вистачає файлу'); return; }
+  const dealsCsv = parseCSV(await readFileAsText(dealsInput.files[0]));
+
+  let peopleCsv = { rows: [] };
+  const peopleInput = document.getElementById('pdPeopleFile');
+  if(peopleInput.files[0]) peopleCsv = parseCSV(await readFileAsText(peopleInput.files[0]));
+
+  let notesCsv = { rows: [] };
+  const notesInput = document.getElementById('pdNotesFile');
+  if(notesInput.files[0]) notesCsv = parseCSV(await readFileAsText(notesInput.files[0]));
+
+  // Індекс контактів за Pipedrive-ідентифікатором — щоб підставити
+  // телефон/email в угоди за посиланням "Ідентифікатор контактної особи".
+  const peopleById = {};
+  peopleCsv.rows.forEach(p => {
+    const id = csvGet(p, ["Контактна особа - Ідентифікатор"]);
+    if(!id) return;
+    peopleById[id] = {
+      name: csvGet(p, ["Контактна особа - Ім'я/Назва"]),
+      phone: csvGet(p, ["Контактна особа - Телефон - Робочий","Контактна особа - Телефон - Мобільний","Контактна особа - Телефон - Домашній","Контактна особа - Телефон - Інший"]),
+      email: csvGet(p, ["Контактна особа - Електронна пошта - Робочий","Контактна особа - Електронна пошта - Домашній","Контактна особа - Електронна пошта - Інший"])
+    };
+  });
+  // Нотатки групуємо за ідентифікатором угоди, до якої вони прикріплені.
+  const notesByDealId = {};
+  notesCsv.rows.forEach(n => {
+    const dealId = csvGet(n, ["Нотатка - Ідентифікатор угоди"]);
+    if(!dealId) return;
+    if(!notesByDealId[dealId]) notesByDealId[dealId] = [];
+    notesByDealId[dealId].push({
+      author: csvGet(n, ["Нотатка - Користувач"]) || 'Pipedrive',
+      date: pdFormatDate(csvGet(n, ["Нотатка - Час додавання"])),
+      text: csvGet(n, ["Нотатка - Вміст"]) || ''
+    });
+  });
+
+  const cp = currentPipeline();
+  const stageNames = cp ? cp.stages : [];
+  const owner = currentPipelineOwner();
+  const dupKey = (n,p,e2)=> (n+p+e2).toLowerCase().replace(/\s+/g,'');
+  const existingKeys = new Set(LEADS.map(l=>dupKey(l.name,l.phone,l.email)));
+
+  let dupCount = 0;
+  const staged = [];
+  dealsCsv.rows.forEach(d => {
+    const pdDealId = csvGet(d, ["Угода - Ідентифікатор"]);
+    const personId = csvGet(d, ["Угода - Ідентифікатор контактної особи"]);
+    const person = personId ? peopleById[personId] : null;
+    const title = csvGet(d, ["Угода - Заголовок"]);
+    const name = (person && person.name) ? person.name : (title || 'Без імені');
+    const phone = person ? person.phone : '';
+    const email = person ? person.email : '';
+    const company = csvGet(d, ["Угода - Організація"]);
+    const currency = csvGet(d, ["Угода - Валюта Вартість"]);
+    const rawValue = parseFloat(csvGet(d, ["Угода - Вартість"])) || 0;
+    const value = (currency === 'USD') ? rawValue : 0;
+    const pdStage = csvGet(d, ["Угода - Етап"]);
+    const matchedStage = stageNames.find(s => s.toLowerCase() === pdStage.toLowerCase());
+    const stage = matchedStage || stageNames[0] || '';
+    const createdAt = pdFormatDate(csvGet(d, ["Угода - Угоду створено"]));
+
+    const key = dupKey(name, phone, email);
+    if(existingKeys.has(key)){ dupCount++; return; }
+    existingKeys.add(key);
+
+    const notes = (notesByDealId[pdDealId] || []).slice();
+    if(currency && currency !== 'USD' && rawValue){
+      notes.push({author:'Pipedrive', date: createdAt, text: `Сума угоди в Pipedrive: ${rawValue} ${currency} (не перенесено в поле "Сума", бо СРМ рахує суми лише в $)`});
+    }
+    if(pdStage && !matchedStage){
+      notes.push({author:'Pipedrive', date: createdAt, text: `Етап у Pipedrive: "${pdStage}" (такого стовпця немає в поточній воронці, угоду поставлено в перший стовпець)`});
+    }
+
+    staged.push({ pdDealId, name, phone, email, company, niche:'', link:'', value, stage, createdAt, notes });
+  });
+
+  pdStagedImport = { staged, cp, owner };
+
+  document.getElementById('pdPreviewSummary').textContent =
+    `Знайдено угод у файлі: ${dealsCsv.rows.length}. Готово до імпорту: ${staged.length}. Пропущено як дублікати (вже є в базі): ${dupCount}.`
+    + (peopleCsv.rows.length ? ` Контактів у файлі: ${peopleCsv.rows.length}.` : ' Файл контактів не додано — телефон/email не буде.')
+    + (notesCsv.rows.length ? ` Нотаток у файлі: ${notesCsv.rows.length}.` : '');
+
+  const tbody = document.getElementById('pdPreviewTableBody');
+  const previewRows = staged.slice(0,8).map(s=>`<tr><td>${s.name}</td><td>${s.phone||'—'}</td><td>${s.email||'—'}</td><td>${s.company||'—'}</td><td>${s.value?('$'+s.value.toLocaleString('en-US')):'—'}</td></tr>`).join('');
+  tbody.innerHTML = previewRows || '<tr><td colspan="5" class="empty-hint">Немає нових угод для імпорту.</td></tr>';
+  if(staged.length > 8) tbody.insertAdjacentHTML('beforeend', `<tr><td colspan="5" class="empty-hint">...і ще ${staged.length-8}.</td></tr>`);
+
+  document.getElementById('pdPreviewSection').classList.remove('js-hidden');
+  document.getElementById('pdImportBtn').disabled = staged.length === 0;
+}
+async function commitPipedriveImport(){
+  if(!pdStagedImport || !pdStagedImport.staged.length) return;
+  const { staged, cp, owner } = pdStagedImport;
+  const ok = await showConfirmModal({
+    title:'Імпортувати з Pipedrive',
+    text:`Буде створено ${staged.length} нових угод у воронці "${cp.name}". Продовжити?`,
+    okText:'Імпортувати'
+  });
+  if(!ok) return;
+  staged.forEach(s=>{
+    const newId = nextLeadId++;
+    LEADS.push({
+      id:newId, name:s.name, phone:s.phone, email:s.email, company:s.company, niche:s.niche,
+      link:s.link, stage:s.stage, value:s.value, pipelineId:cp.id, managerId:owner,
+      createdAt:s.createdAt, notes:s.notes, tasks:[], attachments:[]
+    });
+  });
+  logActivity(`Імпортовано ${staged.length} угод з Pipedrive у воронку "${cp.name}"`, {target:{type:'view', name:'clients'}});
+  renderBoard();
+  renderClientsTable();
+  renderDashboardStats();
+  closeAllPanels();
+  const notesTotal = staged.reduce((s,x)=>s+x.notes.length,0);
+  showAlertModal(`Імпортовано ${staged.length} угод${notesTotal ? ` разом із ${notesTotal} нотатками` : ''}.`, 'Імпорт завершено');
+  pdStagedImport = null;
+}
+function csvEscape(v){
+  v = String(v==null?'':v);
+  if(/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
+  return v;
+}
+function exportClientsCSV(){
+  let leads = LEADS;
+  if(state.role === 'manager') leads = leads.filter(l=>l.managerId===state.managerId);
+  const headers = ["Ім'я","Телефон","Email","Компанія","Ніша","Посилання","Сума ($)","Стадія","Менеджер","Дата створення"];
+  const rows = leads.map(l => {
+    const mgr = USERS.find(u=>u.id===l.managerId);
+    return [l.name, l.phone, l.email, l.company, l.niche, l.link, l.value||0, l.stage, mgr ? mgr.name : l.managerId, l.createdAt];
+  });
+  const csv = [headers, ...rows].map(r => r.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob([String.fromCharCode(65279)+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `crm-export-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  logActivity('Експортовано базу клієнтів у CSV', {target:{type:'view', name:'clients'}});
+}
+
 function renderCampaignsTable(){
   let rows = LEADS;
   if(state.role === 'manager'){
