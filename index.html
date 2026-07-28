@@ -757,6 +757,16 @@
               <ul class="cselect-menu" id="managerMultiMenu"></ul>
             </div>
           </div>
+          <div class="field" data-roles="admin cto">
+            <label>Воронка</label>
+            <div class="cselect" id="clientsPipelineMultiSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:170px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="clientsPipelineMultiLabel">Усі воронки</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="clientsPipelineMultiMenu"></ul>
+            </div>
+          </div>
           <div style="margin-left:auto;display:flex;gap:8px;">
             <button class="btn secondary" data-roles="admin cto" onclick="openImportPanel()">Імпорт з Pipedrive</button>
             <button class="btn secondary" data-roles="admin cto" onclick="exportClientsCSV()">Експорт в CSV</button>
@@ -1217,6 +1227,21 @@
   <div class="panel-head"><h3>Імпорт з Pipedrive</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
   <div class="panel-body">
     <div class="panel-section">
+      <div class="field" style="max-width:340px;">
+        <label>Воронка для імпорту</label>
+        <div class="cselect" id="pdPipelineSelect">
+          <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+            <span class="cselect-label" id="pdPipelineLabel">—</span>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <ul class="cselect-menu" id="pdPipelineMenu" data-select="pdPipeline"></ul>
+        </div>
+      </div>
+      <div style="font-size:12.5px;color:var(--text-muted);margin:6px 0 14px;line-height:1.5;">
+        Усі імпортовані угоди потраплять саме в цю воронку — можна імпортувати частинами по кожній воронці окремо.
+      </div>
+    </div>
+    <div class="panel-section">
       <div class="section-title" style="font-size:13px;">Файли експорту</div>
       <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">
         Завантаж CSV-файли з Pipedrive (акаунт → Інструменти та застосунки → Експорт даних). Угоди — обов'язково. Контакти й Нотатки — за бажанням: без "Контактів" не буде телефону/email, без "Нотаток" не перенесеться історія нотаток.
@@ -1429,6 +1454,7 @@ const state = {
   editingDealMeetingId: null,
   dealDoneTasksOpen: false,
   clientManagerFilter: [],
+  clientPipelineFilter: [],
   dateRange: {start:null, end:null},
   calendarMonth: new Date(2026,6,1),
   currentDealId: null,
@@ -1615,6 +1641,7 @@ function completeLogin(user, opts){
   renderPipelineOwnerFilterOptions();
   renderBoardPipelineOptions();
   renderManagerMultiOptions();
+  renderClientsPipelineFilterOptions();
   renderTaskManagerMultiOptions();
   renderReportManagerMultiOptions();
   renderBoard();
@@ -1851,7 +1878,7 @@ document.addEventListener('click', function(e){
   if(!li) return;
   const menu = li.parentElement;
   const selectType = menu.dataset.select;
-  if(selectType === 'managerMulti' || selectType === 'pipelineOwnerFilter') return; // handled separately (multi)
+  if(selectType === 'managerMulti' || selectType === 'pipelineOwnerFilter' || selectType === 'clientsPipelineMulti') return; // handled separately (multi)
   menu.querySelectorAll('li').forEach(x=>x.classList.remove('selected'));
   li.classList.add('selected');
   const trigger = menu.parentElement.querySelector('.cselect-label');
@@ -1860,6 +1887,7 @@ document.addEventListener('click', function(e){
 
   if(selectType === 'boardPipeline'){ state.currentPipelineId = li.dataset.value; renderBoardPipelineOptions(); renderBoard(); }
   if(selectType === 'forwardPipeline'){ forwardSelectedPipelineId = li.dataset.value; renderForwardStageOptions(); }
+  if(selectType === 'pdPipeline'){ pdSelectedPipelineId = li.dataset.value; }
 });
 
 /* =========================================================
@@ -2952,12 +2980,43 @@ function toggleManagerFilter(e, id){
   });
 }
 
+// Фільтр "Воронка" на сторінці Клієнти — доступний лише admin/cto (як і
+// Менеджери вище), дозволяє звузити таблицю/експорт до конкретної(их)
+// воронки(ок) замість усієї бази одразу.
+function clientsPipelineFilterPool(){
+  return PIPELINES.slice();
+}
+function renderClientsPipelineFilterOptions(){
+  const menu = document.getElementById('clientsPipelineMultiMenu');
+  if(!menu) return;
+  const pool = clientsPipelineFilterPool();
+  menu.dataset.select = 'clientsPipelineMulti';
+  menu.innerHTML = pool.map(p => `
+    <li data-value="${p.id}" onclick="toggleClientsPipelineFilter(event,'${p.id}')">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleClientsPipelineFilter(event,'${p.id}')"><span></span></label> ${p.name} — ${pipelineOwnerName(p.ownerId)}
+    </li>`).join('');
+}
+function toggleClientsPipelineFilter(e, id){
+  e.stopPropagation();
+  const idx = state.clientPipelineFilter.indexOf(id);
+  if(idx === -1) state.clientPipelineFilter.push(id); else state.clientPipelineFilter.splice(idx,1);
+  const label = document.getElementById('clientsPipelineMultiLabel');
+  label.textContent = state.clientPipelineFilter.length ? `Обрано: ${state.clientPipelineFilter.length}` : 'Усі воронки';
+  document.querySelectorAll('#clientsPipelineMultiMenu li').forEach(li => {
+    const cb = li.querySelector('input[type=checkbox]');
+    cb.checked = state.clientPipelineFilter.includes(li.dataset.value);
+  });
+}
+
 function renderClientsTable(){
   let rows = LEADS;
   if(state.role === 'manager'){
     rows = rows.filter(l=>l.managerId===state.managerId);
   } else if(state.clientManagerFilter.length){
     rows = rows.filter(l=>state.clientManagerFilter.includes(l.managerId));
+  }
+  if(state.role !== 'manager' && state.clientPipelineFilter.length){
+    rows = rows.filter(l=>state.clientPipelineFilter.includes(l.pipelineId||'default'));
   }
   if(state.dateRange.start && state.dateRange.end){
     rows = rows.filter(l => {
@@ -3031,6 +3090,22 @@ function pdFormatDate(s){
   return `${m[3]}.${m[2]}.${m[1]}`;
 }
 let pdStagedImport = null;
+// Воронка-призначення для імпорту — обирається явно в панелі (не залежить
+// від того, яка воронка зараз відкрита на дошці "Воронка продажів"), тому
+// можна імпортувати частинами: одну воронку за раз.
+let pdSelectedPipelineId = null;
+function renderPdPipelineOptions(){
+  const menu = document.getElementById('pdPipelineMenu');
+  if(!menu) return;
+  if(!pdSelectedPipelineId || !PIPELINES.some(p=>p.id===pdSelectedPipelineId)){
+    const cp = currentPipeline();
+    pdSelectedPipelineId = cp ? cp.id : (PIPELINES[0] ? PIPELINES[0].id : null);
+  }
+  menu.innerHTML = PIPELINES.map(p => `<li data-value="${p.id}" class="${p.id===pdSelectedPipelineId?'selected':''}">${p.name} — ${pipelineOwnerName(p.ownerId)}</li>`).join('');
+  const sel = PIPELINES.find(p=>p.id===pdSelectedPipelineId);
+  const label = document.getElementById('pdPipelineLabel');
+  if(label) label.textContent = sel ? `${sel.name} — ${pipelineOwnerName(sel.ownerId)}` : '—';
+}
 function pdFilePicked(inputId, labelId){
   const input = document.getElementById(inputId);
   const label = document.getElementById(labelId);
@@ -3045,6 +3120,8 @@ function openImportPanel(){
   document.getElementById('pdPreviewSection').classList.add('js-hidden');
   document.getElementById('pdImportBtn').disabled = true;
   pdStagedImport = null;
+  pdSelectedPipelineId = null;
+  renderPdPipelineOptions();
   openPanel('importPanel');
 }
 async function previewPipedriveImport(){
@@ -3085,9 +3162,9 @@ async function previewPipedriveImport(){
     });
   });
 
-  const cp = currentPipeline();
+  const cp = PIPELINES.find(p=>p.id===pdSelectedPipelineId) || currentPipeline();
   const stageNames = cp ? cp.stages : [];
-  const owner = currentPipelineOwner();
+  const owner = cp ? cp.ownerId : currentPipelineOwner();
   const dupKey = (n,p,e2)=> (n+p+e2).toLowerCase().replace(/\s+/g,'');
   const existingKeys = new Set(LEADS.map(l=>dupKey(l.name,l.phone,l.email)));
 
@@ -3171,13 +3248,31 @@ function csvEscape(v){
   if(/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
   return v;
 }
+// Експорт повторює точнісінько ті самі фільтри, що зараз застосовані у
+// таблиці "База клієнтів" (Менеджери + Воронка + Період) — це і є відповідь
+// на "чи можна експортувати окремо по воронках": так, спершу обери потрібну
+// воронку(и) у фільтрі вище, тоді тисни "Експорт в CSV".
 function exportClientsCSV(){
   let leads = LEADS;
-  if(state.role === 'manager') leads = leads.filter(l=>l.managerId===state.managerId);
-  const headers = ["Ім'я","Телефон","Email","Компанія","Ніша","Посилання","Сума ($)","Стадія","Менеджер","Дата створення"];
+  if(state.role === 'manager'){
+    leads = leads.filter(l=>l.managerId===state.managerId);
+  } else if(state.clientManagerFilter.length){
+    leads = leads.filter(l=>state.clientManagerFilter.includes(l.managerId));
+  }
+  if(state.role !== 'manager' && state.clientPipelineFilter.length){
+    leads = leads.filter(l=>state.clientPipelineFilter.includes(l.pipelineId||'default'));
+  }
+  if(state.dateRange.start && state.dateRange.end){
+    leads = leads.filter(l => {
+      const d = parseUkDate(l.createdAt);
+      return d >= state.dateRange.start && d <= state.dateRange.end;
+    });
+  }
+  const headers = ["Ім'я","Телефон","Email","Компанія","Ніша","Посилання","Сума ($)","Стадія","Менеджер","Воронка","Дата створення"];
   const rows = leads.map(l => {
     const mgr = USERS.find(u=>u.id===l.managerId);
-    return [l.name, l.phone, l.email, l.company, l.niche, l.link, l.value||0, l.stage, mgr ? mgr.name : l.managerId, l.createdAt];
+    const pl = PIPELINES.find(p=>p.id===(l.pipelineId||'default'));
+    return [l.name, l.phone, l.email, l.company, l.niche, l.link, l.value||0, l.stage, mgr ? mgr.name : l.managerId, pl ? pl.name : '', l.createdAt];
   });
   const csv = [headers, ...rows].map(r => r.map(csvEscape).join(',')).join('\r\n');
   const blob = new Blob([String.fromCharCode(65279)+csv], {type:'text/csv;charset=utf-8;'});
@@ -3189,7 +3284,7 @@ function exportClientsCSV(){
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  logActivity('Експортовано базу клієнтів у CSV', {target:{type:'view', name:'clients'}});
+  logActivity(`Експортовано базу клієнтів у CSV (${leads.length} рядків)`, {target:{type:'view', name:'clients'}});
 }
 
 function renderCampaignsTable(){
@@ -3969,6 +4064,7 @@ function saveManager(){
   renderPipelineOwnerFilterOptions();
   renderBoardPipelineOptions();
   renderManagerMultiOptions();
+  renderClientsPipelineFilterOptions();
   renderTaskManagerMultiOptions();
   renderReportManagerMultiOptions();
   closeAllPanels();
@@ -4019,6 +4115,7 @@ function saveAccountEdit(){
   renderManagersTable();
   renderPipelineOwnerFilterOptions();
   renderManagerMultiOptions();
+  renderClientsPipelineFilterOptions();
   logActivity(`Оновлено власні дані профілю${oldName!==newName ? ' (' + oldName + ' → ' + newName + ')' : ''}`, {target:{type:'account'}});
   renderAccountView();
 }
@@ -4063,6 +4160,7 @@ function saveCredential(){
   renderManagersTable();
   renderPipelineOwnerFilterOptions();
   renderManagerMultiOptions();
+  renderClientsPipelineFilterOptions();
   closeAllPanels();
   const passwordChanged = u.password !== oldPassword;
   const me = currentUserRecord();
@@ -4324,6 +4422,15 @@ const firebaseConfig = {
 let fbDocRef = null;
 let fbApplyingRemote = false;
 let fbSaveTimer = null;
+// КРИТИЧНО: доки не прийшов ПЕРШИЙ снепшот з хмари (реальні дані), локальний
+// стан у пам'яті — це лише "заглушки"-значення за замовчуванням (порожні
+// ліди/задачі, 3 стартові акаунти). Якщо дозволити запис у Firestore до
+// цього моменту (напр. одразу після входу, коли ensurePipelineIntegrity()
+// ще встигає спрацювати на не завантажених даних) — цей запис перезапише
+// СПРАВЖНЮ хмарну базу порожніми заглушками, і вся база "зникає". Саме це
+// й стався: fbScheduleSave() тепер відмовляється зберігати, поки fbReady
+// не стане true (перший снепшот отримано — байдуже, існував документ чи ні).
+let fbReady = false;
 
 function fbInit(){
   try{
@@ -4335,8 +4442,9 @@ function fbInit(){
     db.enablePersistence({synchronizeTabs:true}).catch(function(err){ /* не критично — просто без офлайн-кешу */ });
     fbDocRef = db.collection('kofax').doc('crm');
     fbDocRef.onSnapshot(function(snap){
-      if(!snap.exists){ fbSaveNow(); return; }
+      if(!snap.exists){ fbReady = true; fbSaveNow(); return; }
       fbApplyRemoteData(snap.data());
+      fbReady = true;
     }, function(err){
       console.error('Firestore sync error:', err);
     });
@@ -4400,6 +4508,7 @@ function fbApplyRemoteData(data){
       renderBoardPipelineOptions();
       renderPipelineOwnerFilterOptions();
       renderManagerMultiOptions();
+      renderClientsPipelineFilterOptions();
       renderTaskManagerMultiOptions();
       renderReportManagerMultiOptions();
       scheduleAllUpcomingMeetings();
@@ -4412,7 +4521,7 @@ function fbApplyRemoteData(data){
 // Дебаунс: кілька змін підряд (напр. кілька полів у формі) шлють у хмару
 // одним запитом за 400мс замість запиту на кожен окремий виклик.
 function fbScheduleSave(){
-  if(fbApplyingRemote || !fbDocRef) return;
+  if(!fbReady || fbApplyingRemote || !fbDocRef) return;
   clearTimeout(fbSaveTimer);
   fbSaveTimer = setTimeout(fbSaveNow, 400);
 }
