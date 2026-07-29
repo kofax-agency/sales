@@ -4868,7 +4868,12 @@ function renderManagersTable(){
   tbody.innerHTML = rows.map(m => `
     <tr>
       <td>${nameBadge(m.name, m.role==='admin')}</td><td>${m.login}</td><td>${roleLabels[m.role]}</td>
-      <td><button class="btn secondary small" onclick="openManagerPanel('${m.id}')">Редагувати</button></td>
+      <td style="white-space:nowrap;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn secondary small" onclick="openManagerPanel('${m.id}')">Редагувати</button>
+          <button class="danger-icon-btn" style="width:30px;height:30px;flex-shrink:0;" title="Видалити" onclick="deleteManagerUser('${m.id}')">${trashIconSvg()}</button>
+        </div>
+      </td>
     </tr>`).join('');
 }
 function updateAdminPageLabels(){
@@ -4950,6 +4955,36 @@ function saveManager(){
   renderTaskManagerMultiOptions();
   renderReportManagerMultiOptions();
   closeAllPanels();
+}
+// Видалення користувача (менеджера або, для CTO, керівника відділу). За
+// проханням: угоди (LEADS) і воронка (PIPELINES) цієї людини НЕ видаляються
+// автоматично — вони лишаються як є, воронку видаляють окремо вручну
+// (кнопка "Видалити воронку" в редакторі стовпців воронки).
+async function deleteManagerUser(id){
+  const m = USERS.find(u=>u.id===id);
+  if(!m) return;
+  const roleLabels = {manager:'менеджера', admin:'керівника відділу'};
+  const ok = await showConfirmModal({
+    title:'Видалити користувача',
+    text:`Видалити ${roleLabels[m.role] || 'користувача'} "${m.name}"? Він більше не зможе увійти. Угоди та воронка цієї людини залишаться без змін — видаляти їх потрібно окремо.`,
+    okText:'Видалити',
+    danger:true
+  });
+  if(!ok) return;
+  USERS = USERS.filter(u=>u.id!==id);
+  renderManagersTable();
+  renderCredentialsTable();
+  renderPipelineOwnerFilterOptions();
+  renderBoardPipelineOptions();
+  renderManagerMultiOptions();
+  renderClientsPipelineFilterOptions();
+  renderTaskManagerMultiOptions();
+  renderReportManagerMultiOptions();
+  renderColdBasesList();
+  refreshColdBaseDetailIfOpen();
+  renderCampaignsTable();
+  logActivity(`Видалено ${roleLabels[m.role] || 'користувача'} ${m.name} (${m.login})`, {target:{type:'view', name:'admin'}});
+  fbScheduleSave();
 }
 
 /* =========================================================
