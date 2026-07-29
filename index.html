@@ -864,7 +864,12 @@
           <div class="section-title" style="margin:0;">База клієнтів</div>
           <button class="btn" data-roles="admin cto" onclick="openColdImportPanel()">+ Імпортувати базу</button>
         </div>
-        <div id="coldBasesGrid" class="coldbase-grid"></div>
+        <div class="card" style="padding:8px 4px;">
+          <div class="table-scroll"><table>
+            <thead><tr><th>Назва бази</th><th data-roles="admin cto" style="width:170px;">Менеджер</th><th style="width:110px;">Контактів</th><th style="width:110px;">Оброблено</th><th style="width:110px;">Залишилось</th><th style="width:90px;"></th></tr></thead>
+            <tbody id="coldBasesTableBody"></tbody>
+          </table></div>
+        </div>
         <div class="empty-hint" id="coldBasesEmptyHint" style="display:none;">Тут поки немає жодної бази.</div>
       </section>
 
@@ -892,7 +897,7 @@
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
           <div class="table-scroll"><table>
-            <thead><tr><th>Назва</th><th>Телефон</th><th>Місто</th><th>Посилання</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:140px;">Дії</th></tr></thead>
+            <thead><tr><th>Назва</th><th style="width:135px;">Телефон</th><th style="width:110px;">Місто</th><th style="width:140px;">Посилання</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:120px;">Дії</th></tr></thead>
             <tbody id="coldBaseWorkingTableBody"></tbody>
           </table></div>
           <div class="empty-hint" id="coldBaseWorkingEmptyHint" style="display:none;">Усі контакти цієї бази вже оброблені 🎉</div>
@@ -901,7 +906,7 @@
           <summary id="coldBaseProcessedSummary">Архів бази (0)</summary>
           <div class="card" style="padding:8px 4px;margin-top:10px;">
             <div class="table-scroll"><table>
-              <thead><tr><th>Назва</th><th>Телефон</th><th>Місто</th><th>Посилання</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:140px;">Дії</th></tr></thead>
+              <thead><tr><th>Назва</th><th style="width:135px;">Телефон</th><th style="width:110px;">Місто</th><th style="width:140px;">Посилання</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:120px;">Дії</th></tr></thead>
               <tbody id="coldBaseProcessedTableBody"></tbody>
             </table></div>
           </div>
@@ -3611,29 +3616,25 @@ function copyIconSvg(){
 }
 
 function renderColdBasesList(){
-  const grid = document.getElementById('coldBasesGrid');
-  if(!grid) return;
+  const tbody = document.getElementById('coldBasesTableBody');
+  if(!tbody) return;
   const canManage = state.role === 'cto' || state.role === 'admin';
   const pool = coldBasesVisiblePool();
-  grid.innerHTML = pool.map(b => {
+  tbody.innerHTML = pool.map(b => {
     const visible = coldBaseVisibleContacts(b);
     const total = visible.length;
     const done = visible.filter(c=>c.status!=='new').length;
-    const pct = total ? Math.round(done/total*100) : 0;
-    const mgrBadge = b.defaultManagerId
-      ? `<span class="badge">${coldManagerLabel(b.defaultManagerId)}</span>`
-      : `<span class="badge" style="color:var(--text-muted);">Не призначено</span>`;
     const delBtn = canManage
-      ? `<button class="danger-icon-btn" style="width:28px;height:28px;flex-shrink:0;" title="Видалити базу" onclick="deleteColdBase('${b.id}', event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>`
+      ? `<button class="danger-icon-btn" style="width:30px;height:30px;" title="Видалити базу" onclick="deleteColdBase('${b.id}', event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>`
       : '';
-    return `<div class="card coldbase-card" onclick="openColdBase('${b.id}')">
-      <div class="row-between" style="align-items:flex-start;gap:8px;">
-        <div class="section-title" style="margin:0;font-size:15px;">${b.name}</div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">${mgrBadge}${delBtn}</div>
-      </div>
-      <div style="font-size:12.5px;color:var(--text-muted);margin-top:8px;">Контактів: ${total} · Оброблено: ${done} · Залишилось: ${total-done}</div>
-      <div class="analytics-bar-track"><div class="analytics-bar-fill" style="width:${pct}%;"></div></div>
-    </div>`;
+    return `<tr class="clickable" onclick="openColdBase('${b.id}')">
+      <td class="link-name">${b.name}</td>
+      <td data-roles="admin cto">${coldManagerLabel(b.defaultManagerId)}</td>
+      <td>${total}</td>
+      <td>${done}</td>
+      <td>${total-done}</td>
+      <td onclick="event.stopPropagation()">${delBtn}</td>
+    </tr>`;
   }).join('');
   const hint = document.getElementById('coldBasesEmptyHint');
   if(hint) hint.style.display = pool.length ? 'none' : '';
@@ -3677,14 +3678,14 @@ function coldRowHtml(base, c){
     ? `<span class="badge" style="color:#1AA35A;">✓ У воронці</span>`
     : `<button class="btn secondary small" onclick="openColdConvertModal('${base.id}','${c.id}')">→ Клієнт</button>`;
   const linkCell = c.url
-    ? `<span style="display:inline-flex;align-items:center;gap:6px;">
-        <a href="${c.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent-1);font-weight:700;text-decoration:none;">Відкрити ↗</a>
+    ? `<span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">
+        <a href="${c.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent-1);font-weight:700;text-decoration:none;white-space:nowrap;">Відкрити ↗</a>
         <button type="button" class="icon-copy-btn" title="Скопіювати посилання" onclick="event.stopPropagation();copyCellToClipboard(event,'${escAttr(c.url)}')">${copyIconSvg()}</button>
       </span>`
     : '—';
   return `<tr class="${c.status!=='new' ? 'coldbase-row-processed' : ''}">
     <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.title)}')">${c.title||'—'}</td>
-    <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.phone)}')">${c.phone||'—'}</td>
+    <td class="copyable" style="white-space:nowrap;" onclick="copyCellToClipboard(event,'${escAttr(c.phone)}')">${c.phone||'—'}</td>
     <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.city)}')">${c.city||'—'}</td>
     <td>${linkCell}</td>
     <td><label class="chk"><input type="checkbox" ${c.status==='called'?'checked':''} onchange="toggleColdCalled('${base.id}','${c.id}',this.checked,this)"><span></span></label></td>
@@ -3930,8 +3931,12 @@ async function commitColdImport(){
     okText:'Імпортувати'
   });
   if(!ok) return;
+  // id — рядок (не число): усі onclick-обробники в таблиці передають id
+  // назад через HTML-атрибути (тобто вже рядком), тому саме значення
+  // контакту теж має бути рядком, інакше x.id===contactId ніколи не
+  // збігається (число !== рядок) і жодна дія в таблиці не спрацьовує.
   const contacts = staged.map(s => ({
-    id: nextColdContactId++, title:s.title, phone:s.phone, city:s.city, url:s.url,
+    id: String(nextColdContactId++), title:s.title, phone:s.phone, city:s.city, url:s.url,
     managerOverride:null, status:'new', convertedClientId:null
   }));
   const newBase = { id:'cb'+(nextColdBaseId++), name, createdAt:new Date().toLocaleDateString('uk-UA'), defaultManagerId: coldImportSelectedManagerId || null, contacts };
