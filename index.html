@@ -872,7 +872,6 @@
             <tbody id="coldBasesTableBody"></tbody>
           </table></div>
         </div>
-        <div class="empty-hint" id="coldBasesEmptyHint" style="display:none;">Тут поки немає жодної бази.</div>
       </section>
 
       <!-- ============ COLD BASE — ДЕТАЛІ ОДНІЄЇ БАЗИ (повна сторінка) ============ -->
@@ -916,7 +915,6 @@
             <thead><tr><th>Назва</th><th style="width:135px;">Телефон</th><th style="width:110px;">Місто</th><th style="width:140px;">Посилання</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:120px;">Дії</th></tr></thead>
             <tbody id="coldBaseTableBody"></tbody>
           </table></div>
-          <div class="empty-hint" id="coldBaseEmptyHint" style="display:none;">Нічого не знайдено.</div>
         </div>
       </section>
 
@@ -3686,6 +3684,10 @@ function renderColdBasesList(){
   if(!tbody) return;
   const canManage = state.role === 'cto' || state.role === 'admin';
   const pool = coldBasesVisiblePool();
+  if(!pool.length){
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-hint" style="text-align:center;padding:26px 12px;">Тут поки немає жодної бази.</td></tr>';
+    return;
+  }
   tbody.innerHTML = pool.map(b => {
     const visible = coldBaseVisibleContacts(b);
     const total = visible.length;
@@ -3702,8 +3704,6 @@ function renderColdBasesList(){
       <td onclick="event.stopPropagation()">${delBtn}</td>
     </tr>`;
   }).join('');
-  const hint = document.getElementById('coldBasesEmptyHint');
-  if(hint) hint.style.display = pool.length ? 'none' : '';
 }
 
 function openColdBase(id){
@@ -3832,9 +3832,14 @@ function renderColdBaseDetail(){
     return aDone - bDone;
   });
   const tbody = document.getElementById('coldBaseTableBody');
-  if(tbody) tbody.innerHTML = sorted.map(c=>coldRowHtml(base,c)).join('');
-  const hint = document.getElementById('coldBaseEmptyHint');
-  if(hint) hint.style.display = sorted.length ? 'none' : '';
+  if(tbody){
+    if(sorted.length){
+      tbody.innerHTML = sorted.map(c=>coldRowHtml(base,c)).join('');
+    } else {
+      const emptyMsg = visible.length ? 'Нічого не знайдено за цим фільтром.' : 'У цій базі ще немає контактів.';
+      tbody.innerHTML = `<tr><td colspan="7" class="empty-hint" style="text-align:center;padding:26px 12px;">${emptyMsg}</td></tr>`;
+    }
+  }
 
   renderColdBaseManagerOptions();
   renderColdStatusFilterOptions();
