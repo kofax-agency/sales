@@ -558,11 +558,12 @@
   td.copyable{cursor:pointer;}
   .copy-toast{position:fixed;z-index:95;background:var(--text);color:var(--surface);font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px;pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s;box-shadow:0 8px 20px rgba(16,24,64,.18);}
   .copy-toast.show{opacity:1;transform:translateY(0);}
-  .coldbase-processed summary{cursor:pointer;font-weight:700;font-size:13.5px;color:var(--text-muted);padding:8px 4px;list-style:none;}
-  .coldbase-processed summary::-webkit-details-marker{display:none;}
-  .coldbase-processed summary::before{content:'▸ ';}
-  .coldbase-processed[open] summary::before{content:'▾ ';}
-  .coldbase-row-processed{opacity:.7;}
+  /* Оброблені рядки бази — падають вниз таблиці і підсвічуються кольором за статусом,
+     замість окремого архіву. */
+  tbody tr.cold-row-called{background:#1AA35A14;}
+  tbody tr.cold-row-no_answer{background:var(--surface-2);}
+  tbody tr.cold-row-invalid{background:#E5484D14;}
+  tbody tr.cold-row-callback{background:#2F4EF314;}
   .cold-status-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;}
   .cold-status-badge.called{background:#1AA35A1A;color:#1AA35A;}
   .cold-status-badge.no_answer{background:var(--surface-2);color:var(--text-muted);}
@@ -890,27 +891,31 @@
               </button>
               <ul class="cselect-menu" id="coldBaseManagerMenu" data-select="coldBaseManager"></ul>
             </div>
-            <button class="danger-icon-btn" style="width:38px;height:38px;flex-shrink:0;" title="Видалити базу" onclick="deleteColdBase(state.coldBaseViewId)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-            </button>
+          </div>
+        </div>
+        <div class="filters-bar card" style="margin-top:16px;">
+          <div class="field" style="max-width:260px;">
+            <label>Пошук</label>
+            <input type="text" id="coldSearchInput" placeholder="Назва, телефон, місто…" oninput="onColdSearchInput(this.value)">
+          </div>
+          <div class="field" style="max-width:220px;">
+            <label>Статус</label>
+            <div class="cselect" id="coldStatusFilterSelect">
+              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="coldStatusFilterLabel">Усі статуси</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="coldStatusFilterMenu" data-select="coldStatusFilter"></ul>
+            </div>
           </div>
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
           <div class="table-scroll"><table>
             <thead><tr><th>Назва</th><th style="width:135px;">Телефон</th><th style="width:110px;">Місто</th><th style="width:140px;">Посилання</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:120px;">Дії</th></tr></thead>
-            <tbody id="coldBaseWorkingTableBody"></tbody>
+            <tbody id="coldBaseTableBody"></tbody>
           </table></div>
-          <div class="empty-hint" id="coldBaseWorkingEmptyHint" style="display:none;">Усі контакти цієї бази вже оброблені 🎉</div>
+          <div class="empty-hint" id="coldBaseEmptyHint" style="display:none;">Нічого не знайдено.</div>
         </div>
-        <details class="coldbase-processed" style="margin-top:16px;">
-          <summary id="coldBaseProcessedSummary">Архів бази (0)</summary>
-          <div class="card" style="padding:8px 4px;margin-top:10px;">
-            <div class="table-scroll"><table>
-              <thead><tr><th>Назва</th><th style="width:135px;">Телефон</th><th style="width:110px;">Місто</th><th style="width:140px;">Посилання</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:120px;">Дії</th></tr></thead>
-              <tbody id="coldBaseProcessedTableBody"></tbody>
-            </table></div>
-          </div>
-        </details>
       </section>
 
       <!-- ============ TASKS ============ -->
@@ -2214,6 +2219,7 @@ document.addEventListener('click', function(e){
   if(selectType === 'forwardPipeline'){ forwardSelectedPipelineId = li.dataset.value; renderForwardStageOptions(); }
   if(selectType === 'pdPipeline'){ pdSelectedPipelineId = li.dataset.value; }
   if(selectType === 'coldBaseManager'){ setColdBaseDefaultManager(state.coldBaseViewId, li.dataset.value || null); }
+  if(selectType === 'coldStatusFilter'){ coldDetailStatusFilter = li.dataset.value || ''; renderColdBaseDetail(); }
   if(selectType === 'coldImportManager'){ coldImportSelectedManagerId = li.dataset.value || null; }
   if(selectType === 'coldRowStatus'){ setColdContactStatus(menu.dataset.baseId, menu.dataset.contactId, li.dataset.value); }
   if(selectType === 'coldConvertPipeline'){ coldConvertSelectedPipelineId = li.dataset.value; renderColdConvertStageOptions(); }
@@ -2517,6 +2523,23 @@ function ensurePipelineIntegrity(){
       PIPELINES.push({id, name:'Воронка продажів', ownerId, stages:[...templateStages]});
       changed = true;
     }
+  });
+  return changed;
+}
+
+// Міграція старих даних "База клієнтів": до фіксу id контактів створювались як
+// Number, а всі onclick-обробники в таблиці передають id назад як рядок —
+// через це строге порівняння (===) завжди було false і кнопки/чекбокси мовчки
+// не працювали для баз, імпортованих до фіксу. Приводимо id бази і кожного
+// контакту до String(), якщо вони чомусь не рядок. Повертає true, якщо щось
+// було виправлено (і тому варто зберегти стан у Firebase).
+function ensureColdBaseIntegrity(){
+  let changed = false;
+  COLDBASES.forEach(b => {
+    if(typeof b.id !== 'string'){ b.id = String(b.id); changed = true; }
+    (b.contacts || []).forEach(c => {
+      if(typeof c.id !== 'string'){ c.id = String(c.id); changed = true; }
+    });
   });
   return changed;
 }
@@ -3642,6 +3665,10 @@ function renderColdBasesList(){
 
 function openColdBase(id){
   state.coldBaseViewId = id;
+  coldDetailSearchQuery = '';
+  coldDetailStatusFilter = '';
+  const searchInput = document.getElementById('coldSearchInput');
+  if(searchInput) searchInput.value = '';
   showView(null, 'coldbase-detail');
   renderColdBaseDetail();
 }
@@ -3671,9 +3698,11 @@ async function deleteColdBase(baseId, e){
   fbScheduleSave();
 }
 
-const COLD_STATUS_LABELS = {new:'—', no_answer:'Не додзвонився', invalid:'Недійсний номер', callback:'Передзвонити пізніше'};
+const COLD_STATUS_LABELS = {new:'—', no_answer:'Не додзвонився', invalid:'Недійсний номер', callback:'Передзвонити'};
+const COLD_STATUS_ROW_CLASS = {new:'', no_answer:'cold-row-no_answer', invalid:'cold-row-invalid', callback:'cold-row-callback', called:'cold-row-called'};
 function coldRowHtml(base, c){
   const statusVal = (c.status==='no_answer'||c.status==='invalid'||c.status==='callback') ? c.status : 'new';
+  const rowClass = c.status==='called' ? COLD_STATUS_ROW_CLASS.called : (COLD_STATUS_ROW_CLASS[statusVal] || '');
   const actionsCell = c.convertedClientId
     ? `<span class="badge" style="color:#1AA35A;">✓ У воронці</span>`
     : `<button class="btn secondary small" onclick="openColdConvertModal('${base.id}','${c.id}')">→ Клієнт</button>`;
@@ -3683,7 +3712,7 @@ function coldRowHtml(base, c){
         <button type="button" class="icon-copy-btn" title="Скопіювати посилання" onclick="event.stopPropagation();copyCellToClipboard(event,'${escAttr(c.url)}')">${copyIconSvg()}</button>
       </span>`
     : '—';
-  return `<tr class="${c.status!=='new' ? 'coldbase-row-processed' : ''}">
+  return `<tr class="${rowClass}">
     <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.title)}')">${c.title||'—'}</td>
     <td class="copyable" style="white-space:nowrap;" onclick="copyCellToClipboard(event,'${escAttr(c.phone)}')">${c.phone||'—'}</td>
     <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.city)}')">${c.city||'—'}</td>
@@ -3699,7 +3728,7 @@ function coldRowHtml(base, c){
           <li data-value="new" class="${statusVal==='new'?'selected':''}">—</li>
           <li data-value="no_answer" class="${statusVal==='no_answer'?'selected':''}">Не додзвонився</li>
           <li data-value="invalid" class="${statusVal==='invalid'?'selected':''}">Недійсний номер</li>
-          <li data-value="callback" class="${statusVal==='callback'?'selected':''}">Передзвонити пізніше</li>
+          <li data-value="callback" class="${statusVal==='callback'?'selected':''}">Передзвонити</li>
         </ul>
       </div>
     </td>
@@ -3707,23 +3736,65 @@ function coldRowHtml(base, c){
   </tr>`;
 }
 
+// Пошук + фільтр статусу — скинуто/поновлено при кожному відкритті бази (openColdBase).
+let coldDetailSearchQuery = '';
+let coldDetailStatusFilter = '';
+const COLD_STATUS_FILTER_OPTIONS = [
+  {value:'', label:'Усі статуси'},
+  {value:'new', label:'—'},
+  {value:'called', label:'Додзвонився'},
+  {value:'no_answer', label:'Не додзвонився'},
+  {value:'invalid', label:'Недійсний номер'},
+  {value:'callback', label:'Передзвонити'}
+];
+function onColdSearchInput(value){
+  coldDetailSearchQuery = (value||'').trim().toLowerCase();
+  renderColdBaseDetail();
+}
+function renderColdStatusFilterOptions(){
+  const menu = document.getElementById('coldStatusFilterMenu');
+  if(!menu) return;
+  menu.innerHTML = COLD_STATUS_FILTER_OPTIONS.map(o=>
+    `<li data-value="${o.value}" class="${coldDetailStatusFilter===o.value?'selected':''}">${o.label}</li>`
+  ).join('');
+  const label = document.getElementById('coldStatusFilterLabel');
+  if(label) label.textContent = (COLD_STATUS_FILTER_OPTIONS.find(o=>o.value===coldDetailStatusFilter)||COLD_STATUS_FILTER_OPTIONS[0]).label;
+}
+function coldContactMatchesFilters(c){
+  if(coldDetailStatusFilter){
+    if(coldDetailStatusFilter==='called' && c.status!=='called') return false;
+    if(coldDetailStatusFilter!=='called' && c.status!==coldDetailStatusFilter) return false;
+  }
+  if(coldDetailSearchQuery){
+    const hay = `${c.title||''} ${c.phone||''} ${c.city||''}`.toLowerCase();
+    if(!hay.includes(coldDetailSearchQuery)) return false;
+  }
+  return true;
+}
 function renderColdBaseDetail(){
   const base = COLDBASES.find(b=>b.id===state.coldBaseViewId);
   const title = document.getElementById('coldBaseDetailTitle');
   if(!base){ if(title) title.textContent = 'Базу не знайдено'; return; }
   if(title) title.textContent = base.name;
   const visible = coldBaseVisibleContacts(base);
-  const working = visible.filter(c=>c.status==='new');
-  const processed = visible.filter(c=>c.status!=='new');
+  const processedCount = visible.filter(c=>c.status!=='new').length;
   const summary = document.getElementById('coldBaseDetailSummary');
-  if(summary) summary.textContent = `Контактів: ${visible.length} · Оброблено: ${processed.length} · Залишилось: ${working.length}`;
+  if(summary) summary.textContent = `Контактів: ${visible.length} · Оброблено: ${processedCount} · Залишилось: ${visible.length-processedCount}`;
 
-  document.getElementById('coldBaseWorkingTableBody').innerHTML = working.map(c=>coldRowHtml(base,c)).join('');
-  document.getElementById('coldBaseWorkingEmptyHint').style.display = working.length ? 'none' : '';
-  document.getElementById('coldBaseProcessedTableBody').innerHTML = processed.map(c=>coldRowHtml(base,c)).join('');
-  document.getElementById('coldBaseProcessedSummary').textContent = `Архів бази (${processed.length})`;
+  const filtered = visible.filter(coldContactMatchesFilters);
+  // Необроблені — згори, оброблені (будь-який статус ≠ new) — донизу, в межах кожної групи зберігаємо порядок як є.
+  const sorted = filtered.slice().sort((a,b)=>{
+    const aDone = a.status!=='new' ? 1 : 0;
+    const bDone = b.status!=='new' ? 1 : 0;
+    return aDone - bDone;
+  });
+  const tbody = document.getElementById('coldBaseTableBody');
+  if(tbody) tbody.innerHTML = sorted.map(c=>coldRowHtml(base,c)).join('');
+  const hint = document.getElementById('coldBaseEmptyHint');
+  if(hint) hint.style.display = sorted.length ? 'none' : '';
 
   renderColdBaseManagerOptions();
+  renderColdStatusFilterOptions();
 }
 function renderColdBaseManagerOptions(){
   const menu = document.getElementById('coldBaseManagerMenu');
@@ -5265,6 +5336,9 @@ function fbApplyRemoteData(data){
     // Гарантуємо, що кожна воронка має власника і що в кожного керівника й
     // менеджера є хоча б одна своя воронка (див. ensurePipelineIntegrity()).
     if(ensurePipelineIntegrity()) needsRepairSave = true;
+    // Мігруємо застарілі числові id в базах клієнтів (див. ensureColdBaseIntegrity()) —
+    // інакше "Дії"/чекбокс мовчки не працюють для баз, імпортованих до фіксу.
+    if(ensureColdBaseIntegrity()) needsRepairSave = true;
 
     if(state.userId){
       renderBoard();
