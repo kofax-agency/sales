@@ -546,6 +546,27 @@
   html::-webkit-scrollbar-track, body::-webkit-scrollbar-track{background:var(--surface-2);}
   html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb{background:var(--accent-grad);border-radius:0;}
   html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover{background:var(--accent-grad);}
+
+  /* ============ "База клієнтів" (холодні бази) ============ */
+  .coldbase-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+  .coldbase-card{cursor:pointer;transition:border-color .15s,transform .1s;}
+  .coldbase-card:hover{border-color:var(--accent-1);transform:translateY(-2px);}
+  .coldbase-card .analytics-bar-track{margin-top:12px;}
+  .mini-select{border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:12.5px;padding:6px 8px;font-family:inherit;max-width:100%;}
+  td.copyable{cursor:pointer;transition:background .1s;}
+  td.copyable:hover{background:var(--surface-2);}
+  .copy-toast{position:fixed;z-index:95;background:var(--text);color:var(--surface);font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px;pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s;box-shadow:0 8px 20px rgba(16,24,64,.18);}
+  .copy-toast.show{opacity:1;transform:translateY(0);}
+  .coldbase-processed summary{cursor:pointer;font-weight:700;font-size:13.5px;color:var(--text-muted);padding:8px 4px;list-style:none;}
+  .coldbase-processed summary::-webkit-details-marker{display:none;}
+  .coldbase-processed summary::before{content:'▸ ';}
+  .coldbase-processed[open] summary::before{content:'▾ ';}
+  .coldbase-row-processed{opacity:.7;}
+  .cold-status-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .cold-status-badge.called{background:#1AA35A1A;color:#1AA35A;}
+  .cold-status-badge.no_answer{background:var(--surface-2);color:var(--text-muted);}
+  .cold-status-badge.invalid{background:#E5484D1A;color:var(--danger);}
+  .cold-status-badge.callback{background:#2F4EF31A;color:var(--accent-1);}
 </style>
 </head>
 <body data-role="cto">
@@ -601,6 +622,9 @@
         Воронка</a></li>
       <li data-nav="clients"><a href="#" onclick="showView(event,'clients')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Контакти</a></li>
+      <li data-nav="coldbase"><a href="#" onclick="showView(event,'coldbase')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>
         База клієнтів</a></li>
       <li data-nav="tasks"><a href="#" onclick="showView(event,'tasks')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -828,6 +852,53 @@
             <tbody id="clientsTableBody"></tbody>
           </table></div>
         </div>
+      </section>
+
+      <!-- ============ COLD BASE ("База клієнтів") — СПИСОК БАЗ ============ -->
+      <section class="view" id="view-coldbase">
+        <div class="row-between" style="margin-bottom:16px;">
+          <div class="section-title" style="margin:0;">База клієнтів</div>
+          <button class="btn" data-roles="admin cto" onclick="openColdImportPanel()">+ Імпортувати базу</button>
+        </div>
+        <div id="coldBasesGrid" class="coldbase-grid"></div>
+        <div class="empty-hint" id="coldBasesEmptyHint" style="display:none;">Тут поки немає жодної бази.</div>
+      </section>
+
+      <!-- ============ COLD BASE — ДЕТАЛІ ОДНІЄЇ БАЗИ (повна сторінка) ============ -->
+      <section class="view" id="view-coldbase-detail">
+        <button class="btn secondary" style="margin-bottom:18px;" onclick="showView(null,'coldbase')">← Назад до бази клієнтів</button>
+        <div class="row-between" style="margin-bottom:4px;flex-wrap:wrap;gap:14px;">
+          <div>
+            <div class="section-title" id="coldBaseDetailTitle" style="margin:0;">—</div>
+            <div style="font-size:12.5px;color:var(--text-muted);margin-top:4px;" id="coldBaseDetailSummary"></div>
+          </div>
+          <div class="field" data-roles="admin cto" style="max-width:260px;margin:0;">
+            <label>Менеджер за замовчуванням</label>
+            <div class="cselect" id="coldBaseManagerSelect">
+              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="coldBaseManagerLabel">—</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="coldBaseManagerMenu" data-select="coldBaseManager"></ul>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:8px 4px;margin-top:16px;">
+          <div class="table-scroll"><table>
+            <thead><tr><th>Назва</th><th>Телефон</th><th>Місто</th><th>Посилання</th><th data-roles="admin cto">Менеджер</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:140px;">Дії</th></tr></thead>
+            <tbody id="coldBaseWorkingTableBody"></tbody>
+          </table></div>
+          <div class="empty-hint" id="coldBaseWorkingEmptyHint" style="display:none;">Усі контакти цієї бази вже оброблені 🎉</div>
+        </div>
+        <details class="coldbase-processed" style="margin-top:16px;">
+          <summary id="coldBaseProcessedSummary">Оброблені (0)</summary>
+          <div class="card" style="padding:8px 4px;margin-top:10px;">
+            <div class="table-scroll"><table>
+              <thead><tr><th>Назва</th><th>Телефон</th><th>Місто</th><th>Посилання</th><th data-roles="admin cto">Менеджер</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:140px;">Дії</th></tr></thead>
+              <tbody id="coldBaseProcessedTableBody"></tbody>
+            </table></div>
+          </div>
+        </details>
       </section>
 
       <!-- ============ TASKS ============ -->
@@ -1327,6 +1398,54 @@
   </div>
 </aside>
 
+<!-- ================= ІМПОРТ ХОЛОДНОЇ БАЗИ ("База клієнтів") ================= -->
+<aside class="side-panel wide" id="coldImportPanel">
+  <div class="panel-head"><h3>Імпортувати базу клієнтів</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="panel-section" style="border-top:none;padding-top:0;">
+      <div class="field-row">
+        <div class="field">
+          <label>Назва бази</label>
+          <input type="text" id="coldImportName" placeholder="напр. Меблі — Київ, липень">
+        </div>
+        <div class="field">
+          <label>Менеджер (необов'язково)</label>
+          <div class="cselect" id="coldImportManagerSelect">
+            <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+              <span class="cselect-label" id="coldImportManagerLabel">Не призначено</span>
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <ul class="cselect-menu" id="coldImportManagerMenu" data-select="coldImportManager"></ul>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12.5px;color:var(--text-muted);margin:6px 0 14px;line-height:1.5;">
+        Якщо не призначити менеджера зараз — базу побачать лише CTO і керівник відділу, і можна буде розподілити її (усю або по рядках) пізніше зі сторінки бази.
+      </div>
+      <div class="field" style="max-width:340px;">
+        <label>Файл (CSV) *</label>
+        <label class="file-btn">📄 <span id="coldImportFileName">Обрати файл</span><input type="file" accept=".csv" style="display:none" id="coldImportFile" onchange="coldImportFilePicked()"></label>
+      </div>
+      <div style="font-size:12.5px;color:var(--text-muted);margin:8px 0 0;line-height:1.5;">
+        Очікувані колонки: назва (title/назва), телефон (phone/телефон), місто (city/місто), посилання (url/link/посилання) — зайві колонки просто ігноруються.
+      </div>
+      <button class="btn secondary" style="margin-top:14px;" onclick="previewColdImport()">Перевірити файл</button>
+    </div>
+    <div class="panel-section js-hidden" id="coldImportPreviewSection">
+      <div class="section-title" style="font-size:13px;">Перевірка перед імпортом</div>
+      <div id="coldImportPreviewSummary" style="font-size:13px;margin-bottom:12px;line-height:1.5;"></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Назва</th><th>Телефон</th><th>Місто</th><th>Посилання</th></tr></thead>
+        <tbody id="coldImportPreviewTableBody"></tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn secondary" onclick="closeAllPanels()">Скасувати</button>
+    <button class="btn" id="coldImportBtn" onclick="commitColdImport()" disabled>Імпортувати</button>
+  </div>
+</aside>
+
 <!-- ================= MANAGER / ADMIN DRAWER (narrow) ================= -->
 <aside class="side-panel narrow" id="managerPanel">
   <div class="panel-head"><h3 id="managerPanelTitle">Новий менеджер</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
@@ -1438,6 +1557,17 @@ loadStoredPhotos();
 let LEADS = [];
 let nextLeadId = 1;
 
+// "База клієнтів" — холодні бази контактів (напр. вивантаження з Google
+// Maps), окремо від "Контакти" (LEADS/воронка). Кожна база: назва + список
+// контактів. base.defaultManagerId — менеджер, якому належить уся база "за
+// замовчуванням"; contact.managerOverride — якщо задано, перекриває
+// defaultManagerId саме для цього рядка (так можна розкидати контакти
+// однієї бази між кількома менеджерами). Обидва можуть бути null — тоді
+// база/рядок бачить лише CTO/керівник відділу.
+let COLDBASES = [];
+let nextColdBaseId = 1;
+let nextColdContactId = 1;
+
 let TASKS = [];
 
 // Заплановані дзвінки на дашборді — прив'язані до ліда, тому клік по дзвінку
@@ -1518,6 +1648,7 @@ const state = {
   editingCredentialId: null,
   reportMode: 'create',
   reportViewId: null,
+  coldBaseViewId: null,
   taskDateRange: {start:null, end:null},
   taskCalendarMonth: new Date(2026,6,1),
   taskManagerFilter: [],
@@ -1725,6 +1856,8 @@ function completeLogin(user, opts){
   renderCampaignsTable();
   renderManagersTable();
   renderCredentialsTable();
+  renderColdBasesList();
+  refreshColdBaseDetailIfOpen();
   updateAdminPageLabels();
   if(opts.showReminder !== false) seedReminderNotification(role);
   renderNotifications();
@@ -1740,7 +1873,7 @@ function completeLogin(user, opts){
   // прив'язана до конкретного звіту (state.reportViewId), який не зберігається.
   const savedView = (location.hash || '').replace('#','');
   const navLi = savedView ? document.querySelector('.nav li[data-nav="' + savedView + '"]') : null;
-  const canRestore = savedView && savedView !== 'report-detail' && document.getElementById('view-' + savedView) && (!navLi || navLi.offsetParent !== null || getComputedStyle(navLi).display !== 'none');
+  const canRestore = savedView && savedView !== 'report-detail' && savedView !== 'coldbase-detail' && document.getElementById('view-' + savedView) && (!navLi || navLi.offsetParent !== null || getComputedStyle(navLi).display !== 'none');
   showView(null, canRestore ? savedView : 'dashboard');
 }
 // Швидке перемикання акаунтів (CTO і керівник відділу) — дозволяє миттєво
@@ -1900,7 +2033,7 @@ function showView(e, name){
   document.querySelectorAll('.nav li').forEach(li => li.classList.remove('active'));
   const li = document.querySelector('.nav li[data-nav="' + name + '"]');
   if(li) li.classList.add('active');
-  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'База клієнтів', tasks:'Завдання', reports:'Звітність', analytics:'Аналітика', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт'};
+  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'Контакти', coldbase:'База клієнтів', 'coldbase-detail':'База клієнтів', tasks:'Завдання', reports:'Звітність', analytics:'Аналітика', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт'};
   document.getElementById('pageTitle').textContent = titles[name];
   // Іконка налаштувань воронки (шестерня) видима лише на сторінці "Воронка"
   // і лише для керівника відділу/CTO — саме вони можуть редагувати стовпці.
@@ -1912,6 +2045,7 @@ function showView(e, name){
   if(name === 'analytics') renderAnalytics();
   if(name === 'campaigns') renderCampaignsTable();
   if(name === 'admin') updateAdminPageLabels();
+  if(name === 'coldbase') renderColdBasesList();
   // Запам'ятовуємо активну сторінку в хеші URL (без додавання запису в
   // історію), щоб оновлення сторінки (F5) залишало користувача там само,
   // а не кидало на дашборд.
@@ -2038,6 +2172,8 @@ document.addEventListener('click', function(e){
   if(selectType === 'boardPipeline'){ state.currentPipelineId = li.dataset.value; renderBoardPipelineOptions(); renderBoard(); }
   if(selectType === 'forwardPipeline'){ forwardSelectedPipelineId = li.dataset.value; renderForwardStageOptions(); }
   if(selectType === 'pdPipeline'){ pdSelectedPipelineId = li.dataset.value; }
+  if(selectType === 'coldBaseManager'){ setColdBaseDefaultManager(state.coldBaseViewId, li.dataset.value || null); }
+  if(selectType === 'coldImportManager'){ coldImportSelectedManagerId = li.dataset.value || null; }
 });
 
 /* =========================================================
@@ -3393,13 +3529,314 @@ async function commitPipedriveImport(){
   showAlertModal(`Імпортовано ${staged.length} угод${notesTotal ? ` разом із ${notesTotal} нотатками` : ''}.`, 'Імпорт завершено');
   pdStagedImport = null;
 }
+/* =========================================================
+   "БАЗА КЛІЄНТІВ" — холодні бази контактів (окремо від Контактів/
+   воронки). Дані живуть у COLDBASES (масив баз, кожна — {contacts:[]}).
+   ========================================================= */
+// Ефективний менеджер рядка: явне перекриття на контакті має пріоритет
+// над менеджером бази за замовчуванням (щоб можна було розкидати
+// контакти однієї бази між кількома менеджерами вручну).
+function coldContactManagerId(base, c){
+  return c.managerOverride || base.defaultManagerId || null;
+}
+// Контакти бази, видимі поточній ролі: CTO/керівник відділу бачать усе,
+// менеджер — лише рядки, де ефективний менеджер саме він.
+function coldBaseVisibleContacts(base){
+  if(state.role === 'cto' || state.role === 'admin') return base.contacts;
+  return base.contacts.filter(c => coldContactManagerId(base, c) === state.userId);
+}
+// Бази, видимі у списку поточній ролі — менеджеру показуємо лише ті,
+// де в нього є хоч один видимий контакт.
+function coldBasesVisiblePool(){
+  if(state.role === 'cto' || state.role === 'admin') return COLDBASES;
+  return COLDBASES.filter(b => coldBaseVisibleContacts(b).length > 0);
+}
+// Кому можна призначити базу/рядок — усі менеджери компанії (і CTO, і
+// керівник відділу керують спільним пулом менеджерів, без поділу на
+// "своїх"/"чужих" — так само, як і решта СРМ).
+function coldManagerPool(){
+  return USERS.filter(u=>u.role==='manager');
+}
+function coldManagerLabel(id){
+  if(!id) return 'Не призначено';
+  const u = USERS.find(u=>u.id===id);
+  return u ? u.name : 'Не призначено';
+}
+// Атрибутам у onclick="...('...')" потрібне екранування лапок/апострофів
+// та бекслешів — інакше назви на кшталт "Меблі ім.'Комодеус'" поламали б
+// розмітку. Подвійні лапки кодуємо як &quot; (сам onclick — в подвійних
+// лапках), одинарні — як \' (бо всередині JS-рядок в одинарних лапках).
+function escAttr(v){
+  return String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+function renderColdBasesList(){
+  const grid = document.getElementById('coldBasesGrid');
+  if(!grid) return;
+  const pool = coldBasesVisiblePool();
+  grid.innerHTML = pool.map(b => {
+    const visible = coldBaseVisibleContacts(b);
+    const total = visible.length;
+    const done = visible.filter(c=>c.status!=='new').length;
+    const pct = total ? Math.round(done/total*100) : 0;
+    const mgrBadge = b.defaultManagerId
+      ? `<span class="badge">${coldManagerLabel(b.defaultManagerId)}</span>`
+      : `<span class="badge" style="color:var(--text-muted);">Не призначено</span>`;
+    return `<div class="card coldbase-card" onclick="openColdBase('${b.id}')">
+      <div class="row-between"><div class="section-title" style="margin:0;font-size:15px;">${b.name}</div>${mgrBadge}</div>
+      <div style="font-size:12.5px;color:var(--text-muted);margin-top:8px;">Контактів: ${total} · Оброблено: ${done} · Залишилось: ${total-done}</div>
+      <div class="analytics-bar-track"><div class="analytics-bar-fill" style="width:${pct}%;"></div></div>
+    </div>`;
+  }).join('');
+  const hint = document.getElementById('coldBasesEmptyHint');
+  if(hint) hint.style.display = pool.length ? 'none' : '';
+}
+
+function openColdBase(id){
+  state.coldBaseViewId = id;
+  showView(null, 'coldbase-detail');
+  renderColdBaseDetail();
+}
+// Якщо хтось інший (напр. інша вкладка) змінив дані, поки менеджер
+// дивиться саме на деталі бази — оновлюємо їх разом з рештою рендерів.
+function refreshColdBaseDetailIfOpen(){
+  const view = document.getElementById('view-coldbase-detail');
+  if(view && view.classList.contains('active') && state.coldBaseViewId) renderColdBaseDetail();
+}
+
+function coldRowHtml(base, c){
+  const canManage = state.role === 'cto' || state.role === 'admin';
+  const managerCell = canManage
+    ? `<select class="mini-select" onchange="setColdContactManager('${base.id}','${c.id}',this.value)">
+        <option value="">— (${coldManagerLabel(base.defaultManagerId)})</option>
+        ${coldManagerPool().map(m=>`<option value="${m.id}" ${c.managerOverride===m.id?'selected':''}>${m.name}</option>`).join('')}
+      </select>`
+    : '';
+  const statusSelectVal = (c.status==='no_answer'||c.status==='invalid'||c.status==='callback') ? c.status : 'new';
+  const actionsCell = c.convertedClientId
+    ? `<span class="badge" style="color:#1AA35A;">✓ У клієнтах</span>`
+    : `<button class="btn secondary small" onclick="convertColdContactToClient('${base.id}','${c.id}')">→ Клієнт</button>`;
+  return `<tr class="${c.status!=='new' ? 'coldbase-row-processed' : ''}">
+    <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.title)}')">${c.title||'—'}</td>
+    <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.phone)}')">${c.phone||'—'}</td>
+    <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.city)}')">${c.city||'—'}</td>
+    <td>${c.url ? `<a href="${c.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent-1);">Відкрити ↗</a>` : '—'}</td>
+    <td data-roles="admin cto">${managerCell}</td>
+    <td><label class="chk"><input type="checkbox" ${c.status==='called'?'checked':''} onchange="toggleColdCalled('${base.id}','${c.id}',this.checked)"><span></span></label></td>
+    <td>
+      <select class="mini-select" onchange="setColdContactStatus('${base.id}','${c.id}',this.value)">
+        <option value="new" ${statusSelectVal==='new'?'selected':''}>—</option>
+        <option value="no_answer" ${statusSelectVal==='no_answer'?'selected':''}>Не додзвонився</option>
+        <option value="invalid" ${statusSelectVal==='invalid'?'selected':''}>Недійсний номер</option>
+        <option value="callback" ${statusSelectVal==='callback'?'selected':''}>Передзвонити пізніше</option>
+      </select>
+    </td>
+    <td>${actionsCell}</td>
+  </tr>`;
+}
+
+function renderColdBaseDetail(){
+  const base = COLDBASES.find(b=>b.id===state.coldBaseViewId);
+  const title = document.getElementById('coldBaseDetailTitle');
+  if(!base){ if(title) title.textContent = 'Базу не знайдено'; return; }
+  if(title) title.textContent = base.name;
+  const visible = coldBaseVisibleContacts(base);
+  const working = visible.filter(c=>c.status==='new');
+  const processed = visible.filter(c=>c.status!=='new');
+  const summary = document.getElementById('coldBaseDetailSummary');
+  if(summary) summary.textContent = `Контактів: ${visible.length} · Оброблено: ${processed.length} · Залишилось: ${working.length}`;
+
+  document.getElementById('coldBaseWorkingTableBody').innerHTML = working.map(c=>coldRowHtml(base,c)).join('');
+  document.getElementById('coldBaseWorkingEmptyHint').style.display = working.length ? 'none' : '';
+  document.getElementById('coldBaseProcessedTableBody').innerHTML = processed.map(c=>coldRowHtml(base,c)).join('');
+  document.getElementById('coldBaseProcessedSummary').textContent = `Оброблені (${processed.length})`;
+
+  renderColdBaseManagerOptions();
+}
+function renderColdBaseManagerOptions(){
+  const menu = document.getElementById('coldBaseManagerMenu');
+  if(!menu) return;
+  const base = COLDBASES.find(b=>b.id===state.coldBaseViewId);
+  if(!base) return;
+  menu.innerHTML = `<li data-value="" class="${!base.defaultManagerId?'selected':''}">Не призначено</li>`
+    + coldManagerPool().map(m=>`<li data-value="${m.id}" class="${base.defaultManagerId===m.id?'selected':''}">${m.name}</li>`).join('');
+  const label = document.getElementById('coldBaseManagerLabel');
+  if(label) label.textContent = coldManagerLabel(base.defaultManagerId);
+}
+
+function setColdBaseDefaultManager(baseId, managerId){
+  const base = COLDBASES.find(b=>b.id===baseId);
+  if(!base) return;
+  base.defaultManagerId = managerId || null;
+  logActivity(`Змінено менеджера бази "${base.name}" за замовчуванням: ${coldManagerLabel(base.defaultManagerId)}`, {silent:true});
+  renderColdBaseDetail();
+  renderColdBasesList();
+  fbScheduleSave();
+}
+function setColdContactManager(baseId, contactId, managerId){
+  const base = COLDBASES.find(b=>b.id===baseId);
+  if(!base) return;
+  const c = base.contacts.find(x=>x.id===contactId);
+  if(!c) return;
+  c.managerOverride = managerId || null;
+  renderColdBaseDetail();
+  renderColdBasesList();
+  fbScheduleSave();
+}
+function toggleColdCalled(baseId, contactId, checked){
+  setColdContactStatus(baseId, contactId, checked ? 'called' : 'new');
+}
+function setColdContactStatus(baseId, contactId, status){
+  const base = COLDBASES.find(b=>b.id===baseId);
+  if(!base) return;
+  const c = base.contacts.find(x=>x.id===contactId);
+  if(!c) return;
+  c.status = status;
+  c.updatedAt = nowTimeStr();
+  renderColdBaseDetail();
+  renderColdBasesList();
+  fbScheduleSave();
+}
+// "Перетворити на клієнта": створює повноцінний запис у Контактах
+// (LEADS) з тим самим менеджером, у його першій воронці/стовпці.
+async function convertColdContactToClient(baseId, contactId){
+  const base = COLDBASES.find(b=>b.id===baseId);
+  if(!base) return;
+  const c = base.contacts.find(x=>x.id===contactId);
+  if(!c || c.convertedClientId) return;
+  const effManagerId = coldContactManagerId(base, c);
+  const ok = await showConfirmModal({
+    title:'Створити клієнта',
+    text:`Створити картку клієнта "${c.title}" у Контактах${effManagerId ? ` для ${coldManagerLabel(effManagerId)}` : ''}?`,
+    okText:'Створити'
+  });
+  if(!ok) return;
+  const cp = PIPELINES.find(p=>p.ownerId===effManagerId) || PIPELINES.find(p=>p.ownerId==='admin') || PIPELINES[0];
+  const stage = cp ? cp.stages[0] : '';
+  const newId = nextLeadId++;
+  LEADS.push({
+    id:newId, name:c.title, phone:c.phone||'', email:'', company:'', niche:'',
+    link:c.url||'', stage, value:0, pipelineId: cp ? cp.id : 'default', managerId: effManagerId,
+    createdAt: new Date().toLocaleDateString('uk-UA'),
+    notes:[{author:currentActorLabel(), date:nowTimeStr(), text:`Створено з холодної бази "${base.name}"${c.city?` (місто: ${c.city})`:''}`}],
+    tasks:[], attachments:[]
+  });
+  c.convertedClientId = newId;
+  logActivity(`Контакт "${c.title}" з бази "${base.name}" перетворено на клієнта`, {target:{type:'lead', id:newId}});
+  renderColdBaseDetail();
+  renderClientsTable();
+  renderBoard();
+  renderDashboardStats();
+  fbScheduleSave();
+  showAlertModal(`Клієнта "${c.title}" створено в Контактах.`, 'Готово');
+}
+
+// Клік по клітинці таблиці — копіює її вміст у буфер обміну і показує
+// маленьку підказку біля курсора, яка сама зникає.
+function copyCellToClipboard(e, text){
+  e.stopPropagation();
+  if(!text || text==='—') return;
+  const show = (msg) => {
+    const toast = document.createElement('div');
+    toast.className = 'copy-toast';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    toast.style.left = (e.clientX + 10) + 'px';
+    toast.style.top = (e.clientY - 28) + 'px';
+    requestAnimationFrame(()=>toast.classList.add('show'));
+    setTimeout(()=>{ toast.classList.remove('show'); setTimeout(()=>toast.remove(), 200); }, 900);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>show('Скопійовано')).catch(()=>show('Не вдалося скопіювати'));
+  } else {
+    show('Копіювання недоступне в цьому браузері');
+  }
+}
+
+/* ---------- Імпорт нової холодної бази (CSV: назва/телефон/місто/посилання) ---------- */
+let coldStagedImport = null;
+let coldImportSelectedManagerId = null;
+function renderColdImportManagerOptions(){
+  const menu = document.getElementById('coldImportManagerMenu');
+  if(!menu) return;
+  menu.innerHTML = `<li data-value="" class="${!coldImportSelectedManagerId?'selected':''}">Не призначено</li>`
+    + coldManagerPool().map(m=>`<li data-value="${m.id}" class="${coldImportSelectedManagerId===m.id?'selected':''}">${m.name}</li>`).join('');
+  const label = document.getElementById('coldImportManagerLabel');
+  if(label) label.textContent = coldManagerLabel(coldImportSelectedManagerId);
+}
+function openColdImportPanel(){
+  document.getElementById('coldImportName').value = '';
+  const fileInput = document.getElementById('coldImportFile');
+  if(fileInput) fileInput.value = '';
+  document.getElementById('coldImportFileName').textContent = 'Обрати файл';
+  document.getElementById('coldImportPreviewSection').classList.add('js-hidden');
+  document.getElementById('coldImportBtn').disabled = true;
+  coldStagedImport = null;
+  coldImportSelectedManagerId = null;
+  renderColdImportManagerOptions();
+  openPanel('coldImportPanel');
+}
+function coldImportFilePicked(){
+  const input = document.getElementById('coldImportFile');
+  const label = document.getElementById('coldImportFileName');
+  label.textContent = (input.files && input.files[0]) ? input.files[0].name : 'Обрати файл';
+  document.getElementById('coldImportPreviewSection').classList.add('js-hidden');
+  document.getElementById('coldImportBtn').disabled = true;
+  coldStagedImport = null;
+}
+async function previewColdImport(){
+  const input = document.getElementById('coldImportFile');
+  if(!input.files[0]){ showAlertModal('Оберіть CSV-файл з базою контактів.', 'Не вистачає файлу'); return; }
+  const name = document.getElementById('coldImportName').value.trim();
+  if(!name){ showAlertModal('Вкажіть назву бази.', 'Не вистачає назви'); return; }
+  const csv = parseCSV(await readFileAsText(input.files[0]));
+  const staged = csv.rows.map(r => ({
+    title: csvGet(r, ['title','Title','назва','Назва','name','Name']),
+    url: csvGet(r, ['url','URL','посилання','Посилання','link','Link']),
+    phone: csvGet(r, ['phone','Phone','телефон','Телефон']),
+    city: csvGet(r, ['city','City','місто','Місто','город','Город'])
+  })).filter(r => r.title || r.phone);
+  coldStagedImport = { name, staged };
+
+  document.getElementById('coldImportPreviewSummary').textContent =
+    `Знайдено рядків у файлі: ${csv.rows.length}. Готово до імпорту: ${staged.length}.`;
+  const tbody = document.getElementById('coldImportPreviewTableBody');
+  const previewRows = staged.slice(0,8).map(s=>`<tr><td>${s.title||'—'}</td><td>${s.phone||'—'}</td><td>${s.city||'—'}</td><td>${s.url?'🔗':'—'}</td></tr>`).join('');
+  tbody.innerHTML = previewRows || '<tr><td colspan="4" class="empty-hint">Немає рядків для імпорту.</td></tr>';
+  if(staged.length > 8) tbody.insertAdjacentHTML('beforeend', `<tr><td colspan="4" class="empty-hint">...і ще ${staged.length-8}.</td></tr>`);
+
+  document.getElementById('coldImportPreviewSection').classList.remove('js-hidden');
+  document.getElementById('coldImportBtn').disabled = staged.length === 0;
+}
+async function commitColdImport(){
+  if(!coldStagedImport || !coldStagedImport.staged.length) return;
+  const { name, staged } = coldStagedImport;
+  const ok = await showConfirmModal({
+    title:'Імпортувати базу клієнтів',
+    text:`Буде створено базу "${name}" з ${staged.length} контактів${coldImportSelectedManagerId ? ` для ${coldManagerLabel(coldImportSelectedManagerId)}` : ' (поки без менеджера)'}. Продовжити?`,
+    okText:'Імпортувати'
+  });
+  if(!ok) return;
+  const contacts = staged.map(s => ({
+    id: nextColdContactId++, title:s.title, phone:s.phone, city:s.city, url:s.url,
+    managerOverride:null, status:'new', convertedClientId:null
+  }));
+  const newBase = { id:'cb'+(nextColdBaseId++), name, createdAt:new Date().toLocaleDateString('uk-UA'), defaultManagerId: coldImportSelectedManagerId || null, contacts };
+  COLDBASES.push(newBase);
+  logActivity(`Імпортовано базу клієнтів "${name}" (${contacts.length} контактів)`, {target:{type:'view', name:'coldbase'}});
+  renderColdBasesList();
+  closeAllPanels();
+  fbScheduleSave();
+  showAlertModal(`Базу "${name}" імпортовано: ${contacts.length} контактів.`, 'Імпорт завершено');
+  coldStagedImport = null;
+}
 function csvEscape(v){
   v = String(v==null?'':v);
   if(/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
   return v;
 }
 // Експорт повторює точнісінько ті самі фільтри, що зараз застосовані у
-// таблиці "База клієнтів" (Менеджери + Воронка + Період) — це і є відповідь
+// таблиці "Контакти" (Менеджери + Воронка + Період) — це і є відповідь
 // на "чи можна експортувати окремо по воронках": так, спершу обери потрібну
 // воронку(и) у фільтрі вище, тоді тисни "Експорт в CSV".
 function exportClientsCSV(){
@@ -3901,7 +4338,7 @@ async function deleteTask(idx){
    REPORTS
    ========================================================= */
 // Фільтр дата+менеджер на сторінці звітності — той самий патерн, що на
-// сторінках "База клієнтів" і "Завдання".
+// сторінках "Контакти" і "Завдання".
 function renderReportManagerMultiOptions(){
   const menu = document.getElementById('reportManagerMultiMenu');
   if(!menu) return;
@@ -4671,6 +5108,7 @@ function fbApplyRemoteData(data){
   let needsRepairSave = false;
   try{
     if(Array.isArray(data.leads)) LEADS = data.leads;
+    if(Array.isArray(data.coldBases)) COLDBASES = data.coldBases;
     if(Array.isArray(data.tasks)) TASKS = data.tasks;
     if(Array.isArray(data.calls)) CALLS = data.calls;
     if(Array.isArray(data.reports)) REPORTS = data.reports;
@@ -4686,6 +5124,8 @@ function fbApplyRemoteData(data){
     if(Array.isArray(data.pipelines) && data.pipelines.length){ PIPELINES.length = 0; data.pipelines.forEach(p=>PIPELINES.push(p)); }
     if(typeof data.nextLeadId === 'number') nextLeadId = Math.max(nextLeadId, data.nextLeadId);
     if(typeof data.nextReportId === 'number') nextReportId = Math.max(nextReportId, data.nextReportId);
+    if(typeof data.nextColdBaseId === 'number') nextColdBaseId = Math.max(nextColdBaseId, data.nextColdBaseId);
+    if(typeof data.nextColdContactId === 'number') nextColdContactId = Math.max(nextColdContactId, data.nextColdContactId);
 
     // Захист від дублікатів id серед воронок (могли лишитись з попередніх
     // сценаріїв синхронізації) — якщо дві воронки мають однаковий id, будь-яка
@@ -4716,6 +5156,8 @@ function fbApplyRemoteData(data){
       renderCampaignsTable();
       renderManagersTable();
       renderCredentialsTable();
+      renderColdBasesList();
+  refreshColdBaseDetailIfOpen();
       renderDashboardStats();
       renderDashboardTasks();
       renderDashboardCalls();
@@ -4747,6 +5189,7 @@ function fbSaveNow(){
   if(!fbDocRef) return;
   const payload = {
     leads: LEADS,
+    coldBases: COLDBASES,
     tasks: TASKS,
     calls: CALLS,
     reports: REPORTS,
@@ -4756,6 +5199,8 @@ function fbSaveNow(){
     pipelines: PIPELINES,
     nextLeadId: nextLeadId,
     nextReportId: nextReportId,
+    nextColdBaseId: nextColdBaseId,
+    nextColdContactId: nextColdContactId,
     updatedAt: Date.now()
   };
   fbDocRef.set(payload, {merge:true}).catch(function(err){ console.error('Firestore save failed:', err); });
