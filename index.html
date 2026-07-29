@@ -787,7 +787,7 @@
             </button>
             <ul class="cselect-menu" id="pipelineOwnerFilterMenu" data-select="pipelineOwnerFilter"></ul>
           </div>
-          <button class="btn danger-ghost" data-roles="admin cto" onclick="clearCurrentPipelineDeals()" id="clearPipelineBtn" title="Видалити всі угоди з поточно відкритої воронки">Очистити воронку</button>
+          <button class="btn danger-ghost" data-roles="cto" onclick="clearCurrentPipelineDeals()" id="clearPipelineBtn" title="Видалити всі угоди з поточно відкритої воронки">Очистити воронку</button>
           <button class="btn" onclick="openDeal(null)" id="addDealBtn">+ Нова угода</button>
         </div>
 
@@ -2820,6 +2820,9 @@ async function deletePipelineFromEditor(){
 // прив'язаними завданнями/зустрічами), але саму воронку і її стовпці лишає —
 // зручно перед повторним/новим імпортом з Pipedrive для конкретного власника.
 async function clearCurrentPipelineDeals(){
+  // Дозволено лише СТО — перевіряємо тут ще раз (не лише ховаємо кнопку в
+  // розмітці), щоб ніхто не міг викликати очищення воронки в обхід UI.
+  if(state.role !== 'cto') return;
   const cp = currentPipeline();
   if(!cp) return;
   const idsToRemove = new Set(LEADS.filter(l => (l.pipelineId||'default') === cp.id).map(l=>l.id));
