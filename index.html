@@ -877,36 +877,36 @@
       <!-- ============ COLD BASE — ДЕТАЛІ ОДНІЄЇ БАЗИ (повна сторінка) ============ -->
       <section class="view" id="view-coldbase-detail">
         <button class="btn secondary" style="margin-bottom:18px;" onclick="showView(null,'coldbase')">← Назад до бази клієнтів</button>
-        <div class="row-between" style="margin-bottom:4px;flex-wrap:wrap;gap:14px;">
+        <div class="row-between" style="margin-bottom:16px;flex-wrap:wrap;gap:14px;align-items:flex-end;">
           <div>
             <div class="section-title" id="coldBaseDetailTitle" style="margin:0;">—</div>
             <div style="font-size:12.5px;color:var(--text-muted);margin-top:4px;" id="coldBaseDetailSummary"></div>
           </div>
-        </div>
-        <div class="filters-bar card" style="margin-top:16px;">
-          <div class="field" data-roles="admin cto" style="max-width:220px;">
-            <label>Менеджер</label>
-            <div class="cselect" id="coldBaseManagerSelect">
-              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                <span class="cselect-label" id="coldBaseManagerLabel" style="flex:1;text-align:left;">—</span>
-                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-              <ul class="cselect-menu" id="coldBaseManagerMenu" data-select="coldBaseManager"></ul>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="field" data-roles="admin cto" style="max-width:190px;">
+              <label>Менеджер</label>
+              <div class="cselect" id="coldBaseManagerSelect">
+                <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  <span class="cselect-label" id="coldBaseManagerLabel" style="flex:1;text-align:left;">—</span>
+                  <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <ul class="cselect-menu" id="coldBaseManagerMenu" data-select="coldBaseManager"></ul>
+              </div>
             </div>
-          </div>
-          <div class="field" style="max-width:260px;">
-            <label>Пошук</label>
-            <input type="text" id="coldSearchInput" placeholder="Назва, телефон, місто…" oninput="onColdSearchInput(this.value)">
-          </div>
-          <div class="field" style="max-width:220px;">
-            <label>Статус</label>
-            <div class="cselect" id="coldStatusFilterSelect">
-              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
-                <span class="cselect-label" id="coldStatusFilterLabel">Усі статуси</span>
-                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-              <ul class="cselect-menu" id="coldStatusFilterMenu" data-select="coldStatusFilter"></ul>
+            <div class="field" style="max-width:220px;">
+              <label>Пошук</label>
+              <input type="text" id="coldSearchInput" placeholder="Назва, телефон, місто…" oninput="onColdSearchInput(this.value)">
+            </div>
+            <div class="field" style="max-width:180px;">
+              <label>Статус</label>
+              <div class="cselect" id="coldStatusFilterSelect">
+                <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                  <span class="cselect-label" id="coldStatusFilterLabel">Усі статуси</span>
+                  <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <ul class="cselect-menu" id="coldStatusFilterMenu" data-select="coldStatusFilter"></ul>
+              </div>
             </div>
           </div>
         </div>
@@ -4953,8 +4953,26 @@ function saveAccountEdit(){
   renderPipelineOwnerFilterOptions();
   renderManagerMultiOptions();
   renderClientsPipelineFilterOptions();
+  renderTaskManagerMultiOptions();
+  renderReportManagerMultiOptions();
+  renderBoard();
+  renderClientsTable();
+  renderTasksTable();
+  renderReportsTable();
+  renderCampaignsTable();
+  renderColdBasesList();
+  refreshColdBaseDetailIfOpen();
+  renderDashboardCalls();
+  renderNotifications();
+  renderHistory();
+  updateHeaderAvatars();
+  updateAccountSwitchUI();
   logActivity(`Оновлено власні дані профілю${oldName!==newName ? ' (' + oldName + ' → ' + newName + ')' : ''}`, {target:{type:'account'}});
   renderAccountView();
+  // Без цього виклику зміна імені/логіну/пароля залишалась лише в пам'яті
+  // поточної вкладки і НЕ потрапляла у Firestore — інші вкладки/користувачі
+  // й сам користувач після перезавантаження бачили стару назву знову.
+  fbScheduleSave();
 }
 // Керівник відділу не має права бачити (чи редагувати) дані входу CTO —
 // CTO вище в ієрархії. Керівнику відділу показуємо лише себе і менеджерів;
@@ -4998,10 +5016,35 @@ function saveCredential(){
   renderPipelineOwnerFilterOptions();
   renderManagerMultiOptions();
   renderClientsPipelineFilterOptions();
+  renderTaskManagerMultiOptions();
+  renderReportManagerMultiOptions();
+  renderBoard();
+  renderClientsTable();
+  renderTasksTable();
+  renderReportsTable();
+  renderCampaignsTable();
+  renderColdBasesList();
+  refreshColdBaseDetailIfOpen();
+  renderDashboardCalls();
+  renderNotifications();
+  renderHistory();
+  updateHeaderAvatars();
+  updateAccountSwitchUI();
   closeAllPanels();
   const passwordChanged = u.password !== oldPassword;
   const me = currentUserRecord();
   const isSelfEdit = me && me.id === u.id;
+  if(isSelfEdit){
+    // Якщо редагуємо самі себе через цю панель (а не через "Особистий
+    // кабінет") — так само оновлюємо ім'я в шапці/сайдбарі одразу.
+    const nameEl = document.getElementById('userName');
+    if(nameEl) nameEl.textContent = u.name;
+    renderAccountView();
+  }
+  // Без цього виклику зміна імені/логіну/пароля залишалась лише в пам'яті
+  // поточної вкладки і НЕ потрапляла у Firestore — інші вкладки/користувачі
+  // й сам користувач після перезавантаження бачили старі дані знову.
+  fbScheduleSave();
   if(isSelfEdit && passwordChanged){
     // Пароль змінено на цьому ж пристрої — одразу оновлюємо збережений
     // у браузері пароль (Chrome/Edge), інакше автозаповнення підставлятиме
