@@ -787,6 +787,7 @@
             </button>
             <ul class="cselect-menu" id="pipelineOwnerFilterMenu" data-select="pipelineOwnerFilter"></ul>
           </div>
+          <button class="btn danger-ghost" data-roles="admin cto" onclick="clearCurrentPipelineDeals()" id="clearPipelineBtn" title="Видалити всі угоди з поточно відкритої воронки">Очистити воронку</button>
           <button class="btn" onclick="openDeal(null)" id="addDealBtn">+ Нова угода</button>
         </div>
 
@@ -2698,6 +2699,8 @@ function toggleStageEditor(){
   const settingsBtnOpen = document.getElementById('pipelineSettingsBtn');
   if(settingsBtnOpen) settingsBtnOpen.classList.add('js-hidden');
   document.getElementById('addDealBtn').classList.add('js-hidden');
+  const clearBtnOpen = document.getElementById('clearPipelineBtn');
+  if(clearBtnOpen) clearBtnOpen.classList.add('js-hidden');
   // Під час редагування самої воронки перемикати воронку/фільтр не має сенсу
   // (і можна випадково загубити незбережені зміни) — ховаємо обидва.
   const boardPipelineSelectEl = document.getElementById('boardPipelineSelect');
@@ -2755,6 +2758,8 @@ function cancelStageEditor(){
   const settingsBtnClose = document.getElementById('pipelineSettingsBtn');
   if(settingsBtnClose) settingsBtnClose.classList.remove('js-hidden');
   document.getElementById('addDealBtn').classList.remove('js-hidden');
+  const clearBtnClose = document.getElementById('clearPipelineBtn');
+  if(clearBtnClose) clearBtnClose.classList.remove('js-hidden');
   const boardPipelineSelectEl2 = document.getElementById('boardPipelineSelect');
   if(boardPipelineSelectEl2) boardPipelineSelectEl2.classList.remove('js-hidden');
   const ownerFilterEl2 = document.getElementById('pipelineOwnerFilterSelect');
@@ -2808,6 +2813,38 @@ async function deletePipelineFromEditor(){
   renderBoardPipelineOptions();
   renderBoard();
   logActivity(`Видалено воронку "${cp.name}"`, {target:{type:'view', name:'pipeline'}, silent:true});
+  fbScheduleSave();
+}
+
+// Очищення воронки: видаляє ВСІ угоди з поточно відкритої воронки (разом з
+// прив'язаними завданнями/зустрічами), але саму воронку і її стовпці лишає —
+// зручно перед повторним/новим імпортом з Pipedrive для конкретного власника.
+async function clearCurrentPipelineDeals(){
+  const cp = currentPipeline();
+  if(!cp) return;
+  const idsToRemove = new Set(LEADS.filter(l => (l.pipelineId||'default') === cp.id).map(l=>l.id));
+  const count = idsToRemove.size;
+  if(!count){
+    showAlertModal(`У воронці "${cp.name}" немає жодної угоди.`, 'Нічого видаляти');
+    return;
+  }
+  const ok = await showConfirmModal({
+    title:'Очистити воронку',
+    text:`Видалити всі ${count} угод${count===1?'у':'и'} з воронки "${cp.name}"? Пов'язані завдання та зустрічі також буде видалено. Дію не можна скасувати.`,
+    okText:'Видалити всі',
+    danger:true
+  });
+  if(!ok) return;
+  LEADS = LEADS.filter(l => !idsToRemove.has(l.id));
+  TASKS = TASKS.filter(t => !idsToRemove.has(t.leadId));
+  CALLS = CALLS.filter(c => !idsToRemove.has(c.leadId));
+  renderBoard();
+  renderClientsTable();
+  renderTasksTable();
+  renderDashboardStats();
+  renderDashboardTasks();
+  renderDashboardCalls();
+  logActivity(`Очищено воронку "${cp.name}" (видалено ${count} угод)`, {target:{type:'view', name:'pipeline'}});
   fbScheduleSave();
 }
 
