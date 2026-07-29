@@ -704,7 +704,7 @@
             <div class="avatar" id="userAvatar2" style="width:26px;height:26px;font-size:11px;">CT</div>
             <span class="role-pill" id="rolePill">CTO</span>
           </div>
-          <div class="dropdown-panel" id="accountMenu" style="width:220px;">
+          <div class="dropdown-panel" id="accountMenu" style="width:320px;">
             <div class="menu-list" id="accountMenuMain">
               <div class="menu-item mobile-only-menu-item" onclick="toggleDropdown('notifPanel', document.querySelector('.account-trigger'))">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -1954,10 +1954,12 @@ function renderAccountSwitchList(){
   const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
   const pool = accountSwitchPool();
   container.innerHTML = pool.map(u => `
-    <div class="menu-item" onclick="switchAccount('${u.id}')" style="justify-content:flex-start;gap:10px;">
-      <div class="avatar" style="width:22px;height:22px;font-size:9px;flex-shrink:0;">${avatarContent(u)}</div>
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u.name}${u.id===state.userId ? ' (поточний)' : ''}</span>
-      <span style="font-size:11px;color:var(--text-muted);flex-shrink:0;">${roleLabels[u.role]}</span>
+    <div class="menu-item" onclick="switchAccount('${u.id}')" style="justify-content:flex-start;gap:10px;align-items:center;height:auto;padding-top:8px;padding-bottom:8px;">
+      <div class="avatar" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">${avatarContent(u)}</div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
+        <span style="overflow-wrap:break-word;white-space:normal;line-height:1.25;">${u.name}${u.id===state.userId ? ' (поточний)' : ''}</span>
+        <span style="font-size:11px;font-weight:500;color:var(--text-muted);">${roleLabels[u.role]}</span>
+      </div>
     </div>`).join('');
 }
 function switchAccount(userId){
