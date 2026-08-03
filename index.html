@@ -324,6 +324,15 @@
   .report-summary-strip{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px;}
   .report-summary-chip{background:#2F4EF314;color:var(--accent-1);border-radius:999px;padding:6px 14px;font-size:12.5px;font-weight:800;}
 
+  /* report detail — grouped single-column list (день/тиждень) */
+  .report-field-list{display:flex;flex-direction:column;margin-top:16px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}
+  .report-field-group-title{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-1);background:#2F4EF314;padding:8px 14px;}
+  .report-field-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--surface);border-top:1px solid var(--border);}
+  .report-field-list .report-field-group-title:first-child{border-top:none;}
+  .report-field-row:first-of-type{border-top:none;}
+  .report-field-row.readonly .report-field-value{font-weight:800;color:var(--accent-2);font-size:14px;}
+  .report-field-sub{font-size:11px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px;}
+
   /* ---------- Analytics ---------- */
   .analytics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;}
   @media (max-width:980px){ .analytics-grid{grid-template-columns:repeat(2,1fr);} }
@@ -996,7 +1005,7 @@
         </div>
         <div class="card" style="padding:8px 4px;">
           <div class="table-scroll"><table>
-            <thead><tr><th>Дата</th><th data-roles="admin cto">Менеджер</th><th>Звіт</th></tr></thead>
+            <thead><tr><th>Дата</th><th data-roles="admin cto">Менеджер</th><th>Звіт</th><th data-roles="cto" style="width:44px;"></th></tr></thead>
             <tbody id="reportsTableBody"></tbody>
           </table></div>
         </div>
@@ -1620,9 +1629,29 @@ let TASKS = [];
 // відкриває картку відповідного клієнта.
 let CALLS = [];
 
-// Поля, які менеджер/керівник відділу заповнює у звіті. Кожне — число,
-// зберігається під ключем f.key, поле у формі має id "rd_" + key.
-const REPORT_FIELDS = [
+// ЗВІТИ: три типи (день/тиждень/місяць) мають РІЗНУ структуру полів.
+// Кожне поле — число, зберігається під ключем f.key, у формі має id "rd_"+key.
+
+// День — повністю ручне введення, згруповане в 3 блоки (як у методичці
+// відділу продажів): Активність / Результати дзвінків / Output.
+const DAILY_FIELDS = [
+  {group:'Активність', key:'calls', label:'Дзвінків зроблено'},
+  {group:'Активність', key:'talks', label:'Розмов (підняли трубку)'},
+  {group:'Активність', key:'reachLPR', label:'Вихід на ЛПР'},
+  {group:'Активність', key:'presLPR', label:'Презентацій ЛПР'},
+  {group:'Активність', key:'presAdmin', label:'Презентацій адміну'},
+  {group:'Результати дзвінків', key:'interestedLPR', label:'Зацікавлені ЛПР'},
+  {group:'Результати дзвінків', key:'notInterestedLPR', label:'Не цікаво'},
+  {group:'Результати дзвінків', key:'hasContractor', label:'Є підрядник'},
+  {group:'Результати дзвінків', key:'notPastAdmin', label:'Не пройшов адміна'},
+  {group:'Результати дзвінків', key:'callBackBusyLPR', label:'Передзвонити пізніше'},
+  {group:'Output — головне', key:'meetings', label:'Зустрічей призначено'},
+  {group:'Output — головне', key:'meetingsHeld', label:'Зустрічей відбулось'},
+  {group:'Output — головне', key:'meetingsNoShow', label:'Не з\'явились (no-show)'},
+];
+
+// Місяць — стара структура, лишається БЕЗ ЗМІН (повністю ручне введення).
+const MONTHLY_FIELDS = [
   {key:'calls', label:'Кількість зроблених дзвінків'},
   {key:'presLPR', label:'Скинуто презентацій ЛПР'},
   {key:'reachLPR', label:'Вихід на ЛПР'},
@@ -1635,23 +1664,155 @@ const REPORT_FIELDS = [
   {key:'interestedLPR', label:'Зацікавлені ЛПР'},
   {key:'meetings', label:'Назначено зустрічей'},
 ];
-// Кожен показник — картка з лейблом і степером; значення можна як клікати
-// +/-, так і вписувати вручну (поле більше не readonly), onReportFieldInput
-// прибирає від'ємні/нечислові значення при введенні.
-function renderReportFieldRows(){
-  const grid = document.getElementById('reportMetricGrid');
-  if(!grid) return;
-  grid.innerHTML = REPORT_FIELDS.map(f => `
-    <div class="report-metric-card">
-      <span class="report-metric-label">${f.label}</span>
-      <div class="stepper"><button type="button" onclick="stepValue('rd_${f.key}',-1)">−</button><input id="rd_${f.key}" type="number" min="0" value="0" oninput="onReportFieldInput(this)"><button type="button" onclick="stepValue('rd_${f.key}',1)">+</button></div>
-    </div>`).join('');
-}
-renderReportFieldRows();
+
+// Тиждень — більшість показників рахується АВТОМАТИЧНО (сума щоденних
+// звітів менеджера за календарний тиждень Пн-Нд); вручну вводяться лише
+// "Зустрічей відбулось" і "Кваліфікованих брифів". Решта — розраховані %.
+const WEEKLY_AUTO_FIELDS = [
+  {key:'calls', label:'Дзвінків / тиждень'},
+  {key:'talks', label:'Розмов'},
+  {key:'reachLPR', label:'Вихід на ЛПР'},
+  {key:'meetings', label:'Зустрічей призначено'},
+];
+const WEEKLY_MANUAL_FIELDS = [
+  {key:'meetingsHeld', label:'Зустрічей відбулось'},
+  {key:'qualifiedBriefs', label:'Кваліфікованих брифів'},
+];
+function reportPct(num, den){ return den ? Math.round(Number(num||0)/Number(den||0)*100) : 0; }
+const WEEKLY_CALC_FIELDS = [
+  {key:'connectRate', label:'Connect rate', sub:'розмови ÷ дзвінки', calc:v=>reportPct(v.talks, v.calls)},
+  {key:'reachPct', label:'Вихід на ЛПР %', sub:'ЛПР ÷ розмови', calc:v=>reportPct(v.reachLPR, v.talks)},
+  {key:'lprToMeetingPct', label:'ЛПР → зустріч %', sub:'призначено ÷ ЛПР', calc:v=>reportPct(v.meetings, v.reachLPR)},
+  {key:'showRate', label:'Show rate', sub:'відбулось ÷ призначено', calc:v=>reportPct(v.meetingsHeld, v.meetings)},
+  {key:'qualityPct', label:'Якість %', sub:'кваліфіковані ÷ відбулось', calc:v=>reportPct(v.qualifiedBriefs, v.meetingsHeld)},
+];
+// Показники для аналітики — об'єднаний список ключів з усіх трьох типів
+// звітів (день/місяць мають майже той самий набір; тиждень виключається
+// із сум нижче, щоб не подвоювати вже пораховані щоденні дані).
+const ANALYTICS_FIELDS = [
+  {key:'calls', label:'Дзвінків зроблено'},
+  {key:'talks', label:'Розмов (підняли трубку)'},
+  {key:'reachLPR', label:'Вихід на ЛПР'},
+  {key:'presLPR', label:'Презентацій ЛПР'},
+  {key:'presAdmin', label:'Презентацій адміну'},
+  {key:'interestedLPR', label:'Зацікавлені ЛПР'},
+  {key:'notInterestedLPR', label:'Не цікаво'},
+  {key:'hasContractor', label:'Є підрядник'},
+  {key:'notPastAdmin', label:'Не пройшов адміна'},
+  {key:'callBackBusyLPR', label:'Передзвонити пізніше'},
+  {key:'meetings', label:'Зустрічей призначено'},
+  {key:'meetingsHeld', label:'Зустрічей відбулось'},
+];
+
 function onReportFieldInput(el){
   let v = Math.round(Number(el.value));
   if(!Number.isFinite(v) || v < 0) v = 0;
   el.value = v;
+}
+// Один рядок форми звіту (лейбл + степер введення).
+function reportInputRow(key, label, value){
+  return `
+    <div class="report-field-row">
+      <span class="report-metric-label">${label}</span>
+      <div class="stepper"><button type="button" onclick="stepValue('rd_${key}',-1);updateWeeklyCalcDisplay()">−</button><input id="rd_${key}" type="number" min="0" value="${value}" oninput="onReportFieldInput(this);updateWeeklyCalcDisplay()"><button type="button" onclick="stepValue('rd_${key}',1);updateWeeklyCalcDisplay()">+</button></div>
+    </div>`;
+}
+// День — згрупований однокол. список, усі поля вручну.
+function renderDailyFields(prefill){
+  const grid = document.getElementById('reportMetricGrid');
+  if(!grid) return;
+  grid.className = 'report-field-list';
+  let html = '', lastGroup = null;
+  DAILY_FIELDS.forEach(f => {
+    if(f.group !== lastGroup){ html += `<div class="report-field-group-title">${f.group}</div>`; lastGroup = f.group; }
+    html += reportInputRow(f.key, f.label, prefill ? Number(prefill[f.key]||0) : 0);
+  });
+  grid.innerHTML = html;
+}
+// Місяць — стара 2-колонкова картка-сітка, без змін.
+function renderMonthlyFields(prefill){
+  const grid = document.getElementById('reportMetricGrid');
+  if(!grid) return;
+  grid.className = 'report-metric-grid';
+  grid.innerHTML = MONTHLY_FIELDS.map(f => {
+    const val = prefill ? Number(prefill[f.key]||0) : 0;
+    return `
+    <div class="report-metric-card">
+      <span class="report-metric-label">${f.label}</span>
+      <div class="stepper"><button type="button" onclick="stepValue('rd_${f.key}',-1)">−</button><input id="rd_${f.key}" type="number" min="0" value="${val}" oninput="onReportFieldInput(this)"><button type="button" onclick="stepValue('rd_${f.key}',1)">+</button></div>
+    </div>`;
+  }).join('');
+}
+// Понеділок-неділя календарного тижня, що містить задану дату.
+function weekRangeContaining(dateObj){
+  const day = dateObj.getDay();
+  const diffToMonday = (day===0 ? -6 : 1-day);
+  const monday = new Date(dateObj); monday.setDate(dateObj.getDate()+diffToMonday); monday.setHours(0,0,0,0);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6); sunday.setHours(23,59,59,999);
+  return {monday, sunday};
+}
+// Автосума щоденних звітів менеджера за тиждень, що містить refDate.
+function computeWeeklyAutoSums(managerId, refDate){
+  const {monday, sunday} = weekRangeContaining(refDate || new Date());
+  const dayReports = REPORTS.filter(r => r.managerId === managerId && r.period === 'day' && (() => {
+    const d = parseUkDate(r.date);
+    return d >= monday && d <= sunday;
+  })());
+  const sums = {};
+  WEEKLY_AUTO_FIELDS.forEach(f => { sums[f.key] = dayReports.reduce((s,r)=>s+Number(r[f.key]||0),0); });
+  return sums;
+}
+// Тиждень — авто-рядки (readonly), розрахункові % (readonly), і лише
+// 2 поля вручну. state.weeklyAutoSnapshot зберігає авто-суми для saveReportDetail.
+function renderWeeklyFields(managerId, prefillRecord){
+  const grid = document.getElementById('reportMetricGrid');
+  if(!grid) return;
+  grid.className = 'report-field-list';
+  const auto = prefillRecord
+    ? WEEKLY_AUTO_FIELDS.reduce((o,f)=>{ o[f.key] = Number(prefillRecord[f.key]||0); return o; }, {})
+    : computeWeeklyAutoSums(managerId, new Date());
+  state.weeklyAutoSnapshot = auto;
+  const manualVals = {};
+  WEEKLY_MANUAL_FIELDS.forEach(f => { manualVals[f.key] = prefillRecord ? Number(prefillRecord[f.key]||0) : 0; });
+  const calcInput = {...auto, ...manualVals};
+
+  let html = '<div class="report-field-group-title">Автоматично за тиждень</div>';
+  WEEKLY_AUTO_FIELDS.forEach(f => {
+    html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}</span><span class="report-field-value">${auto[f.key]}</span></div>`;
+  });
+  html += '<div class="report-field-group-title">Розрахункові показники</div>';
+  WEEKLY_CALC_FIELDS.forEach(f => {
+    html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}<span class="report-field-sub">· ${f.sub}</span></span><span class="report-field-value" id="rdcalc_${f.key}">${f.calc(calcInput)}%</span></div>`;
+  });
+  html += '<div class="report-field-group-title">Вручну</div>';
+  WEEKLY_MANUAL_FIELDS.forEach(f => { html += reportInputRow(f.key, f.label, manualVals[f.key]); });
+  grid.innerHTML = html;
+}
+// Живий перерахунок % при зміні ручних тижневих полів (Зустрічей
+// відбулось / Кваліфікованих брифів) — викликається з oninput/степера.
+function updateWeeklyCalcDisplay(){
+  if(!document.getElementById('rdcalc_connectRate')) return; // не тижневий звіт зараз відкритий
+  const auto = state.weeklyAutoSnapshot || {};
+  const manual = {};
+  WEEKLY_MANUAL_FIELDS.forEach(f => { const el = document.getElementById('rd_'+f.key); manual[f.key] = el ? Number(el.value)||0 : 0; });
+  const calcInput = {...auto, ...manual};
+  WEEKLY_CALC_FIELDS.forEach(f => {
+    const el = document.getElementById('rdcalc_'+f.key);
+    if(el) el.textContent = f.calc(calcInput) + '%';
+  });
+}
+// Побудова грід-форми відповідно до типу звіту (day/week/month).
+function renderReportFieldsForPeriod(period, managerId, prefillRecord){
+  if(period === 'day') renderDailyFields(prefillRecord);
+  else if(period === 'week') renderWeeklyFields(managerId, prefillRecord);
+  else renderMonthlyFields(prefillRecord);
+}
+// Зчитує значення полів форми відповідно до типу звіту.
+function collectReportFormValues(period){
+  if(period === 'day') return Object.fromEntries(DAILY_FIELDS.map(f=>[f.key, Number(document.getElementById('rd_'+f.key).value)||0]));
+  if(period === 'month') return Object.fromEntries(MONTHLY_FIELDS.map(f=>[f.key, Number(document.getElementById('rd_'+f.key).value)||0]));
+  const manual = Object.fromEntries(WEEKLY_MANUAL_FIELDS.map(f=>[f.key, Number(document.getElementById('rd_'+f.key).value)||0]));
+  return {...(state.weeklyAutoSnapshot||{}), ...manual};
 }
 
 let REPORTS = [];
@@ -1702,6 +1863,7 @@ const state = {
   reportDateRange: {start:null, end:null},
   reportCalendarMonth: new Date(2026,6,1),
   reportManagerFilter: [],
+  weeklyAutoSnapshot: {},
 };
 
 // Синя іконка корони — візуальна позначка біля імені керівника відділу
@@ -2225,6 +2387,10 @@ document.addEventListener('click', function(e){
   if(selectType === 'coldImportManager'){ coldImportSelectedManagerId = li.dataset.value || null; }
   if(selectType === 'coldRowStatus'){ setColdContactStatus(menu.dataset.baseId, menu.dataset.contactId, li.dataset.value); }
   if(selectType === 'coldConvertPipeline'){ coldConvertSelectedPipelineId = li.dataset.value; renderColdConvertStageOptions(); }
+  if(selectType === 'reportPeriod' && state.reportMode === 'create'){
+    const me = currentUserRecord();
+    renderReportFieldsForPeriod(li.dataset.value, me ? me.id : null);
+  }
 });
 
 /* =========================================================
@@ -4664,23 +4830,58 @@ function renderReportsTable(){
     });
   }
   const tbody = document.getElementById('reportsTableBody');
-  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="3" class="empty-hint">Немає звітів за обраними фільтрами.</td></tr>'; return; }
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="4" class="empty-hint">Немає звітів за обраними фільтрами.</td></tr>'; return; }
   tbody.innerHTML = rows.map(r => `
     <tr class="clickable" onclick="openReportView(${r.id})">
       <td>${r.date}</td>
       <td data-roles="admin cto">${managerName(r.managerId)}</td>
       <td>${r.comment}</td>
+      <td data-roles="cto" onclick="event.stopPropagation()"><button class="danger-icon-btn" style="width:30px;height:30px;" title="Видалити звіт" onclick="deleteReport(${r.id})">${trashIconSvg()}</button></td>
     </tr>`).join('');
+}
+// Видалення звіту — лише CTO, з підтвердженням і 5с на скасування дії
+// (той самий патерн, що й для завдань — showConfirmModal + showUndoToast).
+async function deleteReport(id){
+  if(state.role !== 'cto') return;
+  const r = REPORTS.find(r=>r.id===id);
+  if(!r) return;
+  const ok = await showConfirmModal({
+    title:'Видалити звіт',
+    text:`Видалити звіт за ${r.date} (${managerName(r.managerId)})?`,
+    okText:'Видалити',
+    danger:true
+  });
+  if(!ok) return;
+  const idx = REPORTS.findIndex(x=>x.id===id);
+  REPORTS.splice(idx,1);
+  renderReportsTable();
+  renderAnalytics();
+  logActivity(`Видалено звіт за ${r.date} (${managerName(r.managerId)})`, {target:{type:'view', name:'reports'}});
+  fbScheduleSave();
+  showUndoToast(`Звіт за ${r.date} видалено`, () => {
+    REPORTS.splice(idx,0,r);
+    renderReportsTable();
+    renderAnalytics();
+    logActivity(`Скасовано видалення звіту за ${r.date}`, {target:{type:'view', name:'reports'}});
+    fbScheduleSave();
+  });
 }
 function setReportFieldsEnabled(enabled){
   document.querySelectorAll('#view-report-detail .stepper button').forEach(b=>b.disabled = !enabled);
   document.querySelectorAll('#reportMetricGrid .stepper input').forEach(inp=>inp.disabled = !enabled);
   document.getElementById('rdComment').disabled = !enabled;
 }
-function renderReportSummaryStrip(values){
+function renderReportSummaryStrip(values, period){
   const el = document.getElementById('reportSummaryStrip');
   if(!el) return;
   if(!values){ el.innerHTML = ''; return; }
+  if(period === 'week'){
+    el.innerHTML = `
+      <span class="report-summary-chip">📞 ${values.calls||0} дзвінків</span>
+      <span class="report-summary-chip">🤝 ${values.meetingsHeld||0} зустрічей відбулось</span>
+      <span class="report-summary-chip">🎯 ${values.qualifiedBriefs||0} кваліф. брифів</span>`;
+    return;
+  }
   el.innerHTML = `
     <span class="report-summary-chip">📞 ${values.calls||0} дзвінків</span>
     <span class="report-summary-chip">🤝 ${values.meetings||0} зустрічей</span>
@@ -4693,9 +4894,7 @@ function openReportCreate(){
   document.getElementById('reportDetailTitle').textContent = 'Створити звіт — сьогодні';
   document.getElementById('reportEditBtn').style.display = 'none';
   renderReportSummaryStrip(null);
-  REPORT_FIELDS.forEach(f => { document.getElementById('rd_'+f.key).value = '0'; });
   document.getElementById('rdComment').value = '';
-  setReportFieldsEnabled(true);
   document.getElementById('rdPeriodRow').style.display = '';
   const periodMenu = document.querySelector('#reportPeriodSelect .cselect-menu');
   const defaultPeriod = (state.role === 'manager') ? 'week' : 'month';
@@ -4703,6 +4902,9 @@ function openReportCreate(){
     li.classList.toggle('selected', li.dataset.value === defaultPeriod);
   });
   document.querySelector('#reportPeriodSelect .cselect-label').textContent = periodMenu.querySelector('li.selected').textContent;
+  const me = currentUserRecord();
+  renderReportFieldsForPeriod(defaultPeriod, me ? me.id : null);
+  setReportFieldsEnabled(true);
   document.getElementById('reportDetailActions').innerHTML = '<button class="btn" onclick="saveReportDetail()">Зберегти звіт</button>';
   showView(null, 'report-detail');
 }
@@ -4710,17 +4912,20 @@ function openReportCreate(){
 // чужий) і не з ролі CTO (CTO лише переглядає). Кнопка "Редагувати" з'являється
 // тільки за цих умов; сама форма стартує заблокованою, як у звичайному
 // перегляді — редагування вмикається окремим кліком (enableReportEditing).
+// Старі звіти без збереженого r.period трактуються як "місяць" (стара
+// структура, яку й досі використовує місячний звіт).
 function openReportView(id){
   const r = REPORTS.find(r=>r.id===id);
   if(!r) return;
+  const period = r.period || 'month';
   state.reportMode = 'view';
   state.reportViewId = id;
   document.getElementById('reportDetailTitle').innerHTML = 'Звіт — ' + r.date + ' · ' + managerName(r.managerId);
   document.getElementById('rdPeriodRow').style.display = 'none';
-  REPORT_FIELDS.forEach(f => { document.getElementById('rd_'+f.key).value = r[f.key] || 0; });
+  renderReportFieldsForPeriod(period, r.managerId, r);
   document.getElementById('rdComment').value = r.comment;
   setReportFieldsEnabled(false);
-  renderReportSummaryStrip(r);
+  renderReportSummaryStrip(r, period);
   const me = currentUserRecord();
   const canEdit = me && me.id === r.managerId && state.role !== 'cto';
   document.getElementById('reportEditBtn').style.display = canEdit ? 'inline-flex' : 'none';
@@ -4747,19 +4952,19 @@ function notifyReportEdited(r, editorName){
   renderNotifications();
 }
 function saveReportDetail(){
-  const values = {};
-  REPORT_FIELDS.forEach(f => { values[f.key] = Number(document.getElementById('rd_'+f.key).value) || 0; });
-  const comment = document.getElementById('rdComment').value.trim()
-    || `${values.calls} дзвінків · ${values.meetings} зустрічей · ${values.interestedLPR} зацікавлених ЛПР`;
+  const isEdit = state.reportMode === 'edit';
+  const existing = isEdit ? REPORTS.find(r=>r.id===state.reportViewId) : null;
+  if(isEdit && !existing) return;
+  const period = isEdit ? (existing.period || 'month') : document.querySelector('#reportPeriodSelect .cselect-menu li.selected').dataset.value;
+  const values = collectReportFormValues(period);
+  const comment = document.getElementById('rdComment').value.trim() || defaultReportComment(period, values);
   const me = currentUserRecord();
 
-  if(state.reportMode === 'edit'){
-    const r = REPORTS.find(r=>r.id===state.reportViewId);
-    if(!r) return;
-    Object.assign(r, values, {comment});
+  if(isEdit){
+    Object.assign(existing, values, {comment});
     renderReportsTable();
-    logActivity(`Відредаговано звіт за ${r.date}`, {target:{type:'report', id:r.id}});
-    notifyReportEdited(r, me ? me.name : '');
+    logActivity(`Відредаговано звіт за ${existing.date}`, {target:{type:'report', id:existing.id}});
+    notifyReportEdited(existing, me ? me.name : '');
     showView(null, 'reports');
     return;
   }
@@ -4767,11 +4972,17 @@ function saveReportDetail(){
   const periodLabel = document.querySelector('#reportPeriodSelect .cselect-label').textContent;
   const today = new Date().toLocaleDateString('uk-UA');
   const newReportId = nextReportId++;
-  REPORTS.unshift({id: newReportId, date: today, managerId: me ? me.id : 'ostap', comment, ...values});
+  REPORTS.unshift({id: newReportId, date: today, managerId: me ? me.id : 'ostap', period, comment, ...values});
   setReportFieldsEnabled(true);
   renderReportsTable();
   logActivity(`Збережено звіт за ${today} (${periodLabel.toLowerCase()})`, {target:{type:'report', id:newReportId}});
   showView(null, 'reports');
+}
+// Дефолтний коментар, якщо менеджер лишив поле коментаря порожнім —
+// різний набір показників для дня/тижня і місяця (в останнього — стара логіка).
+function defaultReportComment(period, values){
+  if(period === 'week') return `${values.calls||0} дзвінків · ${values.meetingsHeld||0} зустрічей відбулось · ${values.qualifiedBriefs||0} кваліф. брифів`;
+  return `${values.calls||0} дзвінків · ${values.meetings||0} зустрічей · ${values.interestedLPR||0} зацікавлених ЛПР`;
 }
 
 /* =========================================================
@@ -4796,11 +5007,14 @@ function renderAnalytics(){
   contentEl.style.display = 'block';
 
   // ---- зведені суми по кожному показнику ----
+  // Тижневі звіти виключено з сум: вони самі є автосумою вже врахованих
+  // щоденних звітів того ж менеджера, тож інакше дані подвоювались би.
+  const activityRows = rows.filter(r => r.period !== 'week');
   const totals = {};
-  REPORT_FIELDS.forEach(f => { totals[f.key] = rows.reduce((s,r)=>s+Number(r[f.key]||0),0); });
+  ANALYTICS_FIELDS.forEach(f => { totals[f.key] = activityRows.reduce((s,r)=>s+Number(r[f.key]||0),0); });
 
   // ---- верхні картки-підсумки ----
-  const avgCallsPerReport = Math.round(totals.calls / rows.length);
+  const avgCallsPerReport = activityRows.length ? Math.round(totals.calls / activityRows.length) : 0;
   const summaryCards = [
     {label:'Звітів подано', value: rows.length},
     {label:'Дзвінків загалом', value: totals.calls, sub:`~${avgCallsPerReport} у звіті`},
@@ -4815,8 +5029,8 @@ function renderAnalytics(){
     </div>`).join('');
 
   // ---- горизонтальні бари по кожному показнику (відносно найбільшого) ----
-  const maxTotal = Math.max(1, ...REPORT_FIELDS.map(f=>totals[f.key]));
-  document.getElementById('analyticsMetricBars').innerHTML = REPORT_FIELDS.map(f => `
+  const maxTotal = Math.max(1, ...ANALYTICS_FIELDS.map(f=>totals[f.key]));
+  document.getElementById('analyticsMetricBars').innerHTML = ANALYTICS_FIELDS.map(f => `
     <div class="analytics-bar-row">
       <span class="analytics-bar-label">${f.label}</span>
       <div class="analytics-bar-track"><div class="analytics-bar-fill" style="width:${Math.round(totals[f.key]/maxTotal*100)}%;"></div></div>
@@ -4832,10 +5046,11 @@ function renderAnalytics(){
     const byManager = {};
     rows.forEach(r => {
       if(!byManager[r.managerId]) byManager[r.managerId] = {calls:0, meetings:0, interestedLPR:0, count:0};
+      byManager[r.managerId].count++;
+      if(r.period === 'week') return; // не додаємо в суми — уникаємо подвоєння з днями
       byManager[r.managerId].calls += Number(r.calls||0);
       byManager[r.managerId].meetings += Number(r.meetings||0);
       byManager[r.managerId].interestedLPR += Number(r.interestedLPR||0);
-      byManager[r.managerId].count++;
     });
     const entries = Object.entries(byManager).sort((a,b)=>b[1].calls-a[1].calls);
     document.getElementById('analyticsByManager').innerHTML = entries.map(([id, s]) => {
