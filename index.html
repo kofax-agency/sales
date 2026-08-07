@@ -1199,20 +1199,17 @@
             </button>
             <ul class="cselect-menu" id="hrVacancySelectMenu" data-select="hrVacancy"></ul>
           </div>
-          <button class="btn secondary" style="margin-left:auto;" onclick="showView(null,'vacancies')">Усі вакансії</button>
+          <button class="btn secondary" id="allVacanciesBtn" style="margin-left:auto;" onclick="showView(null,'vacancies')">Усі вакансії</button>
+          <div id="hrStageEditorActions" style="display:none;gap:10px;">
+            <button class="btn secondary" onclick="cancelHrStageEditor()">Скасувати</button>
+            <button class="btn" onclick="saveHrStageEditor()">Зберегти зміни</button>
+          </div>
         </div>
         <div class="board" id="hrBoard"></div>
         <div id="hrNoVacancyHint" class="card" style="padding:32px;text-align:center;color:var(--text-muted);display:none;">
           Немає жодної вакансії. Створіть вакансію на сторінці «Вакансії» — воронка кандидатів з'явиться автоматично.
         </div>
         <div id="hrStageEditorBoard" style="display:none;"></div>
-        <div id="hrStageEditorActions" style="display:none;margin-top:14px;gap:10px;" class="row-between">
-          <div></div>
-          <div style="display:flex;gap:10px;">
-            <button class="btn secondary" onclick="cancelHrStageEditor()">Скасувати</button>
-            <button class="btn" onclick="saveHrStageEditor()">Зберегти зміни</button>
-          </div>
-        </div>
       </section>
 
       <!-- ============ HR: ВАКАНСІЇ ============ -->
@@ -1282,43 +1279,61 @@
 </div>
 
 <!-- ================= VACANCY DRAWER (narrow) ================= -->
-<aside class="side-panel narrow" id="vacancyPanel">
+<aside class="side-panel" id="vacancyPanel" style="width:480px;">
   <div class="panel-head"><h3 id="vacancyPanelTitle">Нова вакансія</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
   <div class="panel-body">
-    <div class="field"><label>Назва вакансії</label><input id="vacTitle" type="text" placeholder="Напр. Junior Sales Manager"></div>
-    <div class="field"><label>Опис</label><textarea id="vacDescription" style="min-height:90px;" placeholder="Вимоги, деталі, умови..."></textarea></div>
-    <div class="field" id="vacStatusField">
-      <label>Статус</label>
-      <div class="cselect" id="vacStatusSelect">
-        <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
-          <span class="cselect-label">Відкрита</span>
-          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <ul class="cselect-menu" data-select="vacStatus">
-          <li data-value="open" class="selected">Відкрита</li>
-          <li data-value="closed">Закрита</li>
-          <li data-value="archived">Архів</li>
-        </ul>
+
+    <!-- СТАТИЧНИЙ ПЕРЕГЛЯД (для всіх — HR бачить лише це; admin/cto можуть перейти в редагування) -->
+    <div id="vacViewBlock" style="display:none;flex-direction:column;gap:20px;">
+      <div class="field"><label>Статус</label><div><span class="vac-status-badge" id="vacViewStatusBadge">Відкрита</span></div></div>
+      <div class="field"><label>Опис</label><div class="static-text" id="vacViewDescription" style="font-size:13.5px;line-height:1.5;color:var(--text);white-space:pre-wrap;">—</div></div>
+      <div class="field"><label>Резюме / файли вакансії</label>
+        <div id="vacViewAttachList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+      <div id="vacStageSummary">
+        <div class="section-title" style="font-size:13px;margin-bottom:8px;">Кандидати по стадіях</div>
+        <div id="vacStageSummaryList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+      <button class="btn secondary" style="width:100%;" id="vacEditToggleBtn" data-roles="admin cto" onclick="startEditVacancy()">Редагувати</button>
+    </div>
+
+    <!-- РЕДАГУВАННЯ (лише admin/cto) -->
+    <div id="vacEditBlock" style="display:none;flex-direction:column;gap:20px;">
+      <div class="field"><label>Назва вакансії</label><input id="vacTitle" type="text" placeholder="Напр. Junior Sales Manager"></div>
+      <div class="field"><label>Опис</label><textarea id="vacDescription" style="min-height:90px;" placeholder="Вимоги, деталі, умови..."></textarea></div>
+      <div class="field" id="vacStatusField">
+        <label>Статус</label>
+        <div class="cselect" id="vacStatusSelect">
+          <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+            <span class="cselect-label">Відкрита</span>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <ul class="cselect-menu" data-select="vacStatus">
+            <li data-value="open" class="selected">Відкрита</li>
+            <li data-value="closed">Закрита</li>
+            <li data-value="archived">Архів</li>
+          </ul>
+        </div>
+      </div>
+      <div class="field"><label>Резюме / файли вакансії</label>
+        <label class="file-btn" style="margin:0;">📎 Додати файл<input type="file" style="display:none" onchange="addVacAttachment(event)"></label>
+        <div id="vacAttachList" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;"></div>
       </div>
     </div>
-    <div id="vacStageSummary" style="display:none;margin-top:6px;">
-      <div class="section-title" style="font-size:13px;margin-bottom:8px;">Кандидати по стадіях</div>
-      <div id="vacStageSummaryList" style="display:flex;flex-direction:column;gap:6px;"></div>
-      <button class="btn secondary" style="width:100%;margin-top:14px;" onclick="openVacancyPipeline()">Відкрити воронку кандидатів</button>
-    </div>
+
   </div>
-  <div class="panel-foot" data-roles="admin cto">
-    <button class="btn secondary" onclick="closeAllPanels()">Скасувати</button>
+  <div class="panel-foot" id="vacPanelFoot">
+    <button class="btn secondary" onclick="cancelVacancyEdit()">Скасувати</button>
     <button class="btn" id="vacSaveBtn" onclick="saveVacancy()">Створити</button>
   </div>
 </aside>
 
 <!-- ================= SPECIALIST DRAWER ================= -->
-<aside class="side-panel narrow" id="specialistPanel">
+<aside class="side-panel" id="specialistPanel" style="width:520px;">
   <div class="panel-head"><h3 id="specialistPanelTitle">Новий спеціаліст</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
   <div class="panel-body">
     <div class="field"><label>Ім'я</label><input id="specName" type="text" placeholder="Ім'я Прізвище"></div>
-    <div class="field"><label>Телефон</label><input id="specPhone" type="text" placeholder="+380..."></div>
+    <div class="field"><label>Телефон</label><input id="specPhone" type="text" placeholder="+380 XX XXX XX XX" oninput="formatPhoneLive(this)" onblur="validatePhoneField(this)"></div>
     <div class="field"><label>Email / Telegram</label><input id="specContact" type="text" placeholder="email або @telegram"></div>
     <div class="field">
       <label>Напрямки</label>
@@ -1377,24 +1392,17 @@
 </aside>
 
 <!-- ================= CANDIDATE DRAWER (wide, Trello-style) ================= -->
-<aside class="side-panel" id="candidatePanel" style="width:520px;">
+<aside class="side-panel" id="candidatePanel" style="width:640px;">
   <div class="panel-head"><h3 id="candidatePanelTitle">Нова картка</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
   <div class="panel-body">
-    <div class="field"><label>Ім'я кандидата</label><input id="candName" type="text" placeholder="Ім'я Прізвище"></div>
-    <div class="field"><label>Позиція</label><input id="candPosition" type="text" placeholder="Напр. Junior Sales Manager"></div>
-    <div class="field" id="candStageField" style="display:none;">
-      <label>Стадія</label>
-      <div class="cselect" id="candStageSelect">
-        <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
-          <span class="cselect-label" id="candStageSelectLabel"></span>
-          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <ul class="cselect-menu" id="candStageSelectMenu" data-select="candStage"></ul>
-      </div>
+    <div class="field" id="candPositionField" style="display:none;">
+      <label>Позиція</label>
+      <div class="static-text" id="candPositionDisplay" style="font-size:13.5px;color:var(--text);">—</div>
     </div>
+    <div class="field"><label>Ім'я кандидата</label><input id="candName" type="text" placeholder="Ім'я Прізвище"></div>
     <div class="field"><label>Опис</label><textarea id="candDescription" style="min-height:70px;" placeholder="Додати детальніший опис..."></textarea></div>
 
-    <div id="candExtraSections" style="display:none;">
+    <div id="candExtraSections" style="display:none;flex-direction:column;gap:20px;">
       <div class="field"><label>Мітки</label>
         <div id="candLabelsChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;">
@@ -1423,13 +1431,7 @@
         </div>
       </div>
 
-      <div class="field"><label>Коментарі й активність</label>
-        <div id="candActivityList" style="display:flex;flex-direction:column;gap:2px;max-height:220px;overflow-y:auto;"></div>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <input id="candCommentInput" type="text" placeholder="Написати коментар..." style="flex:1;">
-          <button type="button" class="btn secondary small" onclick="addCandidateComment()">Додати</button>
-        </div>
-      </div>
+      <div class="field"><label>Коментар</label><textarea id="candComment" style="min-height:70px;" placeholder="Нотатка про кандидата..."></textarea></div>
     </div>
   </div>
   <div class="panel-foot">
@@ -5570,24 +5572,60 @@ function getCselectValue(containerId){
 function vacancyById(id){ return VACANCIES.find(v=>v.id===id); }
 function activeStages(vac){ return vac ? vac.stages.filter(s=>!s.archived) : []; }
 let editingVacancyId = null;
+let vacEditing = false;
+let tempVacAttachments = [];
+const VAC_STATUS_LABELS = {open:'Відкрита', closed:'Закрита', archived:'Архів'};
+function addVacAttachment(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  tempVacAttachments.push({name:file.name});
+  e.target.value = '';
+  renderVacAttachList();
+}
+function removeVacAttachment(i){ tempVacAttachments.splice(i,1); renderVacAttachList(); }
+function renderVacAttachList(){
+  const el = document.getElementById('vacAttachList');
+  if(!el) return;
+  el.innerHTML = tempVacAttachments.map((a,i)=>`<div class="attach-row">📎 ${a.name}<button type="button" class="row-icon-btn danger" title="Видалити" onclick="removeVacAttachment(${i})">${trashIconSvg(14)}</button></div>`).join('') || '<div class="empty-hint">Файлів ще немає.</div>';
+}
+function renderVacViewAttachList(vac){
+  const el = document.getElementById('vacViewAttachList');
+  if(!el) return;
+  const atts = (vac && vac.attachments) || [];
+  el.innerHTML = atts.length ? atts.map(a=>`<div class="attach-row">📎 ${a.name}</div>`).join('') : '<div class="empty-hint">Файлів ще немає.</div>';
+}
+function applyVacancyPanelMode(){
+  const viewBlock = document.getElementById('vacViewBlock');
+  const editBlock = document.getElementById('vacEditBlock');
+  const foot = document.getElementById('vacPanelFoot');
+  if(vacEditing){
+    viewBlock.style.display = 'none';
+    editBlock.style.display = 'flex';
+    foot.style.display = 'flex';
+  } else {
+    viewBlock.style.display = 'flex';
+    editBlock.style.display = 'none';
+    foot.style.display = 'none';
+  }
+}
+function startEditVacancy(){
+  vacEditing = true;
+  applyVacancyPanelMode();
+}
+function cancelVacancyEdit(){
+  if(editingVacancyId === null){ closeAllPanels(); return; }
+  openVacancyPanel(editingVacancyId);
+}
 function openVacancyPanel(id){
   editingVacancyId = id;
-  const canEdit = state.role === 'admin' || state.role === 'cto';
-  document.getElementById('vacTitle').disabled = !canEdit;
-  document.getElementById('vacDescription').disabled = !canEdit;
-  document.getElementById('vacStatusField').classList.toggle('js-hidden', !canEdit && id === null);
-  const statusTrigger = document.querySelector('#vacStatusSelect .cselect-trigger');
-  if(statusTrigger) statusTrigger.disabled = !canEdit;
-  const summary = document.getElementById('vacStageSummary');
-  const saveBtn = document.getElementById('vacSaveBtn');
+  vacEditing = (id === null);
   if(id === null){
     document.getElementById('vacancyPanelTitle').textContent = 'Нова вакансія';
     document.getElementById('vacTitle').value = '';
     document.getElementById('vacDescription').value = '';
     setCselectValue('vacStatusSelect', 'open');
-    summary.style.display = 'none';
-    saveBtn.textContent = 'Створити';
-    saveBtn.style.display = canEdit ? '' : 'none';
+    tempVacAttachments = [];
+    document.getElementById('vacSaveBtn').textContent = 'Створити';
   } else {
     const v = vacancyById(id);
     if(!v) return;
@@ -5595,15 +5633,20 @@ function openVacancyPanel(id){
     document.getElementById('vacTitle').value = v.title;
     document.getElementById('vacDescription').value = v.description || '';
     setCselectValue('vacStatusSelect', v.status);
-    summary.style.display = '';
+    tempVacAttachments = [...(v.attachments||[])];
+    document.getElementById('vacViewStatusBadge').textContent = VAC_STATUS_LABELS[v.status] || v.status;
+    document.getElementById('vacViewStatusBadge').className = 'vac-status-badge ' + v.status;
+    document.getElementById('vacViewDescription').textContent = v.description ? v.description : 'Опис не додано.';
+    renderVacViewAttachList(v);
     const counts = {};
     activeStages(v).forEach(s => counts[s.id] = CANDIDATES.filter(c=>c.vacancyId===v.id && c.stageId===s.id).length);
     document.getElementById('vacStageSummaryList').innerHTML = activeStages(v).length
       ? activeStages(v).map(s=>`<div class="row-between" style="font-size:13px;"><span>${s.name}</span><b>${counts[s.id]||0}</b></div>`).join('')
       : '<div class="empty-hint">Стадій ще немає.</div>';
-    saveBtn.textContent = 'Зберегти зміни';
-    saveBtn.style.display = canEdit ? '' : 'none';
+    document.getElementById('vacSaveBtn').textContent = 'Зберегти зміни';
   }
+  renderVacAttachList();
+  applyVacancyPanelMode();
   openPanel('vacancyPanel');
 }
 function saveVacancy(){
@@ -5611,15 +5654,16 @@ function saveVacancy(){
   if(!title){ showAlertModal('Вкажіть назву вакансії.', 'Порожнє поле'); return; }
   const description = document.getElementById('vacDescription').value.trim();
   const status = getCselectValue('vacStatusSelect') || 'open';
+  const attachments = [...tempVacAttachments];
   const me = currentUserRecord();
   if(editingVacancyId === null){
-    const v = {id:nextVacancyId++, title, description, status, createdBy: me?me.id:'ostap', createdByName: me?me.name:'', createdAt: new Date().toLocaleDateString('uk-UA'), stages: makeHrStages()};
+    const v = {id:nextVacancyId++, title, description, status, attachments, createdBy: me?me.id:'ostap', createdByName: me?me.name:'', createdAt: new Date().toLocaleDateString('uk-UA'), stages: makeHrStages()};
     VACANCIES.unshift(v);
     logActivity(`Створено вакансію "${title}"`, {target:{type:'view', name:'vacancies'}});
   } else {
     const v = vacancyById(editingVacancyId);
     if(!v) return;
-    Object.assign(v, {title, description, status});
+    Object.assign(v, {title, description, status, attachments});
     logActivity(`Відредаговано вакансію "${title}"`, {target:{type:'view', name:'vacancies'}});
   }
   renderVacanciesTable();
@@ -5645,14 +5689,6 @@ function renderVacanciesTable(){
       <td>${v.createdAt||''}</td>
     </tr>`;
   }).join('');
-}
-function openVacancyPipeline(){
-  if(editingVacancyId === null) return;
-  state.hrVacancyId = editingVacancyId;
-  closeAllPanels();
-  showView(null, 'hr-pipeline');
-  renderHrPipelineSelectOptions();
-  renderHrBoard();
 }
 function refreshVacancyDetailIfOpen(){
   const panel = document.getElementById('vacancyPanel');
@@ -5680,13 +5716,18 @@ function renderHrBoard(){
   const board = document.getElementById('hrBoard');
   const hint = document.getElementById('hrNoVacancyHint');
   if(!board) return;
+  // Поки відкритий редактор стадій, дошка навмисно схована (display:none) —
+  // не можна дати цьому виклику (напр. з fbApplyRemoteData після фонового
+  // збереження) знову її показати поверх редактора.
+  const stageEditorEl = document.getElementById('hrStageEditorBoard');
+  const editorOpen = stageEditorEl && stageEditorEl.style.display !== 'none';
   const vac = currentHrVacancy();
   if(!vac){
-    board.style.display = 'none';
+    if(!editorOpen) board.style.display = 'none';
     if(hint) hint.style.display = '';
     return;
   }
-  board.style.display = '';
+  if(!editorOpen) board.style.display = '';
   if(hint) hint.style.display = 'none';
   board.innerHTML = activeStages(vac).map(stage => {
     const cards = CANDIDATES.filter(c => c.vacancyId === vac.id && c.stageId === stage.id);
@@ -5723,8 +5764,6 @@ function hrDropCard(e, stageId){
   const vac = vacancyById(c.vacancyId);
   const stage = stageById(vac, stageId);
   if(stage && c.stageId !== stageId){
-    c.activity = c.activity || [];
-    c.activity.unshift({id:Date.now()+Math.random(), system:true, text:`Картку переміщено до "${stage.name}"`, time:nowTimeStr()});
     c.stageId = stageId;
     renderHrBoard();
     renderVacanciesTable();
@@ -5745,6 +5784,13 @@ function toggleHrStageEditor(){
   document.getElementById('hrBoard').style.display = 'none';
   document.getElementById('hrStageEditorBoard').style.display = '';
   document.getElementById('hrStageEditorActions').style.display = 'flex';
+  // Під час редагування стадій перемикати вакансію не має сенсу (і можна
+  // випадково загубити незбережені зміни) — ховаємо селектор і кнопку "Усі
+  // вакансії", як і в редакторі воронки продажів.
+  const vacSelectEl = document.getElementById('hrVacancySelect');
+  if(vacSelectEl) vacSelectEl.classList.add('js-hidden');
+  const allVacBtn = document.getElementById('allVacanciesBtn');
+  if(allVacBtn) allVacBtn.classList.add('js-hidden');
   editingHrStages = vac.stages.map(s => ({...s}));
   renderHrStageEditor();
 }
@@ -5752,6 +5798,10 @@ function cancelHrStageEditor(){
   document.getElementById('hrBoard').style.display = '';
   document.getElementById('hrStageEditorBoard').style.display = 'none';
   document.getElementById('hrStageEditorActions').style.display = 'none';
+  const vacSelectEl = document.getElementById('hrVacancySelect');
+  if(vacSelectEl) vacSelectEl.classList.remove('js-hidden');
+  const allVacBtn = document.getElementById('allVacanciesBtn');
+  if(allVacBtn) allVacBtn.classList.remove('js-hidden');
   renderHrBoard();
 }
 function renderHrStageEditor(){
@@ -5809,6 +5859,10 @@ async function saveHrStageEditor(){
   document.getElementById('hrBoard').style.display = '';
   document.getElementById('hrStageEditorBoard').style.display = 'none';
   document.getElementById('hrStageEditorActions').style.display = 'none';
+  const vacSelectElSave = document.getElementById('hrVacancySelect');
+  if(vacSelectElSave) vacSelectElSave.classList.remove('js-hidden');
+  const allVacBtnSave = document.getElementById('allVacanciesBtn');
+  if(allVacBtnSave) allVacBtnSave.classList.remove('js-hidden');
   renderHrBoard();
   logActivity(`Відредаговано стадії воронки вакансії "${vac.title}"`, {target:{type:'view', name:'hr-pipeline'}, silent:true});
   fbScheduleSave();
@@ -5824,38 +5878,31 @@ function candidateById(id){ return CANDIDATES.find(c=>c.id===id); }
 function openCandidatePanel(id, vacancyId, stageId){
   editingCandidateId = id;
   const extra = document.getElementById('candExtraSections');
-  const stageField = document.getElementById('candStageField');
+  const posField = document.getElementById('candPositionField');
   const deleteBtn = document.getElementById('candDeleteBtn');
   if(id === null){
     candCreateVacancyId = vacancyId;
     candCreateStageId = stageId;
-    const vac = vacancyById(vacancyId);
     document.getElementById('candidatePanelTitle').textContent = 'Нова картка';
     document.getElementById('candName').value = '';
-    document.getElementById('candPosition').value = vac ? vac.title : '';
     document.getElementById('candDescription').value = '';
-    stageField.style.display = 'none';
+    posField.style.display = 'none';
     extra.style.display = 'none';
     deleteBtn.style.display = 'none';
     document.getElementById('candSaveBtn').textContent = 'Створити картку';
   } else {
     const c = candidateById(id);
     if(!c) return;
-    const vac = vacancyById(c.vacancyId);
     document.getElementById('candidatePanelTitle').textContent = c.name;
     document.getElementById('candName').value = c.name;
-    document.getElementById('candPosition').value = c.position || '';
     document.getElementById('candDescription').value = c.description || '';
-    stageField.style.display = '';
-    const stageMenu = document.getElementById('candStageSelectMenu');
-    stageMenu.dataset.select = 'candStage';
-    stageMenu.innerHTML = activeStages(vac).map(s=>`<li data-value="${s.id}" class="${s.id===c.stageId?'selected':''}">${s.name}</li>`).join('');
-    setCselectValue('candStageSelect', c.stageId);
-    extra.style.display = '';
+    document.getElementById('candPositionDisplay').textContent = c.position || '—';
+    posField.style.display = '';
+    extra.style.display = 'flex';
+    document.getElementById('candComment').value = c.comment || '';
     renderCandidateLabels(c);
     renderCandidateAttachments(c);
     renderCandidateChecklist(c);
-    renderCandidateActivity(c);
     deleteBtn.style.display = '';
     document.getElementById('candSaveBtn').textContent = 'Зберегти';
   }
@@ -5864,16 +5911,14 @@ function openCandidatePanel(id, vacancyId, stageId){
 function saveCandidateBasicFields(){
   const name = document.getElementById('candName').value.trim();
   if(!name){ showAlertModal('Вкажіть ім\'я кандидата.', 'Порожнє поле'); return; }
-  const position = document.getElementById('candPosition').value.trim();
   const description = document.getElementById('candDescription').value.trim();
   if(editingCandidateId === null){
     const vac = vacancyById(candCreateVacancyId);
     if(!vac) return;
     const c = {
       id: nextCandidateId++, vacancyId: vac.id, stageId: candCreateStageId,
-      name, position, description, labels:[], attachments:[],
+      name, position: vac.title, description, comment:'', labels:[], attachments:[],
       checklist: DEFAULT_HIRING_STEPS.map(text=>({text, done:false})),
-      activity: [{id:Date.now()+Math.random(), system:true, text:`Картку створено у стадії "${(stageById(vac,candCreateStageId)||{}).name||''}"`, time:nowTimeStr()}],
     };
     CANDIDATES.unshift(c);
     renderHrBoard();
@@ -5884,18 +5929,10 @@ function saveCandidateBasicFields(){
   } else {
     const c = candidateById(editingCandidateId);
     if(!c) return;
-    const newStageId = getCselectValue('candStageSelect');
-    const vac = vacancyById(c.vacancyId);
-    if(newStageId && newStageId !== c.stageId){
-      const stage = stageById(vac, newStageId);
-      c.activity = c.activity || [];
-      c.activity.unshift({id:Date.now()+Math.random(), system:true, text:`Картку переміщено до "${stage?stage.name:newStageId}"`, time:nowTimeStr()});
-      c.stageId = newStageId;
-    }
-    Object.assign(c, {name, position, description});
+    const comment = document.getElementById('candComment').value.trim();
+    Object.assign(c, {name, description, comment});
     document.getElementById('candidatePanelTitle').textContent = c.name;
     renderHrBoard();
-    renderCandidateActivity(c);
     logActivity(`Відредаговано картку кандидата "${c.name}"`, {target:{type:'view', name:'hr-pipeline'}, silent:true});
     fbScheduleSave();
   }
@@ -6026,29 +6063,6 @@ function deleteCandidateChecklistItem(i){
   c.checklist.splice(i,1);
   renderCandidateChecklist(c);
   renderHrBoard();
-  fbScheduleSave();
-}
-
-/* ---- коментарі й активність ---- */
-function renderCandidateActivity(c){
-  const el = document.getElementById('candActivityList');
-  if(!el) return;
-  const items = c.activity || [];
-  el.innerHTML = items.length ? items.map(a=>`
-    <div class="timeline-item">${a.text}<div class="timeline-meta">${a.system ? 'Система' : (a.author||'')} · ${a.time||''}</div></div>`).join('') : '<div class="empty-hint">Ще немає активності.</div>';
-}
-function addCandidateComment(){
-  if(editingCandidateId === null) return;
-  const c = candidateById(editingCandidateId);
-  if(!c) return;
-  const input = document.getElementById('candCommentInput');
-  const text = input.value.trim();
-  if(!text) return;
-  const me = currentUserRecord();
-  c.activity = c.activity || [];
-  c.activity.unshift({id:Date.now()+Math.random(), system:false, text, author: me?me.name:'', time:nowTimeStr()});
-  input.value = '';
-  renderCandidateActivity(c);
   fbScheduleSave();
 }
 
