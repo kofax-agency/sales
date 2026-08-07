@@ -221,11 +221,12 @@
   .filters-bar{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;padding:18px;}
   .field{display:flex;flex-direction:column;gap:6px;}
   .field label{font-size:11.5px;font-weight:700;color:var(--text-muted);}
-  .field input, .field textarea{padding:9px 12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--radius-sm);font-size:13px;outline:none;transition:border-color .15s,background .15s,color .15s;}
-  .field input:focus, .field textarea:focus{border-color:var(--accent-1);}
+  .field input, .field select, .field textarea{padding:9px 12px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--radius-sm);font-size:13px;outline:none;transition:border-color .15s,background .15s,color .15s;}
+  .field select{font-family:inherit;cursor:pointer;}
+  .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--accent-1);}
   /* Заблоковані поля мають виглядати явно недоступними (сірішими), щоб було
      одразу видно, яке поле реально можна редагувати після "Редагувати". */
-  .field input:disabled, .field textarea:disabled{background:var(--surface-2);color:var(--text-muted);cursor:not-allowed;}
+  .field input:disabled, .field select:disabled, .field textarea:disabled{background:var(--surface-2);color:var(--text-muted);cursor:not-allowed;}
 
   [data-roles][data-roles]{display:none;}
   body[data-role="manager"] [data-roles~="manager"]{display:revert;}
@@ -1265,23 +1266,15 @@
           </div>
           <div class="field">
             <label>Мова</label>
-            <div class="cselect" id="specLangFilterSelect">
-              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:140px;" onclick="toggleCSelect(this.parentElement)">
-                <span class="cselect-label" id="specLangFilterLabel">Всі мови</span>
-                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-              <ul class="cselect-menu" id="specLangFilterMenu" data-select="specLangFilter"></ul>
-            </div>
+            <select id="specLangFilterSelect" style="min-width:140px;" onchange="specLangFilterLang=this.value; renderSpecialistsTable();">
+              <option value="">Всі мови</option>
+            </select>
           </div>
           <div class="field">
             <label>Рівень мови</label>
-            <div class="cselect" id="specLangLevelFilterSelect">
-              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:120px;" onclick="toggleCSelect(this.parentElement)">
-                <span class="cselect-label" id="specLangLevelFilterLabel">Всі рівні</span>
-                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-              <ul class="cselect-menu" id="specLangLevelFilterMenu" data-select="specLangLevelFilter"></ul>
-            </div>
+            <select id="specLangLevelFilterSelect" style="min-width:120px;" onchange="specLangFilterLevelVal=this.value; renderSpecialistsTable();">
+              <option value="">Всі рівні</option>
+            </select>
           </div>
           <button class="btn" onclick="renderSpecialistsTable()">Застосувати фільтр</button>
           <button class="btn" style="margin-left:auto;" onclick="openSpecialistPanel(null)">+ Додати спеціаліста</button>
@@ -1385,12 +1378,12 @@
     </div>
     <div class="field">
       <label>Мови</label>
-      <div class="cselect" id="specLangSelect">
-        <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
-          <span class="cselect-label" id="specLangSelectLabel">Оберіть мови</span>
-          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <ul class="cselect-menu" id="specLangSelectMenu"></ul>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select id="specLangAddSelect" style="flex:1;min-width:140px;" onchange="addSpecLangFromSelect(this.value); this.value='';">
+          <option value="">+ Додати мову...</option>
+        </select>
+        <input type="text" id="specNewLanguageInput" style="flex:1;min-width:120px;" placeholder="Своя мова...">
+        <button type="button" class="btn secondary" onclick="addSpecLangCustom()">+</button>
       </div>
       <div id="specLangChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
     </div>
@@ -2759,14 +2752,6 @@ document.addEventListener('click', function(e){
     state.hrVacancyId = Number(li.dataset.value);
     renderHrBoard();
   }
-  if(selectType === 'specLangFilter'){
-    specLangFilterLang = li.dataset.value || '';
-    renderSpecialistsTable();
-  }
-  if(selectType === 'specLangLevelFilter'){
-    specLangFilterLevelVal = li.dataset.value || '';
-    renderSpecialistsTable();
-  }
 });
 
 /* =========================================================
@@ -3388,6 +3373,7 @@ async function clearCurrentPipelineDeals(){
   renderDashboardTasks();
   renderDashboardCalls();
   logActivity(`Очищено воронку "${cp.name}" (видалено ${count} угод)`, {target:{type:'view', name:'pipeline'}});
+  allowEmptyCoreSave = true;
   fbScheduleSave();
 }
 
@@ -6133,34 +6119,31 @@ function addSpecDirectionInline(){
   renderSpecNicheFilterOptions();
   fbScheduleSave();
 }
-function renderSpecLangSelectMenu(){
-  const menu = document.getElementById('specLangSelectMenu');
-  if(!menu) return;
-  menu.innerHTML = SPEC_LANGUAGES.map(n => `
-    <li data-value="${n}" onclick="event.stopPropagation()">
-      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${tempSpecLanguages.some(l=>l.lang===n)?'checked':''} onchange="toggleSpecLangChoice('${n}')"><span></span></label> ${n}
-    </li>`).join('') + `
-    <li onclick="event.stopPropagation()" style="display:flex;gap:6px;padding:8px;">
-      <input type="text" id="specNewLanguageInput" placeholder="Нова мова..." style="flex:1;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12.5px;background:var(--surface);color:var(--text);" onclick="event.stopPropagation()">
-      <button type="button" class="btn secondary small" onclick="event.stopPropagation();addSpecLangInline()">+</button>
-    </li>`;
-  const label = document.getElementById('specLangSelectLabel');
-  if(label) label.textContent = tempSpecLanguages.length ? tempSpecLanguages.map(l=>l.lang).join(', ') : 'Оберіть мови';
+// Мови спеціаліста: звичайний <select> зі списком ще НЕ доданих мов —
+// вибір одразу додає чіп (без окремої кнопки/чекбоксів). Поруч — текстове
+// поле для мови, якої немає в списку. Єдине джерело правди — чіпи нижче,
+// без дублювання одного й того ж переліку у двох місцях одразу.
+function renderSpecLangAddSelect(){
+  const sel = document.getElementById('specLangAddSelect');
+  if(!sel) return;
+  const chosen = new Set(tempSpecLanguages.map(l=>l.lang));
+  const available = SPEC_LANGUAGES.filter(n=>!chosen.has(n));
+  sel.innerHTML = `<option value="">+ Додати мову...</option>` + available.map(n=>`<option value="${n}">${n}</option>`).join('');
 }
-function toggleSpecLangChoice(name){
-  const idx = tempSpecLanguages.findIndex(l=>l.lang===name);
-  if(idx === -1) tempSpecLanguages.push({lang:name, level:'B2'}); else tempSpecLanguages.splice(idx,1);
-  renderSpecLangSelectMenu();
+function addSpecLangFromSelect(name){
+  if(!name) return;
+  if(!tempSpecLanguages.some(l=>l.lang===name)) tempSpecLanguages.push({lang:name, level:'B2'});
+  renderSpecLangAddSelect();
   renderSpecLangChips();
 }
-function addSpecLangInline(){
+function addSpecLangCustom(){
   const input = document.getElementById('specNewLanguageInput');
   const name = input.value.trim();
   if(!name) return;
   if(!SPEC_LANGUAGES.includes(name)) SPEC_LANGUAGES.push(name);
   if(!tempSpecLanguages.some(l=>l.lang===name)) tempSpecLanguages.push({lang:name, level:'B2'});
   input.value = '';
-  renderSpecLangSelectMenu();
+  renderSpecLangAddSelect();
   renderSpecLangChips();
   fbScheduleSave();
 }
@@ -6168,7 +6151,7 @@ function updateSpecLangLevel(i, level){
   if(!tempSpecLanguages[i]) return;
   tempSpecLanguages[i].level = level;
 }
-function removeSpecLanguage(i){ tempSpecLanguages.splice(i,1); renderSpecLangSelectMenu(); renderSpecLangChips(); }
+function removeSpecLanguage(i){ tempSpecLanguages.splice(i,1); renderSpecLangAddSelect(); renderSpecLangChips(); }
 function renderSpecLangChips(){
   const el = document.getElementById('specLangChips');
   if(!el) return;
@@ -6220,7 +6203,7 @@ function openSpecialistPanel(id){
     document.getElementById('specSaveBtn').textContent = 'Зберегти';
   }
   renderSpecNicheSelectMenu();
-  renderSpecLangSelectMenu();
+  renderSpecLangAddSelect();
   renderSpecLangChips();
   renderSpecAttachList();
   openPanel('specialistPanel');
@@ -6305,22 +6288,19 @@ function toggleSpecLevelFilter(e, name){
   document.getElementById('specLevelMultiLabel').textContent = specLevelFilter.length ? `Обрано: ${specLevelFilter.length}` : 'Усі рівні';
   renderSpecialistsTable();
 }
+// Мова/Рівень мови у фільтрі — звичайні <select>: сам браузер керує
+// відкриттям/закриттям і підсвіткою обраного, менше коду й менше шансів на
+// баг порівняно з кастомним cselect-дропдауном для простого одиночного вибору.
 function renderSpecLangFilterOptions(){
-  const menu = document.getElementById('specLangFilterMenu');
-  if(!menu) return;
+  const sel = document.getElementById('specLangFilterSelect');
+  if(!sel) return;
   const langs = [...new Set(SPECIALISTS.flatMap(s=>(s.languages||[]).map(l=>l.lang)))];
-  menu.innerHTML = `<li data-value="" class="${specLangFilterLang===''?'selected':''}">Всі мови</li>` + langs.map(n => `
-    <li data-value="${n}" class="${specLangFilterLang===n?'selected':''}">${n}</li>`).join('');
-  const label = document.getElementById('specLangFilterLabel');
-  if(label) label.textContent = specLangFilterLang || 'Всі мови';
+  sel.innerHTML = `<option value="">Всі мови</option>` + langs.map(n => `<option value="${n}" ${n===specLangFilterLang?'selected':''}>${n}</option>`).join('');
 }
 function renderSpecLangLevelFilterOptions(){
-  const menu = document.getElementById('specLangLevelFilterMenu');
-  if(!menu) return;
-  menu.innerHTML = `<li data-value="" class="${specLangFilterLevelVal===''?'selected':''}">Всі рівні</li>` + LANG_LEVELS.map(n => `
-    <li data-value="${n}" class="${specLangFilterLevelVal===n?'selected':''}">${n}</li>`).join('');
-  const label = document.getElementById('specLangLevelFilterLabel');
-  if(label) label.textContent = specLangFilterLevelVal || 'Всі рівні';
+  const sel = document.getElementById('specLangLevelFilterSelect');
+  if(!sel) return;
+  sel.innerHTML = `<option value="">Всі рівні</option>` + LANG_LEVELS.map(n => `<option value="${n}" ${n===specLangFilterLevelVal?'selected':''}>${n}</option>`).join('');
 }
 function renderSpecialistsTable(){
   const tbody = document.getElementById('specialistsTableBody');
@@ -6777,7 +6757,24 @@ let fbSaveTimer = null;
 // СПРАВЖНЮ хмарну базу порожніми заглушками, і вся база "зникає". Саме це
 // й стався: fbScheduleSave() тепер відмовляється зберігати, поки fbReady
 // не стане true (перший снепшот отримано — байдуже, існував документ чи ні).
+//
+// 07.08.2026: цей самий сценарій стався ЗНОВУ, попри захист вище — ліди,
+// завдання, дзвінки й бази клієнтів одночасно обнулились без жодного сліду
+// в історії дій. Ймовірна причина: onSnapshot спершу віддає локальний
+// офлайн-кеш (snap.metadata.fromCache === true), і якщо цей кеш застарілий/
+// порожній (новий пристрій, очищений кеш), стара версія коду вважала його
+// "готовими даними" й одразу дозволяла запис — порожній кеш переписував
+// справжню хмарну базу. Тепер fbReady виставляється лише на снепшоті,
+// ПІДТВЕРДЖЕНОМУ сервером (fromCache === false); кеш і далі одразу
+// малюється на екрані (для швидкості), просто не дозволяє зберігати.
 let fbReady = false;
+// Додатковий (незалежний) захист: якщо сесія вже підтверджено бачила
+// реальні дані з сервера, а зараз локально РАПТОМ усі чотири базові масиви
+// одночасно порожні — це майже напевно симптом якогось ще не знайденого
+// бага синхронізації, а не свідома дія користувача (для свідомого
+// "Очистити воронку" є allowEmptyCoreSave — виставляється самою тією дією).
+let everHadCoreData = false;
+let allowEmptyCoreSave = false;
 
 function fbInit(){
   try{
@@ -6789,9 +6786,18 @@ function fbInit(){
     db.enablePersistence({synchronizeTabs:true}).catch(function(err){ /* не критично — просто без офлайн-кешу */ });
     fbDocRef = db.collection('kofax').doc('crm');
     fbDocRef.onSnapshot(function(snap){
-      if(!snap.exists){ fbReady = true; fbSaveNow(); return; }
-      fbApplyRemoteData(snap.data());
-      fbReady = true;
+      if(!snap.exists){ if(!snap.metadata.fromCache){ fbReady = true; fbSaveNow(); } return; }
+      const data = snap.data();
+      fbApplyRemoteData(data);
+      // Дозволяємо запис лише після снепшоту, підтвердженого сервером —
+      // саме кеш-версія, помилково прийнята за "готову", й спричинила
+      // втрату даних 07.08.2026 (див. коментар вище біля let fbReady).
+      if(!snap.metadata.fromCache){
+        fbReady = true;
+        if((Array.isArray(data.leads)&&data.leads.length) || (Array.isArray(data.tasks)&&data.tasks.length) || (Array.isArray(data.calls)&&data.calls.length) || (Array.isArray(data.coldBases)&&data.coldBases.length)){
+          everHadCoreData = true;
+        }
+      }
     }, function(err){
       console.error('Firestore sync error:', err);
     });
@@ -6905,6 +6911,18 @@ function fbScheduleSave(){
 }
 function fbSaveNow(){
   if(!fbDocRef) return;
+  // Захист від повтору інциденту 07.08.2026 (див. коментарі біля fbReady):
+  // якщо ця сесія вже підтверджено бачила реальні дані з сервера, а зараз
+  // локально раптом усі чотири базові масиви одночасно порожні — це
+  // виглядає як бага, а не свідома дія. Відмовляємось зберігати й голосно
+  // попереджаємо в консоль замість мовчазного затирання бази. Свідоме
+  // "Очистити воронку" виставляє allowEmptyCoreSave, щоб пройти цю перевірку.
+  const allCoreEmptyNow = LEADS.length===0 && TASKS.length===0 && CALLS.length===0 && COLDBASES.length===0;
+  if(everHadCoreData && allCoreEmptyNow && !allowEmptyCoreSave){
+    console.error('Firestore save ЗАБЛОКОВАНО: спроба записати повністю порожні leads/tasks/calls/coldBases поверх бази, де раніше точно були дані. Це майже напевно баг синхронізації, а не свідома дія — збереження скасовано, щоб захистити базу. Перезавантажте сторінку.');
+    return;
+  }
+  allowEmptyCoreSave = false;
   const payload = {
     leads: LEADS,
     coldBases: COLDBASES,
