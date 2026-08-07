@@ -355,7 +355,8 @@
   .spec-lang-row-remove{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:15px;line-height:1;padding:6px;flex-shrink:0;transition:color .12s;}
   .spec-lang-row-remove:hover{color:var(--danger, #E5484D);}
   /* ---------- Комбінований фільтр "Мова / рівень" (два стовпці в одному попапі) ---------- */
-  .lang-combo-menu{display:grid;grid-template-columns:1fr 1px 1fr;width:300px;padding:8px;max-height:none;overflow:visible;}
+  .lang-combo-menu{grid-template-columns:1fr 1px 1fr;width:300px;padding:8px;max-height:none;overflow:visible;}
+  .cselect.open .lang-combo-menu{display:grid;}
   .lang-combo-col{display:flex;flex-direction:column;min-width:0;}
   .lang-combo-divider{background:var(--border);margin:2px 6px;}
   .lang-combo-col-title{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);padding:4px 8px 6px;}
