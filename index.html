@@ -230,9 +230,11 @@
   body[data-role="manager"] [data-roles~="manager"]{display:revert;}
   body[data-role="admin"] [data-roles~="admin"]{display:revert;}
   body[data-role="cto"] [data-roles~="cto"]{display:revert;}
+  body[data-role="hr"] [data-roles~="hr"]{display:revert;}
   body[data-role="manager"] li[data-roles~="manager"]{display:list-item;}
   body[data-role="admin"] li[data-roles~="admin"]{display:list-item;}
   body[data-role="cto"] li[data-roles~="cto"]{display:list-item;}
+  body[data-role="hr"] li[data-roles~="hr"]{display:list-item;}
   /* `display:revert` above skips ALL author CSS (incl. .field{display:flex})
      and falls back to the tag's bare browser default (div -> block). Since
      .cselect inside is inline-block, a block .field no longer forces it onto
@@ -241,18 +243,23 @@
      relies on flex/inline-flex layout and can also be role-gated. */
   body[data-role="manager"] .field[data-roles~="manager"],
   body[data-role="admin"] .field[data-roles~="admin"],
-  body[data-role="cto"] .field[data-roles~="cto"]{display:flex;}
+  body[data-role="cto"] .field[data-roles~="cto"],
+  body[data-role="hr"] .field[data-roles~="hr"]{display:flex;}
   body[data-role="manager"] .pipeline-static-label[data-roles~="manager"],
   body[data-role="admin"] .pipeline-static-label[data-roles~="admin"],
-  body[data-role="cto"] .pipeline-static-label[data-roles~="cto"]{display:flex;}
+  body[data-role="cto"] .pipeline-static-label[data-roles~="cto"],
+  body[data-role="hr"] .pipeline-static-label[data-roles~="hr"]{display:flex;}
   body[data-role="manager"] .btn[data-roles~="manager"],
   body[data-role="admin"] .btn[data-roles~="admin"],
-  body[data-role="cto"] .btn[data-roles~="cto"]{display:inline-flex;}
+  body[data-role="cto"] .btn[data-roles~="cto"],
+  body[data-role="hr"] .btn[data-roles~="hr"]{display:inline-flex;}
   body[data-role="admin"] .cselect[data-roles~="admin"],
-  body[data-role="cto"] .cselect[data-roles~="cto"]{display:inline-block;}
+  body[data-role="cto"] .cselect[data-roles~="cto"],
+  body[data-role="hr"] .cselect[data-roles~="hr"]{display:inline-block;}
   th[data-roles][data-roles], td[data-roles][data-roles]{display:none;}
   body[data-role="admin"] th[data-roles~="admin"], body[data-role="admin"] td[data-roles~="admin"]{display:table-cell;}
   body[data-role="cto"] th[data-roles~="cto"], body[data-role="cto"] td[data-roles~="cto"]{display:table-cell;}
+  body[data-role="hr"] th[data-roles~="hr"], body[data-role="hr"] td[data-roles~="hr"]{display:table-cell;}
 
   /* ---------- Custom select ---------- */
   .cselect{position:relative;display:inline-block;}
@@ -332,6 +339,17 @@
   .report-field-row:first-of-type{border-top:none;}
   .report-field-row.readonly .report-field-value{font-weight:800;color:var(--accent-2);font-size:14px;}
   .report-field-sub{font-size:11px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;margin-left:4px;}
+
+  /* ---------- HR: мітки/чіпи, чекліст, картки кандидатів ---------- */
+  .label-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff;}
+  .label-chip button{background:none;border:none;color:inherit;opacity:.75;cursor:pointer;font-size:13px;line-height:1;padding:0;}
+  .label-chip button:hover{opacity:1;}
+  .checklist-row{display:flex;align-items:center;gap:8px;padding:6px 2px;}
+  .checklist-row .checklist-text{flex:1;font-size:13.5px;}
+  .checklist-row.is-done .checklist-text{text-decoration:line-through;color:var(--text-muted);}
+  .board-card-labels{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
+  .board-card-label-bar{width:28px;height:6px;border-radius:3px;}
+  .attach-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--surface-2);border-radius:8px;font-size:13px;}
 
   /* ---------- Analytics ---------- */
   .analytics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;}
@@ -581,6 +599,10 @@
   .icon-copy-btn{border:none;background:none;padding:3px;cursor:pointer;color:var(--text-muted);display:inline-flex;align-items:center;border-radius:5px;transition:color .1s,background .1s;flex-shrink:0;}
   .icon-copy-btn:hover{color:var(--accent-1);background:var(--surface-2);}
   .cold-status-select .cselect-trigger{min-width:150px;}
+  .vac-status-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .vac-status-badge.open{background:#1AA35A1A;color:#1AA35A;}
+  .vac-status-badge.closed{background:var(--surface-2);color:var(--text-muted);}
+  .vac-status-badge.archived{background:#E5484D1A;color:var(--danger);}
 </style>
 </head>
 <body data-role="cto">
@@ -631,27 +653,36 @@
       <li class="active" data-nav="dashboard"><a href="#" onclick="showView(event,'dashboard')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
         Головна</a></li>
-      <li data-nav="pipeline"><a href="#" onclick="showView(event,'pipeline')">
+      <li data-nav="pipeline" data-roles="manager admin cto"><a href="#" onclick="showView(event,'pipeline')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
         Воронка</a></li>
-      <li data-nav="clients"><a href="#" onclick="showView(event,'clients')">
+      <li data-nav="clients" data-roles="manager admin cto"><a href="#" onclick="showView(event,'clients')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Контакти</a></li>
-      <li data-nav="coldbase"><a href="#" onclick="showView(event,'coldbase')">
+      <li data-nav="coldbase" data-roles="manager admin cto"><a href="#" onclick="showView(event,'coldbase')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>
         База клієнтів</a></li>
-      <li data-nav="tasks"><a href="#" onclick="showView(event,'tasks')">
+      <li data-nav="tasks" data-roles="manager admin cto"><a href="#" onclick="showView(event,'tasks')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Завдання</a></li>
-      <li data-nav="reports"><a href="#" onclick="showView(event,'reports')">
+      <li data-nav="reports" data-roles="manager admin cto"><a href="#" onclick="showView(event,'reports')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
         Звітність</a></li>
-      <li data-nav="analytics"><a href="#" onclick="showView(event,'analytics')">
+      <li data-nav="analytics" data-roles="manager admin cto"><a href="#" onclick="showView(event,'analytics')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H4a1 1 0 0 1-1-1V3"/><circle cx="7" cy="14" r="1.5"/><circle cx="12" cy="9" r="1.5"/><circle cx="16.5" cy="13" r="1.5"/><circle cx="20" cy="7" r="1.5"/><path d="M7 14l5-5 4.5 4 3.5-6"/></svg>
         Аналітика</a></li>
-      <li data-nav="campaigns"><a href="#" onclick="showView(event,'campaigns')">
+      <li data-nav="campaigns" data-roles="manager admin cto"><a href="#" onclick="showView(event,'campaigns')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
         Розсилки</a></li>
+      <li data-nav="hr-pipeline" data-roles="hr admin cto"><a href="#" onclick="showView(event,'hr-pipeline')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
+        Воронка кандидатів</a></li>
+      <li data-nav="vacancies" data-roles="hr admin cto"><a href="#" onclick="showView(event,'vacancies')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 13h20"/></svg>
+        Вакансії</a></li>
+      <li data-nav="specialists" data-roles="hr admin cto"><a href="#" onclick="showView(event,'specialists')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4 3 9 3s9-1.34 9-3v-6"/></svg>
+        База спеціалістів</a></li>
       <li data-nav="admin" data-roles="admin cto"><a href="#" onclick="showView(event,'admin')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
         Менеджери</a></li>
@@ -677,6 +708,9 @@
         </button>
         <div class="page-title" id="pageTitle">Головна</div>
         <button class="icon-btn js-hidden" id="pipelineSettingsBtn" onclick="toggleStageEditor()" title="Налаштувати стовпці воронки" aria-label="Налаштувати стовпці воронки" style="width:32px;height:32px;flex-shrink:0;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3 13.09H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button class="icon-btn js-hidden" id="hrPipelineSettingsBtn" onclick="toggleHrStageEditor()" title="Налаштувати стадії воронки кандидатів" aria-label="Налаштувати стадії воронки кандидатів" style="width:32px;height:32px;flex-shrink:0;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3 13.09H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
       </div>
@@ -754,23 +788,36 @@
 
       <!-- ============ DASHBOARD ============ -->
       <section class="view active" id="view-dashboard">
-        <div class="grid-3" style="margin-bottom:16px;">
-          <div class="card stat-card"><div class="stat-label">Активні ліди</div><div class="stat-value" id="statActiveLeads">0</div></div>
-          <div class="card stat-card"><div class="stat-label">Угоди в роботі</div><div class="stat-value" id="statDealsCount">0</div><div class="stat-sub" data-roles="admin cto" id="statDealsSum">на суму $0</div></div>
-          <div class="card stat-card"><div class="stat-label">Заплановані зустрічі</div><div class="stat-value" id="statCallsToday">0</div><div class="stat-sub" id="statCallsOverdue" style="color:var(--text-muted);">прострочених немає</div></div>
+        <div data-roles="manager admin cto">
+          <div class="grid-3" style="margin-bottom:16px;">
+            <div class="card stat-card"><div class="stat-label">Активні ліди</div><div class="stat-value" id="statActiveLeads">0</div></div>
+            <div class="card stat-card"><div class="stat-label">Угоди в роботі</div><div class="stat-value" id="statDealsCount">0</div><div class="stat-sub" data-roles="admin cto" id="statDealsSum">на суму $0</div></div>
+            <div class="card stat-card"><div class="stat-label">Заплановані зустрічі</div><div class="stat-value" id="statCallsToday">0</div><div class="stat-sub" id="statCallsOverdue" style="color:var(--text-muted);">прострочених немає</div></div>
+          </div>
+          <div class="grid-3">
+            <div class="card widget">
+              <div class="section-title">Мої таски на сьогодні</div>
+              <div id="dashboardTasks" class="widget-scroll"></div>
+            </div>
+            <div class="card widget">
+              <div class="section-title">Заплановані зустрічі</div>
+              <div id="dashboardCalls" class="widget-scroll"></div>
+            </div>
+            <div class="card widget">
+              <div class="section-title">Push-сповіщення</div>
+              <div id="dashboardNotifs" class="widget-scroll"></div>
+            </div>
+          </div>
         </div>
-        <div class="grid-3">
-          <div class="card widget">
-            <div class="section-title">Мої таски на сьогодні</div>
-            <div id="dashboardTasks" class="widget-scroll"></div>
+        <div data-roles="hr">
+          <div class="grid-3" style="margin-bottom:16px;">
+            <div class="card stat-card"><div class="stat-label">Відкритих вакансій</div><div class="stat-value" id="hrStatOpenVacancies">0</div></div>
+            <div class="card stat-card"><div class="stat-label">Кандидатів у роботі</div><div class="stat-value" id="hrStatCandidates">0</div></div>
+            <div class="card stat-card"><div class="stat-label">Спеціалістів у базі</div><div class="stat-value" id="hrStatSpecialists">0</div></div>
           </div>
           <div class="card widget">
-            <div class="section-title">Заплановані зустрічі</div>
-            <div id="dashboardCalls" class="widget-scroll"></div>
-          </div>
-          <div class="card widget">
-            <div class="section-title">Push-сповіщення</div>
-            <div id="dashboardNotifs" class="widget-scroll"></div>
+            <div class="section-title">Вакансії, що потребують уваги</div>
+            <div id="hrDashboardVacancies" class="widget-scroll"></div>
           </div>
         </div>
       </section>
@@ -1113,7 +1160,7 @@
           <div class="field" style="margin-bottom:12px;"><label>Ім'я</label><input id="acctName" type="text" disabled></div>
           <div class="field" style="margin-bottom:12px;"><label>Email (логін)</label><input id="acctEmail" type="text" disabled></div>
           <div class="field" style="margin-bottom:4px;"><label>Роль</label><input id="acctRole" type="text" disabled></div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:10px;" data-roles="manager">Логін і пароль може змінити лише керівник відділу або CTO.</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:10px;" data-roles="manager hr">Логін і пароль може змінити лише керівник відділу або CTO.</div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:10px;" data-roles="admin cto">Змінити пароль можна нижче, у таблиці "База даних для входу".</div>
           <button class="btn secondary" id="acctEditBtn" style="margin-top:16px;" onclick="toggleAccountEdit()">Редагувати</button>
           <div id="acctEditActions" style="display:none;gap:10px;margin-top:16px;">
@@ -1142,9 +1189,255 @@
         </div>
       </section>
 
+      <!-- ============ HR: ВОРОНКА КАНДИДАТІВ ============ -->
+      <section class="view" id="view-hr-pipeline">
+        <div class="pipeline-toolbar">
+          <div class="cselect" id="hrVacancySelect">
+            <button type="button" class="cselect-trigger" style="border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+              <span class="cselect-label" id="hrVacancySelectLabel">Оберіть вакансію</span>
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <ul class="cselect-menu" id="hrVacancySelectMenu" data-select="hrVacancy"></ul>
+          </div>
+          <button class="btn secondary" style="margin-left:auto;" onclick="showView(null,'vacancies')">Усі вакансії</button>
+        </div>
+        <div class="board" id="hrBoard"></div>
+        <div id="hrNoVacancyHint" class="card" style="padding:32px;text-align:center;color:var(--text-muted);display:none;">
+          Немає жодної вакансії. Створіть вакансію на сторінці «Вакансії» — воронка кандидатів з'явиться автоматично.
+        </div>
+        <div id="hrStageEditorBoard" style="display:none;"></div>
+        <div id="hrStageEditorActions" style="display:none;margin-top:14px;gap:10px;" class="row-between">
+          <div></div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn secondary" onclick="cancelHrStageEditor()">Скасувати</button>
+            <button class="btn" onclick="saveHrStageEditor()">Зберегти зміни</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ HR: ВАКАНСІЇ ============ -->
+      <section class="view" id="view-vacancies">
+        <div class="row-between" style="margin-bottom:16px;">
+          <div class="section-title" style="margin:0;">Вакансії</div>
+          <button class="btn" data-roles="admin cto" onclick="openVacancyPanel(null)">+ Додати вакансію</button>
+        </div>
+        <div class="card" style="padding:8px 4px;">
+          <div class="table-scroll"><table>
+            <thead><tr><th>Назва</th><th>Статус</th><th>Кандидатів</th><th>Створив</th><th>Дата</th></tr></thead>
+            <tbody id="vacanciesTableBody"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ HR: БАЗА СПЕЦІАЛІСТІВ ============ -->
+      <section class="view" id="view-specialists">
+        <div class="filters-bar card">
+          <div class="field">
+            <label>Пошук</label>
+            <input type="text" id="specSearchInput" placeholder="Ім'я, контакт..." oninput="renderSpecialistsTable()">
+          </div>
+          <div class="field">
+            <label>Напрямок</label>
+            <div class="cselect" id="specNicheMultiSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:160px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="specNicheMultiLabel">Усі напрямки</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="specNicheMultiMenu"></ul>
+            </div>
+          </div>
+          <div class="field">
+            <label>Рівень</label>
+            <div class="cselect" id="specLevelMultiSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:140px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="specLevelMultiLabel">Усі рівні</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="specLevelMultiMenu"></ul>
+            </div>
+          </div>
+          <div class="field">
+            <label>Мови</label>
+            <div class="cselect" id="specLangMultiSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:140px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="specLangMultiLabel">Усі мови</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="specLangMultiMenu"></ul>
+            </div>
+          </div>
+          <button class="btn" onclick="renderSpecialistsTable()">Застосувати фільтр</button>
+          <button class="btn" style="margin-left:auto;" onclick="openSpecialistPanel(null)">+ Додати спеціаліста</button>
+        </div>
+        <div class="card" style="padding:8px 4px;margin-top:16px;">
+          <div class="table-scroll"><table>
+            <thead><tr><th>Ім'я</th><th>Напрямки</th><th>Рівень</th><th>Мови</th><th>Контакт</th><th></th></tr></thead>
+            <tbody id="specialistsTableBody"></tbody>
+          </table></div>
+        </div>
+      </section>
+
     </div>
   </div>
 </div>
+
+<!-- ================= VACANCY DRAWER (narrow) ================= -->
+<aside class="side-panel narrow" id="vacancyPanel">
+  <div class="panel-head"><h3 id="vacancyPanelTitle">Нова вакансія</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="field"><label>Назва вакансії</label><input id="vacTitle" type="text" placeholder="Напр. Junior Sales Manager"></div>
+    <div class="field"><label>Опис</label><textarea id="vacDescription" style="min-height:90px;" placeholder="Вимоги, деталі, умови..."></textarea></div>
+    <div class="field" id="vacStatusField">
+      <label>Статус</label>
+      <div class="cselect" id="vacStatusSelect">
+        <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+          <span class="cselect-label">Відкрита</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <ul class="cselect-menu" data-select="vacStatus">
+          <li data-value="open" class="selected">Відкрита</li>
+          <li data-value="closed">Закрита</li>
+          <li data-value="archived">Архів</li>
+        </ul>
+      </div>
+    </div>
+    <div id="vacStageSummary" style="display:none;margin-top:6px;">
+      <div class="section-title" style="font-size:13px;margin-bottom:8px;">Кандидати по стадіях</div>
+      <div id="vacStageSummaryList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <button class="btn secondary" style="width:100%;margin-top:14px;" onclick="openVacancyPipeline()">Відкрити воронку кандидатів</button>
+    </div>
+  </div>
+  <div class="panel-foot" data-roles="admin cto">
+    <button class="btn secondary" onclick="closeAllPanels()">Скасувати</button>
+    <button class="btn" id="vacSaveBtn" onclick="saveVacancy()">Створити</button>
+  </div>
+</aside>
+
+<!-- ================= SPECIALIST DRAWER ================= -->
+<aside class="side-panel narrow" id="specialistPanel">
+  <div class="panel-head"><h3 id="specialistPanelTitle">Новий спеціаліст</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="field"><label>Ім'я</label><input id="specName" type="text" placeholder="Ім'я Прізвище"></div>
+    <div class="field"><label>Телефон</label><input id="specPhone" type="text" placeholder="+380..."></div>
+    <div class="field"><label>Email / Telegram</label><input id="specContact" type="text" placeholder="email або @telegram"></div>
+    <div class="field">
+      <label>Напрямки</label>
+      <div class="cselect" id="specNicheSelect">
+        <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+          <span class="cselect-label" id="specNicheSelectLabel">Оберіть напрямки</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <ul class="cselect-menu" id="specNicheSelectMenu"></ul>
+      </div>
+    </div>
+    <div class="field">
+      <label>Рівень</label>
+      <div class="cselect" id="specLevelSelect">
+        <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+          <span class="cselect-label">Middle</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <ul class="cselect-menu" data-select="specLevel">
+          <li data-value="Junior">Junior</li>
+          <li data-value="Middle" class="selected">Middle</li>
+          <li data-value="Senior">Senior</li>
+          <li data-value="Lead">Lead</li>
+        </ul>
+      </div>
+    </div>
+    <div class="field">
+      <label>Мови</label>
+      <div style="display:flex;gap:8px;">
+        <input id="specLangInput" type="text" placeholder="Напр. English" style="flex:1;">
+        <div class="cselect" id="specLangLevelSelect" style="width:110px;">
+          <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+            <span class="cselect-label">B2</span>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <ul class="cselect-menu" data-select="specLangLevel">
+            <li data-value="A1">A1</li><li data-value="A2">A2</li><li data-value="B1">B1</li>
+            <li data-value="B2" class="selected">B2</li><li data-value="C1">C1</li><li data-value="C2">C2</li><li data-value="Рідна">Рідна</li>
+          </ul>
+        </div>
+        <button type="button" class="btn secondary small" onclick="addSpecLanguage()">+</button>
+      </div>
+      <div id="specLangChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+    </div>
+    <div class="field"><label>Резюме / файли</label>
+      <label class="file-btn" style="margin:0;">📎 Додати файл<input type="file" style="display:none" onchange="addSpecAttachment(event)"></label>
+      <div id="specAttachList" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;"></div>
+    </div>
+    <div class="field"><label>Нотатки</label><textarea id="specNotes" style="min-height:70px;" placeholder="Враження, коментарі..."></textarea></div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn danger-ghost" id="specDeleteBtn" style="display:none;" onclick="deleteSpecialist()">Видалити</button>
+    <button class="btn secondary" onclick="closeAllPanels()">Скасувати</button>
+    <button class="btn" id="specSaveBtn" onclick="saveSpecialist()">Створити</button>
+  </div>
+</aside>
+
+<!-- ================= CANDIDATE DRAWER (wide, Trello-style) ================= -->
+<aside class="side-panel" id="candidatePanel" style="width:520px;">
+  <div class="panel-head"><h3 id="candidatePanelTitle">Нова картка</h3><button class="close-btn" onclick="closeAllPanels()">✕</button></div>
+  <div class="panel-body">
+    <div class="field"><label>Ім'я кандидата</label><input id="candName" type="text" placeholder="Ім'я Прізвище"></div>
+    <div class="field"><label>Позиція</label><input id="candPosition" type="text" placeholder="Напр. Junior Sales Manager"></div>
+    <div class="field" id="candStageField" style="display:none;">
+      <label>Стадія</label>
+      <div class="cselect" id="candStageSelect">
+        <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+          <span class="cselect-label" id="candStageSelectLabel"></span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <ul class="cselect-menu" id="candStageSelectMenu" data-select="candStage"></ul>
+      </div>
+    </div>
+    <div class="field"><label>Опис</label><textarea id="candDescription" style="min-height:70px;" placeholder="Додати детальніший опис..."></textarea></div>
+
+    <div id="candExtraSections" style="display:none;">
+      <div class="field"><label>Мітки</label>
+        <div id="candLabelsChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;">
+          <input id="candLabelInput" type="text" placeholder="Нова мітка..." style="flex:1;">
+          <button type="button" class="btn secondary small" onclick="addCandidateLabel()">+ Додати</button>
+        </div>
+      </div>
+
+      <div class="field"><label>Вкладення</label>
+        <label class="file-btn" style="margin:0;">📎 Додати файл<input type="file" style="display:none" onchange="addCandidateAttachment(event)"></label>
+        <div id="candAttachList" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;"></div>
+      </div>
+
+      <div class="field">
+        <div class="row-between" style="margin-bottom:4px;">
+          <label style="margin:0;">Hiring steps</label>
+          <span id="candChecklistPct" style="font-size:12px;color:var(--text-muted);font-weight:700;"></span>
+        </div>
+        <div class="progress-track" style="height:6px;background:var(--surface-2);border-radius:999px;overflow:hidden;margin-bottom:10px;">
+          <div id="candChecklistBar" style="height:100%;background:var(--accent-1);width:0%;transition:width .2s;"></div>
+        </div>
+        <div id="candChecklistItems" style="display:flex;flex-direction:column;gap:2px;"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input id="candChecklistInput" type="text" placeholder="Новий пункт..." style="flex:1;">
+          <button type="button" class="btn secondary small" onclick="addCandidateChecklistItem()">Додати пункт</button>
+        </div>
+      </div>
+
+      <div class="field"><label>Коментарі й активність</label>
+        <div id="candActivityList" style="display:flex;flex-direction:column;gap:2px;max-height:220px;overflow-y:auto;"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input id="candCommentInput" type="text" placeholder="Написати коментар..." style="flex:1;">
+          <button type="button" class="btn secondary small" onclick="addCandidateComment()">Додати</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn danger-ghost" id="candDeleteBtn" style="display:none;" onclick="deleteCandidate()">Видалити</button>
+    <button class="btn secondary" onclick="closeAllPanels()">Закрити</button>
+    <button class="btn" id="candSaveBtn" onclick="saveCandidateBasicFields()">Створити картку</button>
+  </div>
+</aside>
 
 <!-- ================= OVERLAY ================= -->
 <div class="panel-overlay" id="panelOverlay" onclick="handleOverlayClick()"></div>
@@ -1517,6 +1810,7 @@
         <ul class="cselect-menu" data-select="newUserRole">
           <li data-value="manager" class="selected">Менеджер</li>
           <li data-value="admin">Керівник відділу</li>
+          <li data-value="hr">HR</li>
         </ul>
       </div>
     </div>
@@ -1628,6 +1922,40 @@ let TASKS = [];
 // Заплановані дзвінки на дашборді — прив'язані до ліда, тому клік по дзвінку
 // відкриває картку відповідного клієнта.
 let CALLS = [];
+
+/* =========================================================
+   HR: ВАКАНСІЇ + ВОРОНКА КАНДИДАТІВ + БАЗА СПЕЦІАЛІСТІВ
+   =========================================================
+   Вакансію постить CTO або керівник відділу (HR лише працює з нею).
+   Кожна вакансія НЕСЕ В СОБІ власну воронку (vac.stages) — окрема
+   дошка кандидатів на кожну вакансію, авто-створюється разом з вакансією.
+   Стадія — об'єкт {id, name, archived}, а не рядок (як у LEADS/PIPELINES),
+   тому перейменування стадії НЕ губить кандидатів, а "видалення" стадії —
+   це archived:true (кандидати лишаються прив'язані, стовпець ховається
+   з дошки, є можливість відновити).
+*/
+let VACANCIES = [];
+let nextVacancyId = 1;
+const DEFAULT_HR_STAGES = ['Проконтактовані','Pre-screen','Співбесіда','Оффер запропоновано','Найнято','Відмовлено','Самозвернення'];
+function makeHrStages(){
+  return DEFAULT_HR_STAGES.map((name,i) => ({id:'st'+Date.now()+i, name, archived:false}));
+}
+
+// Кандидати на конкретну вакансію (vacancyId) — картки на дошці HR-воронки.
+let CANDIDATES = [];
+let nextCandidateId = 1;
+const DEFAULT_HIRING_STEPS = ['CV переглянуто','Повідомлення надіслано','Отримано відповідь','Скринінг пройдено','Співбесіда проведена','Оффер надіслано'];
+const CANDIDATE_LABEL_COLORS = ['#2F4EF3','#0EA85C','#B5179E','#E5484D','#E8A33D','#0891B2'];
+
+// Довідник напрямків/спеціалізацій — спільний список, який HR поповнює сам
+// (наприклад "Sales", "Marketing", "Development"...), використовується як
+// теги на картках спеціалістів і як фільтр у "Базі спеціалістів".
+let SPEC_DIRECTIONS = ['Sales','Marketing','Development','Design','HR','Finance','Support'];
+
+// "База спеціалістів" — окремий пул усіх фахівців, яких HR знаходить
+// (незалежно від того, чи є вони зараз кандидатами на конкретну вакансію).
+let SPECIALISTS = [];
+let nextSpecialistId = 1;
 
 // ЗВІТИ: три типи (день/тиждень/місяць) мають РІЗНУ структуру полів.
 // Кожне поле — число, зберігається під ключем f.key, у формі має id "rd_"+key.
@@ -1837,6 +2165,7 @@ const state = {
   // список власників ('admin' і/або id менеджерів), чиї воронки показувати.
   pipelineOwnerFilter: [],
   currentPipelineId: 'default',
+  hrVacancyId: null,
   dueCalendarMonth: new Date(2026,6,1),
   duePickedDate: null,
   meetingCalendarMonth: new Date(2026,6,1),
@@ -1968,7 +2297,7 @@ function changeOwnPhoto(e){
 }
 function currentActorLabel(){
   const me = currentUserRecord();
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR'};
   return me ? `${me.name} (${roleLabels[state.role]})` : roleLabels[state.role];
 }
 // Логує дію в аудит (видно лише CTO/керівнику відділу) + одразу створює
@@ -2041,7 +2370,7 @@ function completeLogin(user, opts){
   state.currentPipelineId = 'default';
 
   document.body.setAttribute('data-role', role);
-  const labels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
+  const labels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR'};
   document.getElementById('userName').textContent = user.name;
   document.getElementById('userRoleLabel').textContent = labels[role];
   document.getElementById('rolePill').textContent = labels[role];
@@ -2067,6 +2396,11 @@ function completeLogin(user, opts){
   renderColdBasesList();
   refreshColdBaseDetailIfOpen();
   updateAdminPageLabels();
+  renderVacanciesTable();
+  renderHrPipelineSelectOptions();
+  renderHrBoard();
+  renderSpecialistsTable();
+  renderHrDashboard();
   if(opts.showReminder !== false) seedReminderNotification(role);
   renderNotifications();
   renderDashboardTasks();
@@ -2097,7 +2431,7 @@ function accountSwitchPool(){
   const real = realIdentityUser();
   if(!real) return [];
   if(real.role === 'cto') return USERS.slice();
-  if(real.role === 'admin') return USERS.filter(u=>u.role==='manager' || u.id===real.id);
+  if(real.role === 'admin') return USERS.filter(u=>u.role==='manager' || u.role==='hr' || u.id===real.id);
   return [];
 }
 function openAccountSwitchList(){
@@ -2112,7 +2446,7 @@ function closeAccountSwitchList(){
 function renderAccountSwitchList(){
   const container = document.getElementById('accountSwitchItems');
   if(!container) return;
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR'};
   const pool = accountSwitchPool();
   container.innerHTML = pool.map(u => `
     <div class="menu-item" onclick="switchAccount('${u.id}')" style="justify-content:flex-start;gap:10px;align-items:center;height:auto;padding-top:8px;padding-bottom:8px;">
@@ -2139,7 +2473,7 @@ function switchAccount(userId){
   // Якщо обрали саме той акаунт, з якого починали перемикання — це і є
   // повернення "додому": більше не в режимі імперсонації.
   if(user.id === state.originalUserId) state.originalUserId = null;
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR'};
   logActivity(`Швидке перемикання акаунта: → ${user.name} (${roleLabels[user.role]})`, {silent:true});
   completeLogin(user, {showReminder:false});
 }
@@ -2243,12 +2577,15 @@ function showView(e, name){
   document.querySelectorAll('.nav li').forEach(li => li.classList.remove('active'));
   const li = document.querySelector('.nav li[data-nav="' + name + '"]');
   if(li) li.classList.add('active');
-  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'Контакти', coldbase:'База клієнтів', 'coldbase-detail':'База клієнтів', tasks:'Завдання', reports:'Звітність', analytics:'Аналітика', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт'};
+  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'Контакти', coldbase:'База клієнтів', 'coldbase-detail':'База клієнтів', tasks:'Завдання', reports:'Звітність', analytics:'Аналітика', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт', 'hr-pipeline':'Воронка кандидатів', vacancies:'Вакансії', 'vacancy-detail':'Вакансія', specialists:'База спеціалістів', 'specialist-detail':'Спеціаліст', 'candidate-detail':'Кандидат'};
   document.getElementById('pageTitle').textContent = titles[name];
   // Іконка налаштувань воронки (шестерня) видима лише на сторінці "Воронка"
   // і лише для керівника відділу/CTO — саме вони можуть редагувати стовпці.
   const settingsBtn = document.getElementById('pipelineSettingsBtn');
   if(settingsBtn) settingsBtn.classList.toggle('js-hidden', !(name === 'pipeline' && (state.role==='admin'||state.role==='cto')));
+  // Та сама шестерня для воронки кандидатів HR — доступна hr/admin/cto.
+  const hrSettingsBtn = document.getElementById('hrPipelineSettingsBtn');
+  if(hrSettingsBtn) hrSettingsBtn.classList.toggle('js-hidden', !(name === 'hr-pipeline' && (state.role==='hr'||state.role==='admin'||state.role==='cto')));
   if(name === 'pipeline') updatePipelinePageTitle();
   if(name === 'account') renderAccountView();
   if(name === 'tasks') renderTasksTable();
@@ -2256,6 +2593,10 @@ function showView(e, name){
   if(name === 'campaigns') renderCampaignsTable();
   if(name === 'admin') updateAdminPageLabels();
   if(name === 'coldbase') renderColdBasesList();
+  if(name === 'hr-pipeline') renderHrBoard();
+  if(name === 'vacancies') renderVacanciesTable();
+  if(name === 'specialists') renderSpecialistsTable();
+  if(name === 'dashboard' && state.role === 'hr') renderHrDashboard();
   // Запам'ятовуємо активну сторінку в хеші URL (без додавання запису в
   // історію), щоб оновлення сторінки (F5) залишало користувача там само,
   // а не кидало на дашборд.
@@ -2390,6 +2731,10 @@ document.addEventListener('click', function(e){
   if(selectType === 'reportPeriod' && state.reportMode === 'create'){
     const me = currentUserRecord();
     renderReportFieldsForPeriod(li.dataset.value, me ? me.id : null);
+  }
+  if(selectType === 'hrVacancy'){
+    state.hrVacancyId = Number(li.dataset.value);
+    renderHrBoard();
   }
 });
 
@@ -5077,9 +5422,9 @@ function renderAnalytics(){
 // бачить і редагує тут лише менеджерів (не інших керівників/CTO).
 function renderManagersTable(){
   const tbody = document.getElementById('managersTableBody');
-  const visibleRoles = state.role === 'cto' ? ['manager','admin'] : ['manager'];
+  const visibleRoles = state.role === 'cto' ? ['manager','admin','hr'] : ['manager','hr'];
   const rows = USERS.filter(u=>visibleRoles.includes(u.role));
-  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO'};
+  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO', hr:'HR'};
   tbody.innerHTML = rows.map(m => `
     <tr>
       <td>${nameBadge(m.name, m.role==='admin')}</td><td>${m.login}</td><td>${roleLabels[m.role]}</td>
@@ -5096,10 +5441,10 @@ function updateAdminPageLabels(){
   const btn = document.getElementById('createManagerBtn');
   if(!title || !btn) return;
   if(state.role === 'cto'){
-    title.textContent = 'Менеджери та керівники відділу';
+    title.textContent = 'Менеджери, керівники відділу та HR';
     btn.textContent = '+ Створити користувача';
   } else {
-    title.textContent = 'Менеджери';
+    title.textContent = 'Менеджери та HR';
     btn.textContent = '+ Створити менеджера';
   }
 }
@@ -5126,7 +5471,7 @@ function openManagerPanel(id){
     if(roleField) setNewUserRoleSelect('manager');
   } else {
     const m = USERS.find(u=>u.id===id);
-    const roleLabels = {manager:'менеджера', admin:'керівника відділу'};
+    const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR'};
     document.getElementById('managerPanelTitle').textContent = 'Редагувати ' + (roleLabels[m.role] || 'користувача');
     document.getElementById('mgrName').value = m.name;
     document.getElementById('mgrEmail').value = m.login;
@@ -5145,7 +5490,7 @@ function saveManager(){
   const name = document.getElementById('mgrName').value.trim() || 'Новий користувач';
   const email = emailEl.value.trim() || 'new@kofax.agency';
   const pass = document.getElementById('mgrPass').value.trim() || generateRandomPw();
-  const roleLabels = {manager:'менеджера', admin:'керівника відділу'};
+  const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR'};
   if(state.editingManagerId){
     const m = USERS.find(u=>u.id===state.editingManagerId);
     const oldPassword = m.password;
@@ -5157,7 +5502,8 @@ function saveManager(){
       const selected = document.querySelector('#newUserRoleSelect .cselect-menu li.selected');
       role = selected ? selected.dataset.value : 'manager';
     }
-    USERS.push({id:(role==='admin'?'a':'m')+Date.now(), name, role, login:email, password:pass});
+    const idPrefix = role==='admin' ? 'a' : role==='hr' ? 'h' : 'm';
+    USERS.push({id:idPrefix+Date.now(), name, role, login:email, password:pass});
     logActivity(`Створено ${roleLabels[role]} ${name} (${email})`, {target:{type:'view', name:'admin'}});
   }
   ensurePipelineIntegrity(); // одразу створює воронку новому менеджеру, якщо ще немає
@@ -5178,7 +5524,7 @@ function saveManager(){
 async function deleteManagerUser(id){
   const m = USERS.find(u=>u.id===id);
   if(!m) return;
-  const roleLabels = {manager:'менеджера', admin:'керівника відділу'};
+  const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR'};
   const ok = await showConfirmModal({
     title:'Видалити користувача',
     text:`Видалити ${roleLabels[m.role] || 'користувача'} "${m.name}"? Він більше не зможе увійти. Угоди та воронка цієї людини залишаться без змін — видаляти їх потрібно окремо.`,
@@ -5203,6 +5549,750 @@ async function deleteManagerUser(id){
 }
 
 /* =========================================================
+   HR: спільні дрібні хелпери для кастомних select'ів
+   ========================================================= */
+function setCselectValue(containerId, value){
+  const menu = document.querySelector('#'+containerId+' .cselect-menu');
+  const trigger = document.querySelector('#'+containerId+' .cselect-label');
+  if(!menu || !trigger) return;
+  menu.querySelectorAll('li').forEach(li=>li.classList.toggle('selected', li.dataset.value === value));
+  const sel = menu.querySelector('li.selected') || menu.querySelector('li');
+  if(sel) trigger.textContent = sel.textContent;
+}
+function getCselectValue(containerId){
+  const li = document.querySelector('#'+containerId+' .cselect-menu li.selected');
+  return li ? li.dataset.value : null;
+}
+
+/* =========================================================
+   HR: ВАКАНСІЇ
+   ========================================================= */
+function vacancyById(id){ return VACANCIES.find(v=>v.id===id); }
+function activeStages(vac){ return vac ? vac.stages.filter(s=>!s.archived) : []; }
+let editingVacancyId = null;
+function openVacancyPanel(id){
+  editingVacancyId = id;
+  const canEdit = state.role === 'admin' || state.role === 'cto';
+  document.getElementById('vacTitle').disabled = !canEdit;
+  document.getElementById('vacDescription').disabled = !canEdit;
+  document.getElementById('vacStatusField').classList.toggle('js-hidden', !canEdit && id === null);
+  const statusTrigger = document.querySelector('#vacStatusSelect .cselect-trigger');
+  if(statusTrigger) statusTrigger.disabled = !canEdit;
+  const summary = document.getElementById('vacStageSummary');
+  const saveBtn = document.getElementById('vacSaveBtn');
+  if(id === null){
+    document.getElementById('vacancyPanelTitle').textContent = 'Нова вакансія';
+    document.getElementById('vacTitle').value = '';
+    document.getElementById('vacDescription').value = '';
+    setCselectValue('vacStatusSelect', 'open');
+    summary.style.display = 'none';
+    saveBtn.textContent = 'Створити';
+    saveBtn.style.display = canEdit ? '' : 'none';
+  } else {
+    const v = vacancyById(id);
+    if(!v) return;
+    document.getElementById('vacancyPanelTitle').textContent = v.title;
+    document.getElementById('vacTitle').value = v.title;
+    document.getElementById('vacDescription').value = v.description || '';
+    setCselectValue('vacStatusSelect', v.status);
+    summary.style.display = '';
+    const counts = {};
+    activeStages(v).forEach(s => counts[s.id] = CANDIDATES.filter(c=>c.vacancyId===v.id && c.stageId===s.id).length);
+    document.getElementById('vacStageSummaryList').innerHTML = activeStages(v).length
+      ? activeStages(v).map(s=>`<div class="row-between" style="font-size:13px;"><span>${s.name}</span><b>${counts[s.id]||0}</b></div>`).join('')
+      : '<div class="empty-hint">Стадій ще немає.</div>';
+    saveBtn.textContent = 'Зберегти зміни';
+    saveBtn.style.display = canEdit ? '' : 'none';
+  }
+  openPanel('vacancyPanel');
+}
+function saveVacancy(){
+  const title = document.getElementById('vacTitle').value.trim();
+  if(!title){ showAlertModal('Вкажіть назву вакансії.', 'Порожнє поле'); return; }
+  const description = document.getElementById('vacDescription').value.trim();
+  const status = getCselectValue('vacStatusSelect') || 'open';
+  const me = currentUserRecord();
+  if(editingVacancyId === null){
+    const v = {id:nextVacancyId++, title, description, status, createdBy: me?me.id:'ostap', createdByName: me?me.name:'', createdAt: new Date().toLocaleDateString('uk-UA'), stages: makeHrStages()};
+    VACANCIES.unshift(v);
+    logActivity(`Створено вакансію "${title}"`, {target:{type:'view', name:'vacancies'}});
+  } else {
+    const v = vacancyById(editingVacancyId);
+    if(!v) return;
+    Object.assign(v, {title, description, status});
+    logActivity(`Відредаговано вакансію "${title}"`, {target:{type:'view', name:'vacancies'}});
+  }
+  renderVacanciesTable();
+  renderHrPipelineSelectOptions();
+  renderHrBoard();
+  renderHrDashboard();
+  fbScheduleSave();
+  closeAllPanels();
+}
+function renderVacanciesTable(){
+  const tbody = document.getElementById('vacanciesTableBody');
+  if(!tbody) return;
+  const statusLabels = {open:'Відкрита', closed:'Закрита', archived:'Архів'};
+  if(!VACANCIES.length){ tbody.innerHTML = '<tr><td colspan="5" class="empty-hint">Вакансій ще немає.</td></tr>'; return; }
+  tbody.innerHTML = VACANCIES.map(v => {
+    const count = CANDIDATES.filter(c=>c.vacancyId===v.id).length;
+    return `
+    <tr class="clickable" onclick="openVacancyPanel(${v.id})">
+      <td>${v.title}</td>
+      <td><span class="vac-status-badge ${v.status}">${statusLabels[v.status]||v.status}</span></td>
+      <td>${count}</td>
+      <td>${v.createdByName||''}</td>
+      <td>${v.createdAt||''}</td>
+    </tr>`;
+  }).join('');
+}
+function openVacancyPipeline(){
+  if(editingVacancyId === null) return;
+  state.hrVacancyId = editingVacancyId;
+  closeAllPanels();
+  showView(null, 'hr-pipeline');
+  renderHrPipelineSelectOptions();
+  renderHrBoard();
+}
+function refreshVacancyDetailIfOpen(){
+  const panel = document.getElementById('vacancyPanel');
+  if(panel && panel.classList.contains('open') && editingVacancyId !== null) openVacancyPanel(editingVacancyId);
+}
+
+/* =========================================================
+   HR: ВОРОНКА КАНДИДАТІВ (Kanban) + РЕДАКТОР СТАДІЙ
+   ========================================================= */
+function renderHrPipelineSelectOptions(){
+  const menu = document.getElementById('hrVacancySelectMenu');
+  if(!menu) return;
+  menu.dataset.select = 'hrVacancy';
+  if(!state.hrVacancyId || !vacancyById(state.hrVacancyId)){
+    state.hrVacancyId = VACANCIES.length ? VACANCIES[0].id : null;
+  }
+  menu.innerHTML = VACANCIES.map(v => `<li data-value="${v.id}" class="${v.id===state.hrVacancyId?'selected':''}">${v.title}</li>`).join('');
+  const label = document.getElementById('hrVacancySelectLabel');
+  const cur = vacancyById(state.hrVacancyId);
+  if(label) label.textContent = cur ? cur.title : 'Оберіть вакансію';
+}
+function currentHrVacancy(){ return vacancyById(state.hrVacancyId); }
+let draggedCandidateId = null;
+function renderHrBoard(){
+  const board = document.getElementById('hrBoard');
+  const hint = document.getElementById('hrNoVacancyHint');
+  if(!board) return;
+  const vac = currentHrVacancy();
+  if(!vac){
+    board.style.display = 'none';
+    if(hint) hint.style.display = '';
+    return;
+  }
+  board.style.display = '';
+  if(hint) hint.style.display = 'none';
+  board.innerHTML = activeStages(vac).map(stage => {
+    const cards = CANDIDATES.filter(c => c.vacancyId === vac.id && c.stageId === stage.id);
+    const cardsHtml = cards.map(c => {
+      const doneSteps = (c.checklist||[]).filter(i=>i.done).length;
+      const totalSteps = (c.checklist||[]).length;
+      const labelsHtml = (c.labels||[]).length
+        ? `<div class="board-card-labels">${c.labels.map(l=>`<span class="board-card-label-bar" style="background:${l.color};"></span>`).join('')}</div>` : '';
+      const metaBits = [];
+      if((c.attachments||[]).length) metaBits.push(`📎 ${c.attachments.length}`);
+      if(totalSteps) metaBits.push(`☑ ${doneSteps}/${totalSteps}`);
+      return `
+      <div class="lead-card" draggable="true" ondragstart="hrDragStart(event,${c.id})" onclick="openCandidatePanel(${c.id})">
+        ${labelsHtml}
+        <div class="lead-title">${c.name}</div>
+        <div class="lead-sub">${c.position||''}</div>
+        <div class="lead-foot"><span class="lead-value">${metaBits.join(' · ')}</span><span></span></div>
+      </div>`;
+    }).join('');
+    return `
+    <div class="column" data-stage="${stage.id}" ondragover="allowDrop(event)" ondragenter="columnDragEnter(event)" ondragleave="columnDragLeave(event)" ondrop="hrDropCard(event,'${stage.id}')">
+      <div class="column-head"><div class="column-title">${stage.name}</div><div class="column-meta">${cards.length} ${cards.length===1?'кандидат':'кандидатів'}</div></div>
+      <div class="card-list">${cardsHtml}</div>
+      <button class="add-card-btn" type="button" onclick="openCandidatePanel(null,${vac.id},'${stage.id}')">+ Додати картку</button>
+    </div>`;
+  }).join('');
+}
+function hrDragStart(e, candId){ draggedCandidateId = candId; }
+function hrDropCard(e, stageId){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const c = CANDIDATES.find(c=>c.id===draggedCandidateId);
+  if(!c) return;
+  const vac = vacancyById(c.vacancyId);
+  const stage = stageById(vac, stageId);
+  if(stage && c.stageId !== stageId){
+    c.activity = c.activity || [];
+    c.activity.unshift({id:Date.now()+Math.random(), system:true, text:`Картку переміщено до "${stage.name}"`, time:nowTimeStr()});
+    c.stageId = stageId;
+    renderHrBoard();
+    renderVacanciesTable();
+    refreshCandidateDetailIfOpen();
+    fbScheduleSave();
+  }
+}
+function stageById(vac, stageId){ return vac ? vac.stages.find(s=>s.id===stageId) : null; }
+
+/* ---- редактор стадій: додати/перейменувати/архівувати/відновити/переставити ---- */
+let editingHrStages = [];
+let hrStageDraggedIdx = null;
+function toggleHrStageEditor(){
+  const vac = currentHrVacancy();
+  if(!vac) return;
+  const isOpen = document.getElementById('hrStageEditorBoard').style.display !== 'none';
+  if(isOpen){ cancelHrStageEditor(); return; }
+  document.getElementById('hrBoard').style.display = 'none';
+  document.getElementById('hrStageEditorBoard').style.display = '';
+  document.getElementById('hrStageEditorActions').style.display = 'flex';
+  editingHrStages = vac.stages.map(s => ({...s}));
+  renderHrStageEditor();
+}
+function cancelHrStageEditor(){
+  document.getElementById('hrBoard').style.display = '';
+  document.getElementById('hrStageEditorBoard').style.display = 'none';
+  document.getElementById('hrStageEditorActions').style.display = 'none';
+  renderHrBoard();
+}
+function renderHrStageEditor(){
+  const box = document.getElementById('hrStageEditorBoard');
+  if(!box) return;
+  const active = editingHrStages.filter(s=>!s.archived);
+  const archived = editingHrStages.filter(s=>s.archived);
+  box.innerHTML = `
+    <div class="stage-edit-list" style="display:flex;flex-direction:column;gap:8px;max-width:520px;">
+      ${active.map((s) => {
+        const i = editingHrStages.indexOf(s);
+        return `
+        <div class="stage-edit-card" draggable="true" ondragstart="hrStageDragStart(event,${i})" ondragover="hrStageDragOver(event)" ondrop="hrStageDrop(event,${i})" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);">
+          <span style="cursor:grab;color:var(--text-muted);">⋮⋮</span>
+          <input type="text" value="${s.name}" oninput="editingHrStages[${i}].name=this.value" style="flex:1;border:none;background:transparent;font-size:13.5px;font-weight:600;color:var(--text);">
+          <button type="button" class="danger-icon-btn" style="width:28px;height:28px;" title="Архівувати стадію" onclick="archiveHrStageEditorItem(${i})">${trashIconSvg(14)}</button>
+        </div>`;
+      }).join('')}
+      <button type="button" class="btn secondary" onclick="addHrStageEditorItem()">+ Додати стадію</button>
+      ${archived.length ? `
+      <div class="section-title" style="font-size:12px;margin-top:14px;color:var(--text-muted);">Архівовані стадії</div>
+      ${archived.map((s) => {
+        const i = editingHrStages.indexOf(s);
+        return `
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface-2);border:1px dashed var(--border);border-radius:var(--radius-sm);opacity:.7;">
+          <span style="flex:1;font-size:13.5px;">${s.name}</span>
+          <button type="button" class="btn secondary small" onclick="restoreHrStageEditorItem(${i})">Відновити</button>
+        </div>`;
+      }).join('')}` : ''}
+    </div>`;
+}
+function addHrStageEditorItem(){
+  editingHrStages.push({id:'st'+Date.now()+Math.floor(Math.random()*1000), name:'Нова стадія', archived:false});
+  renderHrStageEditor();
+}
+function archiveHrStageEditorItem(i){ editingHrStages[i].archived = true; renderHrStageEditor(); }
+function restoreHrStageEditorItem(i){ editingHrStages[i].archived = false; renderHrStageEditor(); }
+function hrStageDragStart(e, i){ hrStageDraggedIdx = i; }
+function hrStageDragOver(e){ e.preventDefault(); }
+function hrStageDrop(e, i){
+  e.preventDefault();
+  if(hrStageDraggedIdx === null || hrStageDraggedIdx === i) return;
+  const [moved] = editingHrStages.splice(hrStageDraggedIdx,1);
+  editingHrStages.splice(i,0,moved);
+  hrStageDraggedIdx = null;
+  renderHrStageEditor();
+}
+async function saveHrStageEditor(){
+  const vac = currentHrVacancy();
+  if(!vac) return;
+  if(!editingHrStages.some(s=>!s.archived)){ showAlertModal('Має лишитись хоча б одна активна стадія.', 'Неможливо зберегти'); return; }
+  const ok = await showConfirmModal({title:'Зберегти зміни стадій', text:`Застосувати зміни до воронки вакансії "${vac.title}"?`, okText:'Зберегти'});
+  if(!ok) return;
+  vac.stages = editingHrStages.map(s=>({...s}));
+  document.getElementById('hrBoard').style.display = '';
+  document.getElementById('hrStageEditorBoard').style.display = 'none';
+  document.getElementById('hrStageEditorActions').style.display = 'none';
+  renderHrBoard();
+  logActivity(`Відредаговано стадії воронки вакансії "${vac.title}"`, {target:{type:'view', name:'hr-pipeline'}, silent:true});
+  fbScheduleSave();
+}
+
+/* =========================================================
+   HR: КАРТКА КАНДИДАТА
+   ========================================================= */
+let editingCandidateId = null;
+let candCreateVacancyId = null;
+let candCreateStageId = null;
+function candidateById(id){ return CANDIDATES.find(c=>c.id===id); }
+function openCandidatePanel(id, vacancyId, stageId){
+  editingCandidateId = id;
+  const extra = document.getElementById('candExtraSections');
+  const stageField = document.getElementById('candStageField');
+  const deleteBtn = document.getElementById('candDeleteBtn');
+  if(id === null){
+    candCreateVacancyId = vacancyId;
+    candCreateStageId = stageId;
+    const vac = vacancyById(vacancyId);
+    document.getElementById('candidatePanelTitle').textContent = 'Нова картка';
+    document.getElementById('candName').value = '';
+    document.getElementById('candPosition').value = vac ? vac.title : '';
+    document.getElementById('candDescription').value = '';
+    stageField.style.display = 'none';
+    extra.style.display = 'none';
+    deleteBtn.style.display = 'none';
+    document.getElementById('candSaveBtn').textContent = 'Створити картку';
+  } else {
+    const c = candidateById(id);
+    if(!c) return;
+    const vac = vacancyById(c.vacancyId);
+    document.getElementById('candidatePanelTitle').textContent = c.name;
+    document.getElementById('candName').value = c.name;
+    document.getElementById('candPosition').value = c.position || '';
+    document.getElementById('candDescription').value = c.description || '';
+    stageField.style.display = '';
+    const stageMenu = document.getElementById('candStageSelectMenu');
+    stageMenu.dataset.select = 'candStage';
+    stageMenu.innerHTML = activeStages(vac).map(s=>`<li data-value="${s.id}" class="${s.id===c.stageId?'selected':''}">${s.name}</li>`).join('');
+    setCselectValue('candStageSelect', c.stageId);
+    extra.style.display = '';
+    renderCandidateLabels(c);
+    renderCandidateAttachments(c);
+    renderCandidateChecklist(c);
+    renderCandidateActivity(c);
+    deleteBtn.style.display = '';
+    document.getElementById('candSaveBtn').textContent = 'Зберегти';
+  }
+  openPanel('candidatePanel');
+}
+function saveCandidateBasicFields(){
+  const name = document.getElementById('candName').value.trim();
+  if(!name){ showAlertModal('Вкажіть ім\'я кандидата.', 'Порожнє поле'); return; }
+  const position = document.getElementById('candPosition').value.trim();
+  const description = document.getElementById('candDescription').value.trim();
+  if(editingCandidateId === null){
+    const vac = vacancyById(candCreateVacancyId);
+    if(!vac) return;
+    const c = {
+      id: nextCandidateId++, vacancyId: vac.id, stageId: candCreateStageId,
+      name, position, description, labels:[], attachments:[],
+      checklist: DEFAULT_HIRING_STEPS.map(text=>({text, done:false})),
+      activity: [{id:Date.now()+Math.random(), system:true, text:`Картку створено у стадії "${(stageById(vac,candCreateStageId)||{}).name||''}"`, time:nowTimeStr()}],
+    };
+    CANDIDATES.unshift(c);
+    renderHrBoard();
+    renderVacanciesTable();
+    logActivity(`Додано кандидата "${name}" на вакансію "${vac.title}"`, {target:{type:'view', name:'hr-pipeline'}});
+    fbScheduleSave();
+    openCandidatePanel(c.id);
+  } else {
+    const c = candidateById(editingCandidateId);
+    if(!c) return;
+    const newStageId = getCselectValue('candStageSelect');
+    const vac = vacancyById(c.vacancyId);
+    if(newStageId && newStageId !== c.stageId){
+      const stage = stageById(vac, newStageId);
+      c.activity = c.activity || [];
+      c.activity.unshift({id:Date.now()+Math.random(), system:true, text:`Картку переміщено до "${stage?stage.name:newStageId}"`, time:nowTimeStr()});
+      c.stageId = newStageId;
+    }
+    Object.assign(c, {name, position, description});
+    document.getElementById('candidatePanelTitle').textContent = c.name;
+    renderHrBoard();
+    renderCandidateActivity(c);
+    logActivity(`Відредаговано картку кандидата "${c.name}"`, {target:{type:'view', name:'hr-pipeline'}, silent:true});
+    fbScheduleSave();
+  }
+}
+async function deleteCandidate(){
+  if(editingCandidateId === null) return;
+  const c = candidateById(editingCandidateId);
+  if(!c) return;
+  const ok = await showConfirmModal({title:'Видалити картку', text:`Видалити кандидата "${c.name}"? Дію не можна скасувати.`, okText:'Видалити', danger:true});
+  if(!ok) return;
+  CANDIDATES = CANDIDATES.filter(x=>x.id!==c.id);
+  closeAllPanels();
+  renderHrBoard();
+  renderVacanciesTable();
+  logActivity(`Видалено кандидата "${c.name}"`, {target:{type:'view', name:'hr-pipeline'}});
+  fbScheduleSave();
+}
+function refreshCandidateDetailIfOpen(){
+  const panel = document.getElementById('candidatePanel');
+  if(panel && panel.classList.contains('open') && editingCandidateId !== null) openCandidatePanel(editingCandidateId);
+}
+
+/* ---- мітки ---- */
+function renderCandidateLabels(c){
+  const el = document.getElementById('candLabelsChips');
+  if(!el) return;
+  el.innerHTML = (c.labels||[]).map((l,i)=>`<span class="label-chip" style="background:${l.color};">${l.text}<button type="button" onclick="removeCandidateLabel(${i})">✕</button></span>`).join('') || '<span style="font-size:12px;color:var(--text-muted);">Міток ще немає.</span>';
+}
+function addCandidateLabel(){
+  if(editingCandidateId === null) return;
+  const c = candidateById(editingCandidateId);
+  if(!c) return;
+  const input = document.getElementById('candLabelInput');
+  const text = input.value.trim();
+  if(!text) return;
+  c.labels = c.labels || [];
+  const color = CANDIDATE_LABEL_COLORS[c.labels.length % CANDIDATE_LABEL_COLORS.length];
+  c.labels.push({text, color});
+  input.value = '';
+  renderCandidateLabels(c);
+  renderHrBoard();
+  fbScheduleSave();
+}
+function removeCandidateLabel(i){
+  if(editingCandidateId === null) return;
+  const c = candidateById(editingCandidateId);
+  if(!c) return;
+  c.labels.splice(i,1);
+  renderCandidateLabels(c);
+  renderHrBoard();
+  fbScheduleSave();
+}
+
+/* ---- вкладення (лише назва файлу, без реального зберігання — як у картці угоди) ---- */
+function renderCandidateAttachments(c){
+  const el = document.getElementById('candAttachList');
+  if(!el) return;
+  el.innerHTML = (c.attachments||[]).map((a,i)=>`<div class="attach-row">📎 ${a.name}<button type="button" class="row-icon-btn danger" title="Видалити" onclick="removeCandidateAttachment(${i})">${trashIconSvg(14)}</button></div>`).join('') || '<div class="empty-hint">Вкладень ще немає.</div>';
+}
+function addCandidateAttachment(e){
+  if(editingCandidateId === null) return;
+  const file = e.target.files[0];
+  if(!file) return;
+  const c = candidateById(editingCandidateId);
+  if(!c) return;
+  c.attachments = c.attachments || [];
+  c.attachments.push({name:file.name});
+  e.target.value = '';
+  renderCandidateAttachments(c);
+  renderHrBoard();
+  fbScheduleSave();
+}
+function removeCandidateAttachment(i){
+  if(editingCandidateId === null) return;
+  const c = candidateById(editingCandidateId);
+  if(!c) return;
+  c.attachments.splice(i,1);
+  renderCandidateAttachments(c);
+  renderHrBoard();
+  fbScheduleSave();
+}
+
+/* ---- Hiring steps: чекліст + прогрес-бар ---- */
+function renderCandidateChecklist(c){
+  const el = document.getElementById('candChecklistItems');
+  const pctEl = document.getElementById('candChecklistPct');
+  const barEl = document.getElementById('candChecklistBar');
+  if(!el) return;
+  const items = c.checklist || [];
+  const done = items.filter(i=>i.done).length;
+  const pct = items.length ? Math.round(done/items.length*100) : 0;
+  if(pctEl) pctEl.textContent = items.length ? `${pct}%` : '';
+  if(barEl) barEl.style.width = pct + '%';
+  el.innerHTML = items.map((it,i)=>`
+    <div class="checklist-row${it.done?' is-done':''}">
+      <label class="chk"><input type="checkbox" ${it.done?'checked':''} onchange="toggleCandidateChecklistItem(${i})"><span></span></label>
+      <span class="checklist-text">${it.text}</span>
+      <button type="button" class="row-icon-btn danger" title="Видалити пункт" onclick="deleteCandidateChecklistItem(${i})">${trashIconSvg(13)}</button>
+    </div>`).join('') || '<div class="empty-hint">Пунктів ще немає.</div>';
+}
+function toggleCandidateChecklistItem(i){
+  if(editingCandidateId === null) return;
+  const c = candidateById(editingCandidateId);
+  if(!c) return;
+  c.checklist[i].done = !c.checklist[i].done;
+  renderCandidateChecklist(c);
+  renderHrBoard();
+  fbScheduleSave();
+}
+function addCandidateChecklistItem(){
+  if(editingCandidateId === null) return;
+  const c = candidateById(editingCandidateId);
+  if(!c) return;
+  const input = document.getElementById('candChecklistInput');
+  const text = input.value.trim();
+  if(!text) return;
+  c.checklist = c.checklist || [];
+  c.checklist.push({text, done:false});
+  input.value = '';
+  renderCandidateChecklist(c);
+  renderHrBoard();
+  fbScheduleSave();
+}
+function deleteCandidateChecklistItem(i){
+  if(editingCandidateId === null) return;
+  const c = candidateById(editingCandidateId);
+  if(!c) return;
+  c.checklist.splice(i,1);
+  renderCandidateChecklist(c);
+  renderHrBoard();
+  fbScheduleSave();
+}
+
+/* ---- коментарі й активність ---- */
+function renderCandidateActivity(c){
+  const el = document.getElementById('candActivityList');
+  if(!el) return;
+  const items = c.activity || [];
+  el.innerHTML = items.length ? items.map(a=>`
+    <div class="timeline-item">${a.text}<div class="timeline-meta">${a.system ? 'Система' : (a.author||'')} · ${a.time||''}</div></div>`).join('') : '<div class="empty-hint">Ще немає активності.</div>';
+}
+function addCandidateComment(){
+  if(editingCandidateId === null) return;
+  const c = candidateById(editingCandidateId);
+  if(!c) return;
+  const input = document.getElementById('candCommentInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const me = currentUserRecord();
+  c.activity = c.activity || [];
+  c.activity.unshift({id:Date.now()+Math.random(), system:false, text, author: me?me.name:'', time:nowTimeStr()});
+  input.value = '';
+  renderCandidateActivity(c);
+  fbScheduleSave();
+}
+
+/* =========================================================
+   HR: БАЗА СПЕЦІАЛІСТІВ
+   ========================================================= */
+let editingSpecialistId = null;
+let tempSpecNiches = [];
+let tempSpecLanguages = [];
+let tempSpecAttachments = [];
+function specialistById(id){ return SPECIALISTS.find(s=>s.id===id); }
+function renderSpecNicheSelectMenu(){
+  const menu = document.getElementById('specNicheSelectMenu');
+  if(!menu) return;
+  menu.innerHTML = SPEC_DIRECTIONS.map(n => `
+    <li data-value="${n}" onclick="event.stopPropagation()">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${tempSpecNiches.includes(n)?'checked':''} onchange="toggleSpecNicheChoice('${n}')"><span></span></label> ${n}
+    </li>`).join('') + `
+    <li onclick="event.stopPropagation()" style="display:flex;gap:6px;padding:8px;">
+      <input type="text" id="specNewDirectionInput" placeholder="Новий напрямок..." style="flex:1;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12.5px;background:var(--surface);color:var(--text);" onclick="event.stopPropagation()">
+      <button type="button" class="btn secondary small" onclick="event.stopPropagation();addSpecDirectionInline()">+</button>
+    </li>`;
+  const label = document.getElementById('specNicheSelectLabel');
+  if(label) label.textContent = tempSpecNiches.length ? tempSpecNiches.join(', ') : 'Оберіть напрямки';
+}
+function toggleSpecNicheChoice(name){
+  const idx = tempSpecNiches.indexOf(name);
+  if(idx === -1) tempSpecNiches.push(name); else tempSpecNiches.splice(idx,1);
+  renderSpecNicheSelectMenu();
+}
+function addSpecDirectionInline(){
+  const input = document.getElementById('specNewDirectionInput');
+  const name = input.value.trim();
+  if(!name) return;
+  if(!SPEC_DIRECTIONS.includes(name)) SPEC_DIRECTIONS.push(name);
+  if(!tempSpecNiches.includes(name)) tempSpecNiches.push(name);
+  input.value = '';
+  renderSpecNicheSelectMenu();
+  renderSpecNicheFilterOptions();
+  fbScheduleSave();
+}
+function addSpecLanguage(){
+  const input = document.getElementById('specLangInput');
+  const lang = input.value.trim();
+  if(!lang) return;
+  const level = getCselectValue('specLangLevelSelect') || 'B2';
+  tempSpecLanguages.push({lang, level});
+  input.value = '';
+  renderSpecLangChips();
+}
+function removeSpecLanguage(i){ tempSpecLanguages.splice(i,1); renderSpecLangChips(); }
+function renderSpecLangChips(){
+  const el = document.getElementById('specLangChips');
+  if(!el) return;
+  el.innerHTML = tempSpecLanguages.map((l,i)=>`<span class="label-chip" style="background:var(--accent-1);">${l.lang} · ${l.level}<button type="button" onclick="removeSpecLanguage(${i})">✕</button></span>`).join('');
+}
+function addSpecAttachment(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  tempSpecAttachments.push({name:file.name});
+  e.target.value = '';
+  renderSpecAttachList();
+}
+function removeSpecAttachment(i){ tempSpecAttachments.splice(i,1); renderSpecAttachList(); }
+function renderSpecAttachList(){
+  const el = document.getElementById('specAttachList');
+  if(!el) return;
+  el.innerHTML = tempSpecAttachments.map((a,i)=>`<div class="attach-row">📎 ${a.name}<button type="button" class="row-icon-btn danger" title="Видалити" onclick="removeSpecAttachment(${i})">${trashIconSvg(14)}</button></div>`).join('');
+}
+function openSpecialistPanel(id){
+  editingSpecialistId = id;
+  const deleteBtn = document.getElementById('specDeleteBtn');
+  if(id === null){
+    document.getElementById('specialistPanelTitle').textContent = 'Новий спеціаліст';
+    document.getElementById('specName').value = '';
+    document.getElementById('specPhone').value = '';
+    document.getElementById('specContact').value = '';
+    document.getElementById('specNotes').value = '';
+    setCselectValue('specLevelSelect', 'Middle');
+    tempSpecNiches = [];
+    tempSpecLanguages = [];
+    tempSpecAttachments = [];
+    deleteBtn.style.display = 'none';
+    document.getElementById('specSaveBtn').textContent = 'Створити';
+  } else {
+    const s = specialistById(id);
+    if(!s) return;
+    document.getElementById('specialistPanelTitle').textContent = s.name;
+    document.getElementById('specName').value = s.name;
+    document.getElementById('specPhone').value = s.phone || '';
+    document.getElementById('specContact').value = s.contact || '';
+    document.getElementById('specNotes').value = s.notes || '';
+    setCselectValue('specLevelSelect', s.level || 'Middle');
+    tempSpecNiches = [...(s.niches||[])];
+    tempSpecLanguages = [...(s.languages||[])];
+    tempSpecAttachments = [...(s.attachments||[])];
+    deleteBtn.style.display = '';
+    document.getElementById('specSaveBtn').textContent = 'Зберегти';
+  }
+  renderSpecNicheSelectMenu();
+  renderSpecLangChips();
+  renderSpecAttachList();
+  openPanel('specialistPanel');
+}
+function saveSpecialist(){
+  const name = document.getElementById('specName').value.trim();
+  if(!name){ showAlertModal('Вкажіть ім\'я спеціаліста.', 'Порожнє поле'); return; }
+  const phone = document.getElementById('specPhone').value.trim();
+  const contact = document.getElementById('specContact').value.trim();
+  const notes = document.getElementById('specNotes').value.trim();
+  const level = getCselectValue('specLevelSelect') || 'Middle';
+  const me = currentUserRecord();
+  if(editingSpecialistId === null){
+    SPECIALISTS.unshift({
+      id: nextSpecialistId++, name, phone, contact, notes, level,
+      niches:[...tempSpecNiches], languages:[...tempSpecLanguages], attachments:[...tempSpecAttachments],
+      createdBy: me?me.id:'ostap', createdAt: new Date().toLocaleDateString('uk-UA'),
+    });
+    logActivity(`Додано спеціаліста "${name}" до бази`, {target:{type:'view', name:'specialists'}});
+  } else {
+    const s = specialistById(editingSpecialistId);
+    if(!s) return;
+    Object.assign(s, {name, phone, contact, notes, level, niches:[...tempSpecNiches], languages:[...tempSpecLanguages], attachments:[...tempSpecAttachments]});
+    logActivity(`Відредаговано спеціаліста "${name}"`, {target:{type:'view', name:'specialists'}, silent:true});
+  }
+  renderSpecialistsTable();
+  renderSpecNicheFilterOptions();
+  renderHrDashboard();
+  fbScheduleSave();
+  closeAllPanels();
+}
+async function deleteSpecialist(){
+  if(editingSpecialistId === null) return;
+  const s = specialistById(editingSpecialistId);
+  if(!s) return;
+  const ok = await showConfirmModal({title:'Видалити спеціаліста', text:`Видалити "${s.name}" з бази спеціалістів?`, okText:'Видалити', danger:true});
+  if(!ok) return;
+  SPECIALISTS = SPECIALISTS.filter(x=>x.id!==s.id);
+  closeAllPanels();
+  renderSpecialistsTable();
+  renderHrDashboard();
+  logActivity(`Видалено спеціаліста "${s.name}" з бази`, {target:{type:'view', name:'specialists'}});
+  fbScheduleSave();
+}
+
+/* ---- фільтри бази спеціалістів (пошук + напрямок + рівень + мови) ---- */
+let specNicheFilter = [];
+let specLevelFilter = [];
+let specLangFilterVals = [];
+function renderSpecNicheFilterOptions(){
+  const menu = document.getElementById('specNicheMultiMenu');
+  if(!menu) return;
+  menu.dataset.select = 'specNicheFilter';
+  menu.innerHTML = SPEC_DIRECTIONS.map(n => `
+    <li data-value="${n}" onclick="toggleSpecNicheFilter(event,'${n}')">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${specNicheFilter.includes(n)?'checked':''} onchange="toggleSpecNicheFilter(event,'${n}')"><span></span></label> ${n}
+    </li>`).join('');
+}
+function toggleSpecNicheFilter(e, name){
+  e.stopPropagation();
+  const idx = specNicheFilter.indexOf(name);
+  if(idx === -1) specNicheFilter.push(name); else specNicheFilter.splice(idx,1);
+  document.getElementById('specNicheMultiLabel').textContent = specNicheFilter.length ? `Обрано: ${specNicheFilter.length}` : 'Усі напрямки';
+  document.querySelectorAll('#specNicheMultiMenu input[type=checkbox]').forEach((cb,i)=>cb.checked = specNicheFilter.includes(SPEC_DIRECTIONS[i]));
+  renderSpecialistsTable();
+}
+function renderSpecLevelFilterOptions(){
+  const menu = document.getElementById('specLevelMultiMenu');
+  if(!menu) return;
+  menu.dataset.select = 'specLevelFilter';
+  const levels = ['Junior','Middle','Senior','Lead'];
+  menu.innerHTML = levels.map(n => `
+    <li data-value="${n}" onclick="toggleSpecLevelFilter(event,'${n}')">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${specLevelFilter.includes(n)?'checked':''} onchange="toggleSpecLevelFilter(event,'${n}')"><span></span></label> ${n}
+    </li>`).join('');
+}
+function toggleSpecLevelFilter(e, name){
+  e.stopPropagation();
+  const idx = specLevelFilter.indexOf(name);
+  if(idx === -1) specLevelFilter.push(name); else specLevelFilter.splice(idx,1);
+  document.getElementById('specLevelMultiLabel').textContent = specLevelFilter.length ? `Обрано: ${specLevelFilter.length}` : 'Усі рівні';
+  renderSpecialistsTable();
+}
+function renderSpecLangFilterOptions(){
+  const menu = document.getElementById('specLangMultiMenu');
+  if(!menu) return;
+  menu.dataset.select = 'specLangFilter';
+  const langs = [...new Set(SPECIALISTS.flatMap(s=>(s.languages||[]).map(l=>l.lang)))];
+  menu.innerHTML = langs.length ? langs.map(n => `
+    <li data-value="${n}" onclick="toggleSpecLangFilter(event,'${n}')">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${specLangFilterVals.includes(n)?'checked':''} onchange="toggleSpecLangFilter(event,'${n}')"><span></span></label> ${n}
+    </li>`).join('') : '<li style="color:var(--text-muted);font-size:12.5px;padding:8px;">Мов ще немає</li>';
+}
+function toggleSpecLangFilter(e, name){
+  e.stopPropagation();
+  const idx = specLangFilterVals.indexOf(name);
+  if(idx === -1) specLangFilterVals.push(name); else specLangFilterVals.splice(idx,1);
+  document.getElementById('specLangMultiLabel').textContent = specLangFilterVals.length ? `Обрано: ${specLangFilterVals.length}` : 'Усі мови';
+  renderSpecialistsTable();
+}
+function renderSpecialistsTable(){
+  const tbody = document.getElementById('specialistsTableBody');
+  if(!tbody) return;
+  renderSpecNicheFilterOptions();
+  renderSpecLevelFilterOptions();
+  renderSpecLangFilterOptions();
+  const q = (document.getElementById('specSearchInput')?.value || '').trim().toLowerCase();
+  let rows = SPECIALISTS;
+  if(q) rows = rows.filter(s => s.name.toLowerCase().includes(q) || (s.phone||'').includes(q) || (s.contact||'').toLowerCase().includes(q));
+  if(specNicheFilter.length) rows = rows.filter(s => (s.niches||[]).some(n=>specNicheFilter.includes(n)));
+  if(specLevelFilter.length) rows = rows.filter(s => specLevelFilter.includes(s.level));
+  if(specLangFilterVals.length) rows = rows.filter(s => (s.languages||[]).some(l=>specLangFilterVals.includes(l.lang)));
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty-hint">Спеціалістів за обраними фільтрами не знайдено.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(s => `
+    <tr class="clickable" onclick="openSpecialistPanel(${s.id})">
+      <td>${s.name}</td>
+      <td>${(s.niches||[]).join(', ')||'—'}</td>
+      <td>${s.level||'—'}</td>
+      <td>${(s.languages||[]).map(l=>`${l.lang} (${l.level})`).join(', ')||'—'}</td>
+      <td>${[s.phone, s.contact].filter(Boolean).join(' · ')||'—'}</td>
+      <td onclick="event.stopPropagation()"><button class="danger-icon-btn" style="width:30px;height:30px;" title="Видалити" onclick="editingSpecialistId=${s.id};deleteSpecialist()">${trashIconSvg()}</button></td>
+    </tr>`).join('');
+}
+
+/* =========================================================
+   HR: ГОЛОВНА (дашборд, адаптований під HR)
+   ========================================================= */
+function renderHrDashboard(){
+  const openEl = document.getElementById('hrStatOpenVacancies');
+  if(!openEl) return;
+  openEl.textContent = VACANCIES.filter(v=>v.status==='open').length;
+  document.getElementById('hrStatCandidates').textContent = CANDIDATES.length;
+  document.getElementById('hrStatSpecialists').textContent = SPECIALISTS.length;
+  const list = document.getElementById('hrDashboardVacancies');
+  if(!list) return;
+  const openVacs = VACANCIES.filter(v=>v.status==='open');
+  if(!openVacs.length){ list.innerHTML = '<div class="empty-hint">Немає відкритих вакансій.</div>'; return; }
+  list.innerHTML = openVacs.map(v => {
+    const count = CANDIDATES.filter(c=>c.vacancyId===v.id).length;
+    return `<div class="task-item"><span class="row-click" onclick="state.hrVacancyId=${v.id};showView(null,'hr-pipeline');renderHrPipelineSelectOptions();renderHrBoard();">${v.title}</span><span class="badge">${count} кандидат${count===1?'':count>=2&&count<=4?'и':'ів'}</span></div>`;
+  }).join('');
+}
+
+/* =========================================================
    ACCOUNT / CREDENTIALS
    ========================================================= */
 let acctEditing = false;
@@ -5216,7 +6306,7 @@ function renderAccountView(){
   document.getElementById('acctEditActions').style.display = 'none';
   const editBtn = document.getElementById('acctEditBtn');
   if(editBtn){ editBtn.style.display = ''; editBtn.textContent = 'Редагувати'; editBtn.disabled = false; }
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер'};
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR'};
   document.getElementById('acctRole').value = roleLabels[state.role];
   updateHeaderAvatars();
   renderHistory();
@@ -5276,7 +6366,7 @@ function saveAccountEdit(){
 // сам CTO бачить усіх, включно з іншими керівниками відділу.
 function renderCredentialsTable(){
   const tbody = document.getElementById('credentialsTableBody');
-  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO'};
+  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO', hr:'HR'};
   const rows = state.role === 'admin' ? USERS.filter(u=>u.role!=='cto') : USERS;
   tbody.innerHTML = rows.map(u => `
     <tr>
@@ -5652,10 +6742,17 @@ function fbApplyRemoteData(data){
       loadStoredPhotos();
     }
     if(Array.isArray(data.pipelines) && data.pipelines.length){ PIPELINES.length = 0; data.pipelines.forEach(p=>PIPELINES.push(p)); }
+    if(Array.isArray(data.vacancies)) VACANCIES = data.vacancies;
+    if(Array.isArray(data.candidates)) CANDIDATES = data.candidates;
+    if(Array.isArray(data.specDirections) && data.specDirections.length) SPEC_DIRECTIONS = data.specDirections;
+    if(Array.isArray(data.specialists)) SPECIALISTS = data.specialists;
     if(typeof data.nextLeadId === 'number') nextLeadId = Math.max(nextLeadId, data.nextLeadId);
     if(typeof data.nextReportId === 'number') nextReportId = Math.max(nextReportId, data.nextReportId);
     if(typeof data.nextColdBaseId === 'number') nextColdBaseId = Math.max(nextColdBaseId, data.nextColdBaseId);
     if(typeof data.nextColdContactId === 'number') nextColdContactId = Math.max(nextColdContactId, data.nextColdContactId);
+    if(typeof data.nextVacancyId === 'number') nextVacancyId = Math.max(nextVacancyId, data.nextVacancyId);
+    if(typeof data.nextCandidateId === 'number') nextCandidateId = Math.max(nextCandidateId, data.nextCandidateId);
+    if(typeof data.nextSpecialistId === 'number') nextSpecialistId = Math.max(nextSpecialistId, data.nextSpecialistId);
 
     // Захист від дублікатів id серед воронок (могли лишитись з попередніх
     // сценаріїв синхронізації) — якщо дві воронки мають однаковий id, будь-яка
@@ -5702,6 +6799,13 @@ function fbApplyRemoteData(data){
       renderClientsPipelineFilterOptions();
       renderTaskManagerMultiOptions();
       renderReportManagerMultiOptions();
+      renderVacanciesTable();
+      renderHrPipelineSelectOptions();
+      renderHrBoard();
+      refreshVacancyDetailIfOpen();
+      renderSpecialistsTable();
+      refreshCandidateDetailIfOpen();
+      renderHrDashboard();
       scheduleAllUpcomingMeetings();
       updateHeaderAvatars();
       updateAccountSwitchUI();
@@ -5730,10 +6834,17 @@ function fbSaveNow(){
     history: HISTORY.slice(0,200),
     users: USERS,
     pipelines: PIPELINES,
+    vacancies: VACANCIES,
+    candidates: CANDIDATES,
+    specDirections: SPEC_DIRECTIONS,
+    specialists: SPECIALISTS,
     nextLeadId: nextLeadId,
     nextReportId: nextReportId,
     nextColdBaseId: nextColdBaseId,
     nextColdContactId: nextColdContactId,
+    nextVacancyId: nextVacancyId,
+    nextCandidateId: nextCandidateId,
+    nextSpecialistId: nextSpecialistId,
     updatedAt: Date.now()
   };
   fbDocRef.set(payload, {merge:true}).catch(function(err){ console.error('Firestore save failed:', err); });
