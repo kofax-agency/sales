@@ -346,8 +346,22 @@
   .label-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff;}
   .label-chip button{background:none;border:none;color:inherit;opacity:.75;cursor:pointer;font-size:13px;line-height:1;padding:0;}
   .label-chip button:hover{opacity:1;}
-  .lang-level-native{background:rgba(255,255,255,.22);border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:700;padding:2px 4px;cursor:pointer;}
-  .lang-level-native option{color:#111;}
+  /* ---------- Мови спеціаліста: рядки "назва — рівень" у картці ---------- */
+  .spec-lang-row{display:flex;align-items:center;gap:8px;}
+  .spec-lang-row-label{flex:1;min-width:110px;padding:9px 12px;font-size:13px;font-weight:600;color:var(--text);}
+  .spec-lang-name-input{flex:1;min-width:110px;}
+  .spec-lang-level-cselect{flex-shrink:0;}
+  .spec-lang-level-cselect .cselect-trigger{min-width:96px;}
+  .spec-lang-row-remove{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:15px;line-height:1;padding:6px;flex-shrink:0;transition:color .12s;}
+  .spec-lang-row-remove:hover{color:var(--danger, #E5484D);}
+  /* ---------- Комбінований фільтр "Мова / рівень" (два стовпці в одному попапі) ---------- */
+  .lang-combo-menu{display:grid;grid-template-columns:1fr 1px 1fr;width:300px;padding:8px;max-height:none;overflow:visible;}
+  .lang-combo-col{display:flex;flex-direction:column;min-width:0;}
+  .lang-combo-divider{background:var(--border);margin:2px 6px;}
+  .lang-combo-col-title{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);padding:4px 8px 6px;}
+  .lang-combo-list{list-style:none;margin:0;padding:0;max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;}
+  .lang-combo-list li[style]{cursor:default;}
+  .lang-combo-menu .menu-footer{grid-column:1/-1;display:flex;justify-content:space-between;gap:8px;}
   .checklist-row{display:flex;align-items:center;gap:8px;padding:6px 2px;}
   .checklist-row .checklist-text{flex:1;font-size:13.5px;}
   .checklist-row.is-done .checklist-text{text-decoration:line-through;color:var(--text-muted);}
@@ -1265,16 +1279,28 @@
             </div>
           </div>
           <div class="field">
-            <label>Мова</label>
-            <select id="specLangFilterSelect" style="min-width:140px;" onchange="specLangFilterLang=this.value; renderSpecialistsTable();">
-              <option value="">Всі мови</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Рівень мови</label>
-            <select id="specLangLevelFilterSelect" style="min-width:120px;" onchange="specLangFilterLevelVal=this.value; renderSpecialistsTable();">
-              <option value="">Всі рівні</option>
-            </select>
+            <label>Мова / рівень</label>
+            <div class="cselect" id="specLangComboSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:190px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="specLangComboLabel">Всі мови й рівні</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="cselect-menu lang-combo-menu">
+                <div class="lang-combo-col">
+                  <div class="lang-combo-col-title">Мова</div>
+                  <ul class="lang-combo-list" id="specLangComboLangList" data-select="specLangComboLang"></ul>
+                </div>
+                <div class="lang-combo-divider"></div>
+                <div class="lang-combo-col">
+                  <div class="lang-combo-col-title">Рівень</div>
+                  <ul class="lang-combo-list" id="specLangComboLevelList" data-select="specLangComboLevel"></ul>
+                </div>
+                <div class="menu-footer">
+                  <button type="button" class="btn secondary small" onclick="event.stopPropagation();resetSpecLangCombo()">Скинути</button>
+                  <button type="button" class="btn small" onclick="event.stopPropagation();document.getElementById('specLangComboSelect').classList.remove('open')">Готово</button>
+                </div>
+              </div>
+            </div>
           </div>
           <button class="btn" onclick="renderSpecialistsTable()">Застосувати фільтр</button>
           <button class="btn" style="margin-left:auto;" onclick="openSpecialistPanel(null)">+ Додати спеціаліста</button>
@@ -1378,14 +1404,8 @@
     </div>
     <div class="field">
       <label>Мови</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <select id="specLangAddSelect" style="flex:1;min-width:140px;" onchange="addSpecLangFromSelect(this.value); this.value='';">
-          <option value="">+ Додати мову...</option>
-        </select>
-        <input type="text" id="specNewLanguageInput" style="flex:1;min-width:120px;" placeholder="Своя мова...">
-        <button type="button" class="btn secondary" onclick="addSpecLangCustom()">+</button>
-      </div>
-      <div id="specLangChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+      <div id="specLangRows" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <button type="button" class="btn secondary small" style="align-self:flex-start;margin-top:2px;" onclick="addSpecLangRow()">+ Додати мову</button>
     </div>
     <div class="field"><label>Резюме / файли</label>
       <label class="file-btn" style="margin:0;">📎 Додати файл<input type="file" style="display:none" onchange="addSpecAttachment(event)"></label>
@@ -2751,6 +2771,10 @@ document.addEventListener('click', function(e){
   if(selectType === 'hrVacancy'){
     state.hrVacancyId = Number(li.dataset.value);
     renderHrBoard();
+  }
+  if(selectType === 'specLangRowLevel'){
+    const idx = Number(menu.dataset.row);
+    if(tempSpecLangRows[idx]) tempSpecLangRows[idx].level = li.dataset.value || '';
   }
 });
 
@@ -6086,7 +6110,11 @@ function deleteCandidateChecklistItem(i){
    ========================================================= */
 let editingSpecialistId = null;
 let tempSpecNiches = [];
-let tempSpecLanguages = [];
+// Кожен рядок: {lang, level, fixed}. Перші три (укр/рос/англ) завжди
+// присутні (fixed:true, назва не редагується) — рівень "—" означає, що
+// мова не заповнена й не потрапить у збережений запис. Додані вручну рядки
+// (fixed:false) мають текстове поле для назви й можна видаляти.
+let tempSpecLangRows = [];
 let tempSpecAttachments = [];
 function specialistById(id){ return SPECIALISTS.find(s=>s.id===id); }
 function renderSpecNicheSelectMenu(){
@@ -6119,45 +6147,41 @@ function addSpecDirectionInline(){
   renderSpecNicheFilterOptions();
   fbScheduleSave();
 }
-// Мови спеціаліста: звичайний <select> зі списком ще НЕ доданих мов —
-// вибір одразу додає чіп (без окремої кнопки/чекбоксів). Поруч — текстове
-// поле для мови, якої немає в списку. Єдине джерело правди — чіпи нижче,
-// без дублювання одного й того ж переліку у двох місцях одразу.
-function renderSpecLangAddSelect(){
-  const sel = document.getElementById('specLangAddSelect');
-  if(!sel) return;
-  const chosen = new Set(tempSpecLanguages.map(l=>l.lang));
-  const available = SPEC_LANGUAGES.filter(n=>!chosen.has(n));
-  sel.innerHTML = `<option value="">+ Додати мову...</option>` + available.map(n=>`<option value="${n}">${n}</option>`).join('');
-}
-function addSpecLangFromSelect(name){
-  if(!name) return;
-  if(!tempSpecLanguages.some(l=>l.lang===name)) tempSpecLanguages.push({lang:name, level:'B2'});
-  renderSpecLangAddSelect();
-  renderSpecLangChips();
-}
-function addSpecLangCustom(){
-  const input = document.getElementById('specNewLanguageInput');
-  const name = input.value.trim();
-  if(!name) return;
-  if(!SPEC_LANGUAGES.includes(name)) SPEC_LANGUAGES.push(name);
-  if(!tempSpecLanguages.some(l=>l.lang===name)) tempSpecLanguages.push({lang:name, level:'B2'});
-  input.value = '';
-  renderSpecLangAddSelect();
-  renderSpecLangChips();
-  fbScheduleSave();
-}
-function updateSpecLangLevel(i, level){
-  if(!tempSpecLanguages[i]) return;
-  tempSpecLanguages[i].level = level;
-}
-function removeSpecLanguage(i){ tempSpecLanguages.splice(i,1); renderSpecLangAddSelect(); renderSpecLangChips(); }
-function renderSpecLangChips(){
-  const el = document.getElementById('specLangChips');
+// Мови спеціаліста: три постійні рядки (укр/рос/англ, назва не редагується,
+// рівень "—" за замовчуванням = мова не заповнена й не потрапить у збережений
+// запис) + довільна кількість доданих рядків (текстове поле для назви,
+// можна видалити). Рівень у кожному рядку — кастомний .cselect, як і всюди
+// в CRM, а не нативний <select>.
+function renderSpecLangRows(){
+  const el = document.getElementById('specLangRows');
   if(!el) return;
-  el.innerHTML = tempSpecLanguages.map((l,i)=>`<span class="label-chip" style="background:var(--accent-1);">${l.lang}
-    <select class="lang-level-native" onchange="updateSpecLangLevel(${i},this.value)">${LANG_LEVELS.map(lv=>`<option value="${lv}" ${lv===l.level?'selected':''}>${lv}</option>`).join('')}</select>
-    <button type="button" onclick="removeSpecLanguage(${i})">✕</button></span>`).join('') || '<span style="font-size:12px;color:var(--text-muted);">Мов ще немає.</span>';
+  el.innerHTML = tempSpecLangRows.map((r,i) => `
+    <div class="spec-lang-row">
+      ${r.fixed
+        ? `<div class="spec-lang-row-label">${r.lang}</div>`
+        : `<input type="text" class="spec-lang-name-input" value="${(r.lang||'').replace(/"/g,'&quot;')}" placeholder="Назва мови" oninput="tempSpecLangRows[${i}].lang=this.value">`
+      }
+      <div class="cselect spec-lang-level-cselect">
+        <button type="button" class="cselect-trigger" onclick="toggleCSelect(this.parentElement)">
+          <span class="cselect-label">${r.level || '—'}</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <ul class="cselect-menu" data-select="specLangRowLevel" data-row="${i}">
+          <li data-value="" class="${r.level===''?'selected':''}">—</li>
+          ${LANG_LEVELS.map(lv=>`<li data-value="${lv}" class="${r.level===lv?'selected':''}">${lv}</li>`).join('')}
+        </ul>
+      </div>
+      ${r.fixed ? '' : `<button type="button" class="spec-lang-row-remove" onclick="removeSpecLangRow(${i})" title="Видалити">✕</button>`}
+    </div>`).join('');
+}
+function addSpecLangRow(){
+  tempSpecLangRows.push({lang:'', level:'', fixed:false});
+  renderSpecLangRows();
+}
+function removeSpecLangRow(i){
+  if(!tempSpecLangRows[i] || tempSpecLangRows[i].fixed) return;
+  tempSpecLangRows.splice(i,1);
+  renderSpecLangRows();
 }
 function addSpecAttachment(e){
   const file = e.target.files[0];
@@ -6183,7 +6207,7 @@ function openSpecialistPanel(id){
     document.getElementById('specNotes').value = '';
     setCselectValue('specLevelSelect', 'Middle');
     tempSpecNiches = [];
-    tempSpecLanguages = [];
+    tempSpecLangRows = ['Українська','Російська','Англійська'].map(lang=>({lang, level:'', fixed:true}));
     tempSpecAttachments = [];
     deleteBtn.style.display = 'none';
     document.getElementById('specSaveBtn').textContent = 'Створити';
@@ -6197,14 +6221,21 @@ function openSpecialistPanel(id){
     document.getElementById('specNotes').value = s.notes || '';
     setCselectValue('specLevelSelect', s.level || 'Middle');
     tempSpecNiches = [...(s.niches||[])];
-    tempSpecLanguages = [...(s.languages||[])];
+    const savedLangs = s.languages || [];
+    const defaultLangs = ['Українська','Російська','Англійська'];
+    tempSpecLangRows = defaultLangs.map(lang=>{
+      const found = savedLangs.find(l=>l.lang===lang);
+      return {lang, level: found ? found.level : '', fixed:true};
+    });
+    savedLangs.forEach(l=>{
+      if(!defaultLangs.includes(l.lang)) tempSpecLangRows.push({lang:l.lang, level:l.level, fixed:false});
+    });
     tempSpecAttachments = [...(s.attachments||[])];
     deleteBtn.style.display = '';
     document.getElementById('specSaveBtn').textContent = 'Зберегти';
   }
   renderSpecNicheSelectMenu();
-  renderSpecLangAddSelect();
-  renderSpecLangChips();
+  renderSpecLangRows();
   renderSpecAttachList();
   openPanel('specialistPanel');
 }
@@ -6216,17 +6247,23 @@ function saveSpecialist(){
   const notes = document.getElementById('specNotes').value.trim();
   const level = getCselectValue('specLevelSelect') || 'Middle';
   const me = currentUserRecord();
+  // Рядок потрапляє у збережений список мов лише коли заповнені і назва,
+  // і рівень (порожній рівень "—" означає "мова не вказана" — не помилка).
+  const languages = tempSpecLangRows
+    .filter(r => r.lang && r.lang.trim() && r.level)
+    .map(r => ({lang: r.lang.trim(), level: r.level}));
+  languages.forEach(l => { if(!SPEC_LANGUAGES.includes(l.lang)) SPEC_LANGUAGES.push(l.lang); });
   if(editingSpecialistId === null){
     SPECIALISTS.unshift({
       id: nextSpecialistId++, name, phone, contact, notes, level,
-      niches:[...tempSpecNiches], languages:[...tempSpecLanguages], attachments:[...tempSpecAttachments],
+      niches:[...tempSpecNiches], languages, attachments:[...tempSpecAttachments],
       createdBy: me?me.id:'ostap', createdAt: new Date().toLocaleDateString('uk-UA'),
     });
     logActivity(`Додано спеціаліста "${name}" до бази`, {target:{type:'view', name:'specialists'}});
   } else {
     const s = specialistById(editingSpecialistId);
     if(!s) return;
-    Object.assign(s, {name, phone, contact, notes, level, niches:[...tempSpecNiches], languages:[...tempSpecLanguages], attachments:[...tempSpecAttachments]});
+    Object.assign(s, {name, phone, contact, notes, level, niches:[...tempSpecNiches], languages, attachments:[...tempSpecAttachments]});
     logActivity(`Відредаговано спеціаліста "${name}"`, {target:{type:'view', name:'specialists'}, silent:true});
   }
   renderSpecialistsTable();
@@ -6288,27 +6325,63 @@ function toggleSpecLevelFilter(e, name){
   document.getElementById('specLevelMultiLabel').textContent = specLevelFilter.length ? `Обрано: ${specLevelFilter.length}` : 'Усі рівні';
   renderSpecialistsTable();
 }
-// Мова/Рівень мови у фільтрі — звичайні <select>: сам браузер керує
-// відкриттям/закриттям і підсвіткою обраного, менше коду й менше шансів на
-// баг порівняно з кастомним cselect-дропдауном для простого одиночного вибору.
-function renderSpecLangFilterOptions(){
-  const sel = document.getElementById('specLangFilterSelect');
-  if(!sel) return;
-  const langs = [...new Set(SPECIALISTS.flatMap(s=>(s.languages||[]).map(l=>l.lang)))];
-  sel.innerHTML = `<option value="">Всі мови</option>` + langs.map(n => `<option value="${n}" ${n===specLangFilterLang?'selected':''}>${n}</option>`).join('');
+// Комбінований фільтр "Мова / Рівень" — один кастомний попап з двома
+// колонками: зліва всі мови, додані в СРМ (SPEC_LANGUAGES), справа — лише ті
+// рівні, які реально зустрічаються серед спеціалістів для обраної мови (щоб
+// не можна було обрати завідомо порожню комбінацію). Зміна мови, що робить
+// поточний обраний рівень недійсним, автоматично скидає рівень.
+function validLangLevels(lang){
+  const relevant = lang
+    ? SPECIALISTS.flatMap(s=>(s.languages||[]).filter(l=>l.lang===lang))
+    : SPECIALISTS.flatMap(s=>s.languages||[]);
+  return [...new Set(relevant.map(l=>l.level))];
 }
-function renderSpecLangLevelFilterOptions(){
-  const sel = document.getElementById('specLangLevelFilterSelect');
-  if(!sel) return;
-  sel.innerHTML = `<option value="">Всі рівні</option>` + LANG_LEVELS.map(n => `<option value="${n}" ${n===specLangFilterLevelVal?'selected':''}>${n}</option>`).join('');
+function renderSpecLangCombo(){
+  const langList = document.getElementById('specLangComboLangList');
+  const levelList = document.getElementById('specLangComboLevelList');
+  if(!langList || !levelList) return;
+  langList.innerHTML = `<li data-value="" class="${specLangFilterLang===''?'selected':''}">Всі мови</li>` +
+    SPEC_LANGUAGES.map(n=>`<li data-value="${n}" class="${specLangFilterLang===n?'selected':''}">${n}</li>`).join('');
+  const valid = validLangLevels(specLangFilterLang);
+  const levels = LANG_LEVELS.filter(lv=>valid.includes(lv));
+  levelList.innerHTML = `<li data-value="" class="${specLangFilterLevelVal===''?'selected':''}">Всі рівні</li>` +
+    levels.map(n=>`<li data-value="${n}" class="${specLangFilterLevelVal===n?'selected':''}">${n}</li>`).join('') +
+    (levels.length ? '' : '<li style="color:var(--text-muted);">Немає варіантів</li>');
+  const label = document.getElementById('specLangComboLabel');
+  if(label){
+    label.textContent = (!specLangFilterLang && !specLangFilterLevelVal)
+      ? 'Всі мови й рівні'
+      : `${specLangFilterLang || 'Всі мови'} · ${specLangFilterLevelVal || 'всі рівні'}`;
+  }
 }
+function resetSpecLangCombo(){
+  specLangFilterLang = '';
+  specLangFilterLevelVal = '';
+  renderSpecLangCombo();
+  renderSpecialistsTable();
+}
+document.addEventListener('click', function(e){
+  const li = e.target.closest('.lang-combo-list li[data-value]');
+  if(!li) return;
+  const kind = li.parentElement.dataset.select;
+  if(kind === 'specLangComboLang'){
+    specLangFilterLang = li.dataset.value || '';
+    const valid = validLangLevels(specLangFilterLang);
+    if(specLangFilterLevelVal && !valid.includes(specLangFilterLevelVal)) specLangFilterLevelVal = '';
+  } else if(kind === 'specLangComboLevel'){
+    specLangFilterLevelVal = li.dataset.value || '';
+  } else {
+    return;
+  }
+  renderSpecLangCombo();
+  renderSpecialistsTable();
+});
 function renderSpecialistsTable(){
   const tbody = document.getElementById('specialistsTableBody');
   if(!tbody) return;
   renderSpecNicheFilterOptions();
   renderSpecLevelFilterOptions();
-  renderSpecLangFilterOptions();
-  renderSpecLangLevelFilterOptions();
+  renderSpecLangCombo();
   const q = (document.getElementById('specSearchInput')?.value || '').trim().toLowerCase();
   let rows = SPECIALISTS;
   if(q) rows = rows.filter(s => s.name.toLowerCase().includes(q) || (s.phone||'').includes(q) || (s.contact||'').toLowerCase().includes(q));
