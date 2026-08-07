@@ -344,6 +344,8 @@
   .label-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff;}
   .label-chip button{background:none;border:none;color:inherit;opacity:.75;cursor:pointer;font-size:13px;line-height:1;padding:0;}
   .label-chip button:hover{opacity:1;}
+  .lang-level-native{background:rgba(255,255,255,.22);border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:700;padding:2px 4px;cursor:pointer;}
+  .lang-level-native option{color:#111;}
   .checklist-row{display:flex;align-items:center;gap:8px;padding:6px 2px;}
   .checklist-row .checklist-text{flex:1;font-size:13.5px;}
   .checklist-row.is-done .checklist-text{text-decoration:line-through;color:var(--text-muted);}
@@ -653,6 +655,7 @@
       <li class="active" data-nav="dashboard"><a href="#" onclick="showView(event,'dashboard')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
         Головна</a></li>
+      <li class="nav-section-label" data-roles="admin cto" style="padding:14px 12px 4px;margin-bottom:0;">Sales</li>
       <li data-nav="pipeline" data-roles="manager admin cto"><a href="#" onclick="showView(event,'pipeline')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
         Воронка</a></li>
@@ -674,6 +677,7 @@
       <li data-nav="campaigns" data-roles="manager admin cto"><a href="#" onclick="showView(event,'campaigns')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
         Розсилки</a></li>
+      <li class="nav-section-label" data-roles="admin cto" style="padding:14px 12px 4px;margin-bottom:0;">HR</li>
       <li data-nav="hr-pipeline" data-roles="hr admin cto"><a href="#" onclick="showView(event,'hr-pipeline')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
         Воронка кандидатів</a></li>
@@ -1254,13 +1258,23 @@
             </div>
           </div>
           <div class="field">
-            <label>Мови</label>
-            <div class="cselect" id="specLangMultiSelect">
+            <label>Мова</label>
+            <div class="cselect" id="specLangFilterSelect">
               <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:140px;" onclick="toggleCSelect(this.parentElement)">
-                <span class="cselect-label" id="specLangMultiLabel">Усі мови</span>
+                <span class="cselect-label" id="specLangFilterLabel">Всі мови</span>
                 <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
               </button>
-              <ul class="cselect-menu" id="specLangMultiMenu"></ul>
+              <ul class="cselect-menu" id="specLangFilterMenu" data-select="specLangFilter"></ul>
+            </div>
+          </div>
+          <div class="field">
+            <label>Рівень мови</label>
+            <div class="cselect" id="specLangLevelFilterSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:120px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="specLangLevelFilterLabel">Всі рівні</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="specLangLevelFilterMenu" data-select="specLangLevelFilter"></ul>
             </div>
           </div>
           <button class="btn" onclick="renderSpecialistsTable()">Застосувати фільтр</button>
@@ -1353,28 +1367,24 @@
           <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <ul class="cselect-menu" data-select="specLevel">
+          <li data-value="Intern">Intern</li>
+          <li data-value="Trainee">Trainee</li>
           <li data-value="Junior">Junior</li>
           <li data-value="Middle" class="selected">Middle</li>
           <li data-value="Senior">Senior</li>
           <li data-value="Lead">Lead</li>
+          <li data-value="Head">Head</li>
         </ul>
       </div>
     </div>
     <div class="field">
       <label>Мови</label>
-      <div style="display:flex;gap:8px;">
-        <input id="specLangInput" type="text" placeholder="Напр. English" style="flex:1;">
-        <div class="cselect" id="specLangLevelSelect" style="width:110px;">
-          <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
-            <span class="cselect-label">B2</span>
-            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <ul class="cselect-menu" data-select="specLangLevel">
-            <li data-value="A1">A1</li><li data-value="A2">A2</li><li data-value="B1">B1</li>
-            <li data-value="B2" class="selected">B2</li><li data-value="C1">C1</li><li data-value="C2">C2</li><li data-value="Рідна">Рідна</li>
-          </ul>
-        </div>
-        <button type="button" class="btn secondary small" onclick="addSpecLanguage()">+</button>
+      <div class="cselect" id="specLangSelect">
+        <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+          <span class="cselect-label" id="specLangSelectLabel">Оберіть мови</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <ul class="cselect-menu" id="specLangSelectMenu"></ul>
       </div>
       <div id="specLangChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
     </div>
@@ -1953,6 +1963,11 @@ const CANDIDATE_LABEL_COLORS = ['#2F4EF3','#0EA85C','#B5179E','#E5484D','#E8A33D
 // (наприклад "Sales", "Marketing", "Development"...), використовується як
 // теги на картках спеціалістів і як фільтр у "Базі спеціалістів".
 let SPEC_DIRECTIONS = ['Sales','Marketing','Development','Design','HR','Finance','Support'];
+
+// Довідник мов — стартовий набір (укр/рос/англ), HR може дописувати свої.
+let SPEC_LANGUAGES = ['Українська','Російська','Англійська'];
+const LANG_LEVELS = ['A1','A2','B1','B2','C1','C2','Рідна'];
+const SPEC_CAREER_LEVELS = ['Intern','Trainee','Junior','Middle','Senior','Lead','Head'];
 
 // "База спеціалістів" — окремий пул усіх фахівців, яких HR знаходить
 // (незалежно від того, чи є вони зараз кандидатами на конкретну вакансію).
@@ -2737,6 +2752,14 @@ document.addEventListener('click', function(e){
   if(selectType === 'hrVacancy'){
     state.hrVacancyId = Number(li.dataset.value);
     renderHrBoard();
+  }
+  if(selectType === 'specLangFilter'){
+    specLangFilterLang = li.dataset.value || '';
+    renderSpecialistsTable();
+  }
+  if(selectType === 'specLangLevelFilter'){
+    specLangFilterLevelVal = li.dataset.value || '';
+    renderSpecialistsTable();
   }
 });
 
@@ -6104,20 +6127,48 @@ function addSpecDirectionInline(){
   renderSpecNicheFilterOptions();
   fbScheduleSave();
 }
-function addSpecLanguage(){
-  const input = document.getElementById('specLangInput');
-  const lang = input.value.trim();
-  if(!lang) return;
-  const level = getCselectValue('specLangLevelSelect') || 'B2';
-  tempSpecLanguages.push({lang, level});
-  input.value = '';
+function renderSpecLangSelectMenu(){
+  const menu = document.getElementById('specLangSelectMenu');
+  if(!menu) return;
+  menu.innerHTML = SPEC_LANGUAGES.map(n => `
+    <li data-value="${n}" onclick="event.stopPropagation()">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${tempSpecLanguages.some(l=>l.lang===n)?'checked':''} onchange="toggleSpecLangChoice('${n}')"><span></span></label> ${n}
+    </li>`).join('') + `
+    <li onclick="event.stopPropagation()" style="display:flex;gap:6px;padding:8px;">
+      <input type="text" id="specNewLanguageInput" placeholder="Нова мова..." style="flex:1;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12.5px;background:var(--surface);color:var(--text);" onclick="event.stopPropagation()">
+      <button type="button" class="btn secondary small" onclick="event.stopPropagation();addSpecLangInline()">+</button>
+    </li>`;
+  const label = document.getElementById('specLangSelectLabel');
+  if(label) label.textContent = tempSpecLanguages.length ? tempSpecLanguages.map(l=>l.lang).join(', ') : 'Оберіть мови';
+}
+function toggleSpecLangChoice(name){
+  const idx = tempSpecLanguages.findIndex(l=>l.lang===name);
+  if(idx === -1) tempSpecLanguages.push({lang:name, level:'B2'}); else tempSpecLanguages.splice(idx,1);
+  renderSpecLangSelectMenu();
   renderSpecLangChips();
 }
-function removeSpecLanguage(i){ tempSpecLanguages.splice(i,1); renderSpecLangChips(); }
+function addSpecLangInline(){
+  const input = document.getElementById('specNewLanguageInput');
+  const name = input.value.trim();
+  if(!name) return;
+  if(!SPEC_LANGUAGES.includes(name)) SPEC_LANGUAGES.push(name);
+  if(!tempSpecLanguages.some(l=>l.lang===name)) tempSpecLanguages.push({lang:name, level:'B2'});
+  input.value = '';
+  renderSpecLangSelectMenu();
+  renderSpecLangChips();
+  fbScheduleSave();
+}
+function updateSpecLangLevel(i, level){
+  if(!tempSpecLanguages[i]) return;
+  tempSpecLanguages[i].level = level;
+}
+function removeSpecLanguage(i){ tempSpecLanguages.splice(i,1); renderSpecLangSelectMenu(); renderSpecLangChips(); }
 function renderSpecLangChips(){
   const el = document.getElementById('specLangChips');
   if(!el) return;
-  el.innerHTML = tempSpecLanguages.map((l,i)=>`<span class="label-chip" style="background:var(--accent-1);">${l.lang} · ${l.level}<button type="button" onclick="removeSpecLanguage(${i})">✕</button></span>`).join('');
+  el.innerHTML = tempSpecLanguages.map((l,i)=>`<span class="label-chip" style="background:var(--accent-1);">${l.lang}
+    <select class="lang-level-native" onchange="updateSpecLangLevel(${i},this.value)">${LANG_LEVELS.map(lv=>`<option value="${lv}" ${lv===l.level?'selected':''}>${lv}</option>`).join('')}</select>
+    <button type="button" onclick="removeSpecLanguage(${i})">✕</button></span>`).join('') || '<span style="font-size:12px;color:var(--text-muted);">Мов ще немає.</span>';
 }
 function addSpecAttachment(e){
   const file = e.target.files[0];
@@ -6163,6 +6214,7 @@ function openSpecialistPanel(id){
     document.getElementById('specSaveBtn').textContent = 'Зберегти';
   }
   renderSpecNicheSelectMenu();
+  renderSpecLangSelectMenu();
   renderSpecLangChips();
   renderSpecAttachList();
   openPanel('specialistPanel');
@@ -6211,7 +6263,8 @@ async function deleteSpecialist(){
 /* ---- фільтри бази спеціалістів (пошук + напрямок + рівень + мови) ---- */
 let specNicheFilter = [];
 let specLevelFilter = [];
-let specLangFilterVals = [];
+let specLangFilterLang = '';
+let specLangFilterLevelVal = '';
 function renderSpecNicheFilterOptions(){
   const menu = document.getElementById('specNicheMultiMenu');
   if(!menu) return;
@@ -6233,7 +6286,7 @@ function renderSpecLevelFilterOptions(){
   const menu = document.getElementById('specLevelMultiMenu');
   if(!menu) return;
   menu.dataset.select = 'specLevelFilter';
-  const levels = ['Junior','Middle','Senior','Lead'];
+  const levels = SPEC_CAREER_LEVELS;
   menu.innerHTML = levels.map(n => `
     <li data-value="${n}" onclick="toggleSpecLevelFilter(event,'${n}')">
       <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${specLevelFilter.includes(n)?'checked':''} onchange="toggleSpecLevelFilter(event,'${n}')"><span></span></label> ${n}
@@ -6247,21 +6300,21 @@ function toggleSpecLevelFilter(e, name){
   renderSpecialistsTable();
 }
 function renderSpecLangFilterOptions(){
-  const menu = document.getElementById('specLangMultiMenu');
+  const menu = document.getElementById('specLangFilterMenu');
   if(!menu) return;
-  menu.dataset.select = 'specLangFilter';
   const langs = [...new Set(SPECIALISTS.flatMap(s=>(s.languages||[]).map(l=>l.lang)))];
-  menu.innerHTML = langs.length ? langs.map(n => `
-    <li data-value="${n}" onclick="toggleSpecLangFilter(event,'${n}')">
-      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${specLangFilterVals.includes(n)?'checked':''} onchange="toggleSpecLangFilter(event,'${n}')"><span></span></label> ${n}
-    </li>`).join('') : '<li style="color:var(--text-muted);font-size:12.5px;padding:8px;">Мов ще немає</li>';
+  menu.innerHTML = `<li data-value="" class="${specLangFilterLang===''?'selected':''}">Всі мови</li>` + langs.map(n => `
+    <li data-value="${n}" class="${specLangFilterLang===n?'selected':''}">${n}</li>`).join('');
+  const label = document.getElementById('specLangFilterLabel');
+  if(label) label.textContent = specLangFilterLang || 'Всі мови';
 }
-function toggleSpecLangFilter(e, name){
-  e.stopPropagation();
-  const idx = specLangFilterVals.indexOf(name);
-  if(idx === -1) specLangFilterVals.push(name); else specLangFilterVals.splice(idx,1);
-  document.getElementById('specLangMultiLabel').textContent = specLangFilterVals.length ? `Обрано: ${specLangFilterVals.length}` : 'Усі мови';
-  renderSpecialistsTable();
+function renderSpecLangLevelFilterOptions(){
+  const menu = document.getElementById('specLangLevelFilterMenu');
+  if(!menu) return;
+  menu.innerHTML = `<li data-value="" class="${specLangFilterLevelVal===''?'selected':''}">Всі рівні</li>` + LANG_LEVELS.map(n => `
+    <li data-value="${n}" class="${specLangFilterLevelVal===n?'selected':''}">${n}</li>`).join('');
+  const label = document.getElementById('specLangLevelFilterLabel');
+  if(label) label.textContent = specLangFilterLevelVal || 'Всі рівні';
 }
 function renderSpecialistsTable(){
   const tbody = document.getElementById('specialistsTableBody');
@@ -6269,12 +6322,19 @@ function renderSpecialistsTable(){
   renderSpecNicheFilterOptions();
   renderSpecLevelFilterOptions();
   renderSpecLangFilterOptions();
+  renderSpecLangLevelFilterOptions();
   const q = (document.getElementById('specSearchInput')?.value || '').trim().toLowerCase();
   let rows = SPECIALISTS;
   if(q) rows = rows.filter(s => s.name.toLowerCase().includes(q) || (s.phone||'').includes(q) || (s.contact||'').toLowerCase().includes(q));
   if(specNicheFilter.length) rows = rows.filter(s => (s.niches||[]).some(n=>specNicheFilter.includes(n)));
   if(specLevelFilter.length) rows = rows.filter(s => specLevelFilter.includes(s.level));
-  if(specLangFilterVals.length) rows = rows.filter(s => (s.languages||[]).some(l=>specLangFilterVals.includes(l.lang)));
+  if(specLangFilterLang && specLangFilterLevelVal){
+    rows = rows.filter(s => (s.languages||[]).some(l=>l.lang===specLangFilterLang && l.level===specLangFilterLevelVal));
+  } else if(specLangFilterLang){
+    rows = rows.filter(s => (s.languages||[]).some(l=>l.lang===specLangFilterLang));
+  } else if(specLangFilterLevelVal){
+    rows = rows.filter(s => (s.languages||[]).some(l=>l.level===specLangFilterLevelVal));
+  }
   if(!rows.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty-hint">Спеціалістів за обраними фільтрами не знайдено.</td></tr>'; return; }
   tbody.innerHTML = rows.map(s => `
     <tr class="clickable" onclick="openSpecialistPanel(${s.id})">
@@ -6759,6 +6819,7 @@ function fbApplyRemoteData(data){
     if(Array.isArray(data.vacancies)) VACANCIES = data.vacancies;
     if(Array.isArray(data.candidates)) CANDIDATES = data.candidates;
     if(Array.isArray(data.specDirections) && data.specDirections.length) SPEC_DIRECTIONS = data.specDirections;
+    if(Array.isArray(data.specLanguages) && data.specLanguages.length) SPEC_LANGUAGES = data.specLanguages;
     if(Array.isArray(data.specialists)) SPECIALISTS = data.specialists;
     if(typeof data.nextLeadId === 'number') nextLeadId = Math.max(nextLeadId, data.nextLeadId);
     if(typeof data.nextReportId === 'number') nextReportId = Math.max(nextReportId, data.nextReportId);
@@ -6851,6 +6912,7 @@ function fbSaveNow(){
     vacancies: VACANCIES,
     candidates: CANDIDATES,
     specDirections: SPEC_DIRECTIONS,
+    specLanguages: SPEC_LANGUAGES,
     specialists: SPECIALISTS,
     nextLeadId: nextLeadId,
     nextReportId: nextReportId,
