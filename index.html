@@ -361,7 +361,13 @@
   .lang-combo-col-title{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);padding:4px 8px 6px;}
   .lang-combo-list{list-style:none;margin:0;padding:0;max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;}
   .lang-combo-list li[style]{cursor:default;}
+  .lang-combo-list li{justify-content:space-between;}
+  .lang-combo-list li.selected{background:color-mix(in srgb, var(--accent-1) 14%, var(--surface) 86%);border-radius:6px;}
+  .lang-combo-list li.selected::after{content:'✓';color:var(--accent-1);font-weight:800;font-size:12px;flex-shrink:0;}
+  .lang-combo-search{width:100%;box-sizing:border-box;padding:6px 8px;margin:0 0 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);color:var(--text);}
+  .lang-combo-search:focus{outline:none;border-color:var(--accent-1);}
   .lang-combo-menu .menu-footer{grid-column:1/-1;display:flex;justify-content:space-between;gap:8px;}
+  .cselect-count-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--accent-grad);color:#fff;font-size:10px;font-weight:800;margin-left:5px;vertical-align:middle;}
   .checklist-row{display:flex;align-items:center;gap:8px;padding:6px 2px;}
   .checklist-row .checklist-text{flex:1;font-size:13.5px;}
   .checklist-row.is-done .checklist-text{text-decoration:line-through;color:var(--text-muted);}
@@ -1288,6 +1294,7 @@
               <div class="cselect-menu lang-combo-menu">
                 <div class="lang-combo-col">
                   <div class="lang-combo-col-title">Мова</div>
+                  <input type="text" class="lang-combo-search" id="specLangComboSearch" placeholder="Пошук..." oninput="filterSpecLangComboSearch(this.value)" onclick="event.stopPropagation()">
                   <ul class="lang-combo-list" id="specLangComboLangList" data-select="specLangComboLang"></ul>
                 </div>
                 <div class="lang-combo-divider"></div>
@@ -6291,6 +6298,7 @@ let specNicheFilter = [];
 let specLevelFilter = [];
 let specLangFilterLang = '';
 let specLangFilterLevelVal = '';
+let specLangComboSearchQuery = '';
 function renderSpecNicheFilterOptions(){
   const menu = document.getElementById('specNicheMultiMenu');
   if(!menu) return;
@@ -6336,12 +6344,19 @@ function validLangLevels(lang){
     : SPECIALISTS.flatMap(s=>s.languages||[]);
   return [...new Set(relevant.map(l=>l.level))];
 }
+function filterSpecLangComboSearch(v){
+  specLangComboSearchQuery = (v||'').trim().toLowerCase();
+  renderSpecLangCombo();
+}
 function renderSpecLangCombo(){
   const langList = document.getElementById('specLangComboLangList');
   const levelList = document.getElementById('specLangComboLevelList');
   if(!langList || !levelList) return;
-  langList.innerHTML = `<li data-value="" class="${specLangFilterLang===''?'selected':''}">Всі мови</li>` +
-    SPEC_LANGUAGES.map(n=>`<li data-value="${n}" class="${specLangFilterLang===n?'selected':''}">${n}</li>`).join('');
+  const q = specLangComboSearchQuery;
+  const filteredLangs = q ? SPEC_LANGUAGES.filter(n=>n.toLowerCase().includes(q)) : SPEC_LANGUAGES;
+  langList.innerHTML = (q ? '' : `<li data-value="" class="${specLangFilterLang===''?'selected':''}">Всі мови</li>`) +
+    filteredLangs.map(n=>`<li data-value="${n}" class="${specLangFilterLang===n?'selected':''}">${n}</li>`).join('') +
+    (filteredLangs.length ? '' : '<li style="color:var(--text-muted);">Нічого не знайдено</li>');
   const valid = validLangLevels(specLangFilterLang);
   const levels = LANG_LEVELS.filter(lv=>valid.includes(lv));
   levelList.innerHTML = `<li data-value="" class="${specLangFilterLevelVal===''?'selected':''}">Всі рівні</li>` +
@@ -6349,14 +6364,19 @@ function renderSpecLangCombo(){
     (levels.length ? '' : '<li style="color:var(--text-muted);">Немає варіантів</li>');
   const label = document.getElementById('specLangComboLabel');
   if(label){
-    label.textContent = (!specLangFilterLang && !specLangFilterLevelVal)
+    const activeCount = (specLangFilterLang?1:0) + (specLangFilterLevelVal?1:0);
+    const baseText = (!specLangFilterLang && !specLangFilterLevelVal)
       ? 'Всі мови й рівні'
       : `${specLangFilterLang || 'Всі мови'} · ${specLangFilterLevelVal || 'всі рівні'}`;
+    label.innerHTML = baseText + (activeCount ? `<span class="cselect-count-badge">${activeCount}</span>` : '');
   }
 }
 function resetSpecLangCombo(){
   specLangFilterLang = '';
   specLangFilterLevelVal = '';
+  specLangComboSearchQuery = '';
+  const searchInput = document.getElementById('specLangComboSearch');
+  if(searchInput) searchInput.value = '';
   renderSpecLangCombo();
   renderSpecialistsTable();
 }
