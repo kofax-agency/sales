@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --radius: 14px;
@@ -984,7 +985,7 @@
             </div>
             <div class="field" style="max-width:220px;">
               <label>Пошук</label>
-              <input type="text" id="coldSearchInput" placeholder="Назва, телефон, місто…" oninput="onColdSearchInput(this.value)">
+              <input type="text" id="coldSearchInput" placeholder="Назва, телефон, email, керівник…" oninput="onColdSearchInput(this.value)">
             </div>
             <div class="field" style="max-width:180px;">
               <label>Статус</label>
@@ -1000,7 +1001,7 @@
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
           <div class="table-scroll"><table>
-            <thead><tr><th>Назва</th><th style="width:135px;">Телефон</th><th style="width:110px;">Місто</th><th style="width:140px;">Посилання</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:120px;">Дії</th></tr></thead>
+            <thead><tr><th>Назва</th><th style="width:135px;">Телефон</th><th style="width:170px;">Email</th><th style="width:140px;">Веб-сайт</th><th style="width:150px;">Керівник</th><th style="width:100px;">Додзвонився</th><th style="width:180px;">Статус</th><th style="width:120px;">Дії</th></tr></thead>
             <tbody id="coldBaseTableBody"></tbody>
           </table></div>
         </div>
@@ -1812,11 +1813,11 @@
         Якщо не призначити менеджера зараз — базу побачать лише CTO і керівник відділу, і можна буде розподілити її (усю або по рядках) пізніше зі сторінки бази.
       </div>
       <div class="field" style="max-width:340px;">
-        <label>Файл (CSV) *</label>
-        <label class="file-btn">📄 <span id="coldImportFileName">Обрати файл</span><input type="file" accept=".csv" style="display:none" id="coldImportFile" onchange="coldImportFilePicked()"></label>
+        <label>Файл (XLSX або CSV) *</label>
+        <label class="file-btn">📄 <span id="coldImportFileName">Обрати файл</span><input type="file" accept=".xlsx,.xls,.csv" style="display:none" id="coldImportFile" onchange="coldImportFilePicked()"></label>
       </div>
       <div style="font-size:12.5px;color:var(--text-muted);margin:8px 0 0;line-height:1.5;">
-        Очікувані колонки: назва (title/назва), телефон (phone/телефон), місто (city/місто), посилання (url/link/посилання) — зайві колонки просто ігноруються.
+        Підтримується файл-вивантаження з YouControl (.xlsx) або звичайний CSV. З файлу беруться лише колонки: «Суб'єкт господарської діяльності», «Телефон», «Email», «Веб-сайт», «Керівник» — решта колонок ігнорується.
       </div>
       <button class="btn secondary" style="margin-top:14px;" onclick="previewColdImport()">Перевірити файл</button>
     </div>
@@ -1824,7 +1825,7 @@
       <div class="section-title" style="font-size:13px;">Перевірка перед імпортом</div>
       <div id="coldImportPreviewSummary" style="font-size:13px;margin-bottom:12px;line-height:1.5;"></div>
       <div class="table-scroll"><table>
-        <thead><tr><th>Назва</th><th>Телефон</th><th>Місто</th><th>Посилання</th></tr></thead>
+        <thead><tr><th>Назва</th><th>Телефон</th><th>Email</th><th>Веб-сайт</th><th>Керівник</th></tr></thead>
         <tbody id="coldImportPreviewTableBody"></tbody>
       </table></div>
     </div>
@@ -4035,6 +4036,26 @@ function readFileAsText(file){
     reader.readAsText(file, 'utf-8');
   });
 }
+function readFileAsArrayBuffer(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+// Парсер XLSX (наприклад, вивантаження з YouControl) через бібліотеку
+// SheetJS: читає першу підходящу вкладку і повертає рядки як об'єкти
+// {заголовок: значення}, у тому ж форматі, що й parseCSV(), щоб обидва
+// джерела даних можна було обробляти однаковим кодом далі.
+async function parseXLSXFile(file){
+  const buf = await readFileAsArrayBuffer(file);
+  const wb = XLSX.read(buf, {type:'array'});
+  const sheetName = wb.SheetNames.includes('report') ? 'report' : wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+  return { rows };
+}
 // Pipedrive віддає дати як "2026-04-22 09:59:23" — переводимо у формат
 // "дд.мм.рррр", яким уже користується весь СРМ (l.createdAt).
 function pdFormatDate(s){
@@ -4318,8 +4339,9 @@ function coldRowHtml(base, c){
   return `<tr class="${rowClass}">
     <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.title)}')">${c.title||'—'}</td>
     <td class="copyable" style="white-space:nowrap;" onclick="copyCellToClipboard(event,'${escAttr(c.phone)}')">${c.phone||'—'}</td>
-    <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.city)}')">${c.city||'—'}</td>
+    <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.email)}')">${c.email||'—'}</td>
     <td>${linkCell}</td>
+    <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.director)}')">${c.director||'—'}</td>
     <td><label class="chk"><input type="checkbox" ${c.status==='called'?'checked':''} onchange="toggleColdCalled('${base.id}','${c.id}',this.checked,this)"><span></span></label></td>
     <td>
       <div class="cselect cold-status-select">
@@ -4369,7 +4391,7 @@ function coldContactMatchesFilters(c){
     if(coldDetailStatusFilter!=='called' && c.status!==coldDetailStatusFilter) return false;
   }
   if(coldDetailSearchQuery){
-    const hay = `${c.title||''} ${c.phone||''} ${c.city||''}`.toLowerCase();
+    const hay = `${c.title||''} ${c.phone||''} ${c.email||''} ${c.director||''}`.toLowerCase();
     if(!hay.includes(coldDetailSearchQuery)) return false;
   }
   return true;
@@ -4397,7 +4419,7 @@ function renderColdBaseDetail(){
       tbody.innerHTML = sorted.map(c=>coldRowHtml(base,c)).join('');
     } else {
       const emptyMsg = visible.length ? 'Нічого не знайдено за цим фільтром.' : 'У цій базі ще немає контактів.';
-      tbody.innerHTML = `<tr><td colspan="7" class="empty-hint" style="text-align:center;padding:26px 12px;">${emptyMsg}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-hint" style="text-align:center;padding:26px 12px;">${emptyMsg}</td></tr>`;
     }
   }
 
@@ -4507,10 +4529,10 @@ function confirmColdConvert(){
   if(!base || !c || !targetPipeline || !targetStage) return;
   const newId = nextLeadId++;
   LEADS.push({
-    id:newId, name:c.title, phone:c.phone||'', email:'', company:'', niche:'',
+    id:newId, name:c.title, phone:c.phone||'', email:c.email||'', company:'', niche:'',
     link:c.url||'', stage:targetStage, value:0, pipelineId:targetPipeline.id, managerId:targetPipeline.ownerId,
     createdAt: new Date().toLocaleDateString('uk-UA'),
-    notes:[{author:currentActorLabel(), date:nowTimeStr(), text:`Створено з холодної бази "${base.name}"${c.city?` (місто: ${c.city})`:''}`}],
+    notes:[{author:currentActorLabel(), date:nowTimeStr(), text:`Створено з холодної бази "${base.name}"${c.director?` (керівник: ${c.director})`:''}`}],
     tasks:[], attachments:[]
   });
   c.convertedClientId = newId;
@@ -4577,26 +4599,38 @@ function coldImportFilePicked(){
   document.getElementById('coldImportBtn').disabled = true;
   coldStagedImport = null;
 }
+function coldRowValue(r, keys){
+  return String(csvGet(r, keys) ?? '').trim();
+}
 async function previewColdImport(){
   const input = document.getElementById('coldImportFile');
-  if(!input.files[0]){ showAlertModal('Оберіть CSV-файл з базою контактів.', 'Не вистачає файлу'); return; }
+  if(!input.files[0]){ showAlertModal('Оберіть файл (XLSX або CSV) з базою контактів.', 'Не вистачає файлу'); return; }
   const name = document.getElementById('coldImportName').value.trim();
   if(!name){ showAlertModal('Вкажіть назву бази.', 'Не вистачає назви'); return; }
-  const csv = parseCSV(await readFileAsText(input.files[0]));
-  const staged = csv.rows.map(r => ({
-    title: csvGet(r, ['title','Title','назва','Назва','name','Name']),
-    url: csvGet(r, ['url','URL','посилання','Посилання','link','Link']),
-    phone: csvGet(r, ['phone','Phone','телефон','Телефон']),
-    city: csvGet(r, ['city','City','місто','Місто','город','Город'])
+  const file = input.files[0];
+  const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+  let rows;
+  try{
+    rows = isExcel ? (await parseXLSXFile(file)).rows : parseCSV(await readFileAsText(file)).rows;
+  }catch(err){
+    showAlertModal('Не вдалося прочитати файл. Перевірте, що це коректний XLSX або CSV.', 'Помилка читання файлу');
+    return;
+  }
+  const staged = rows.map(r => ({
+    title: coldRowValue(r, ["Суб'єкт господарської діяльності", 'title','Title','назва','Назва','name','Name']),
+    phone: coldRowValue(r, ['Телефон','телефон','phone','Phone']),
+    email: coldRowValue(r, ['Email','email','E-mail','e-mail']),
+    url: coldRowValue(r, ['Веб-сайт','веб-сайт','url','URL','посилання','Посилання','link','Link']),
+    director: coldRowValue(r, ['Керівник','керівник','director','Director'])
   })).filter(r => r.title || r.phone);
   coldStagedImport = { name, staged };
 
   document.getElementById('coldImportPreviewSummary').textContent =
-    `Знайдено рядків у файлі: ${csv.rows.length}. Готово до імпорту: ${staged.length}.`;
+    `Знайдено рядків у файлі: ${rows.length}. Готово до імпорту: ${staged.length}.`;
   const tbody = document.getElementById('coldImportPreviewTableBody');
-  const previewRows = staged.slice(0,8).map(s=>`<tr><td>${s.title||'—'}</td><td>${s.phone||'—'}</td><td>${s.city||'—'}</td><td>${s.url?'🔗':'—'}</td></tr>`).join('');
-  tbody.innerHTML = previewRows || '<tr><td colspan="4" class="empty-hint">Немає рядків для імпорту.</td></tr>';
-  if(staged.length > 8) tbody.insertAdjacentHTML('beforeend', `<tr><td colspan="4" class="empty-hint">...і ще ${staged.length-8}.</td></tr>`);
+  const previewRows = staged.slice(0,8).map(s=>`<tr><td>${s.title||'—'}</td><td>${s.phone||'—'}</td><td>${s.email||'—'}</td><td>${s.url?'🔗':'—'}</td><td>${s.director||'—'}</td></tr>`).join('');
+  tbody.innerHTML = previewRows || '<tr><td colspan="5" class="empty-hint">Немає рядків для імпорту.</td></tr>';
+  if(staged.length > 8) tbody.insertAdjacentHTML('beforeend', `<tr><td colspan="5" class="empty-hint">...і ще ${staged.length-8}.</td></tr>`);
 
   document.getElementById('coldImportPreviewSection').classList.remove('js-hidden');
   document.getElementById('coldImportBtn').disabled = staged.length === 0;
@@ -4615,7 +4649,7 @@ async function commitColdImport(){
   // контакту теж має бути рядком, інакше x.id===contactId ніколи не
   // збігається (число !== рядок) і жодна дія в таблиці не спрацьовує.
   const contacts = staged.map(s => ({
-    id: String(nextColdContactId++), title:s.title, phone:s.phone, city:s.city, url:s.url,
+    id: String(nextColdContactId++), title:s.title, phone:s.phone, email:s.email, url:s.url, director:s.director,
     managerOverride:null, status:'new', convertedClientId:null
   }));
   const newBase = { id:'cb'+(nextColdBaseId++), name, createdAt:new Date().toLocaleDateString('uk-UA'), defaultManagerId: coldImportSelectedManagerId || null, contacts };
