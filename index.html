@@ -1623,7 +1623,7 @@
         <div id="dealNotesList"></div>
         <div class="inline-add-row">
           <textarea id="newNoteText" placeholder="Додати нотатку..." style="min-height:44px;"></textarea>
-          <button class="btn secondary" style="white-space:nowrap;" onclick="addDealNote()">Додати</button>
+          <button class="btn secondary" id="addNoteBtn" style="white-space:nowrap;" onclick="addDealNote()">Додати</button>
         </div>
       </div>
     </div>
@@ -2227,6 +2227,7 @@ const state = {
   dealPanelTab: 'info',
   editingDealTaskIdx: null,
   editingDealMeetingId: null,
+  editingDealNoteIdx: null,
   dealDoneTasksOpen: false,
   clientManagerFilter: [],
   clientPipelineFilter: [],
@@ -3433,6 +3434,7 @@ function openDeal(id, presetStage){
   const panel = document.getElementById('dealPanel');
   cancelDealTaskEdit();
   cancelDealMeetingEdit();
+  cancelDealNoteEdit();
   state.dealDoneTasksOpen = false;
   setDealPanelTab('info');
   if(id === null){
@@ -3490,9 +3492,30 @@ function updateDealPanelTabCounts(l){
 }
 function renderDealNotes(l){
   document.getElementById('dealNotesList').innerHTML = l.notes.length
-    ? l.notes.map((n,i)=>`<div class="timeline-item note-row"><div class="note-row-main">${n.text}<div class="timeline-meta">${n.author} · ${n.date}</div></div><button type="button" class="row-icon-btn danger" title="Видалити нотатку" onclick="deleteDealNote(${l.id},${i})">${trashIconSvg(14)}</button></div>`).join('')
+    ? l.notes.map((n,i)=>`<div class="timeline-item note-row"><div class="note-row-main">${n.text}<div class="timeline-meta">${n.author} · ${n.date}</div></div><button type="button" class="row-icon-btn" title="Редагувати" onclick="editDealNote(${l.id},${i})">${editIconSvg(14)}</button><button type="button" class="row-icon-btn danger" title="Видалити нотатку" onclick="deleteDealNote(${l.id},${i})">${trashIconSvg(14)}</button></div>`).join('')
     : '<div class="empty-hint">Нотаток ще немає.</div>';
   updateDealPanelTabCounts(l);
+}
+// Редагування нотатки: форма додавання внизу виступає формою редагування,
+// поки не збережемо/не скасуємо — той самий патерн, що й для завдань.
+function editDealNote(leadId, idx){
+  const l = LEADS.find(l=>l.id===leadId);
+  if(!l) return;
+  const n = l.notes[idx];
+  if(!n) return;
+  state.editingDealNoteIdx = idx;
+  const textEl = document.getElementById('newNoteText');
+  textEl.value = n.text;
+  textEl.focus();
+  const btn = document.getElementById('addNoteBtn');
+  if(btn) btn.textContent = 'Зберегти';
+}
+function cancelDealNoteEdit(){
+  state.editingDealNoteIdx = null;
+  const textEl = document.getElementById('newNoteText');
+  if(textEl) textEl.value = '';
+  const btn = document.getElementById('addNoteBtn');
+  if(btn) btn.textContent = 'Додати';
 }
 async function deleteDealNote(leadId, idx){
   const l = LEADS.find(l=>l.id===leadId);
@@ -3502,6 +3525,7 @@ async function deleteDealNote(leadId, idx){
   const ok = await showConfirmModal({title:'Видалити нотатку', text:'Видалити цю нотатку? Дію не можна скасувати.', okText:'Видалити', danger:true});
   if(!ok) return;
   l.notes.splice(idx,1);
+  if(state.editingDealNoteIdx === idx) cancelDealNoteEdit();
   renderDealNotes(l);
   logActivity(`Видалено нотатку до угоди "${l.name}"`, {target:{type:'lead', id:l.id}});
 }
@@ -3662,6 +3686,20 @@ function addDealNote(){
   if(!text) return;
   const today = new Date().toLocaleDateString('uk-UA');
   const author = USERS.find(u=>u.id===(state.managerId||'ostap'))?.name || 'Я';
+  // Редагування наявної нотатки: форма додавання виступає формою
+  // редагування, поки не збережемо/не скасуємо (той самий патерн, що й для завдань).
+  if(state.currentDealId !== null && state.editingDealNoteIdx !== null){
+    const l = LEADS.find(l=>l.id===state.currentDealId);
+    const n = l ? l.notes[state.editingDealNoteIdx] : null;
+    if(n){
+      n.text = text;
+      n.date = today;
+      renderDealNotes(l);
+      logActivity(`Відредаговано нотатку до угоди "${l.name}"`, {target:{type:'lead', id:l.id}});
+    }
+    cancelDealNoteEdit();
+    return;
+  }
   if(state.currentDealId === null){
     document.getElementById('dealNotesList').insertAdjacentHTML('beforeend', `<div class="timeline-item">${text}<div class="timeline-meta">${author} · ${today}</div></div>`);
   } else {
