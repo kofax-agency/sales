@@ -639,6 +639,7 @@
   .coldbase-detail-table th{font-size:10.5px;padding:10px 8px;white-space:nowrap;}
   .vac-status-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;}
   .vac-status-badge.open{background:#1AA35A1A;color:#1AA35A;}
+  .vac-status-badge.paused{background:#F5A52422;color:var(--warning);}
   .vac-status-badge.closed{background:var(--surface-2);color:var(--text-muted);}
   .vac-status-badge.archived{background:#E5484D1A;color:var(--danger);}
 </style>
@@ -1365,6 +1366,7 @@
           </button>
           <ul class="cselect-menu" data-select="vacStatus">
             <li data-value="open" class="selected">Відкрита</li>
+            <li data-value="paused">На паузі</li>
             <li data-value="closed">Закрита</li>
             <li data-value="archived">Архів</li>
           </ul>
@@ -5792,7 +5794,7 @@ function activeStages(vac){ return vac ? vac.stages.filter(s=>!s.archived) : [];
 let editingVacancyId = null;
 let vacEditing = false;
 let tempVacAttachments = [];
-const VAC_STATUS_LABELS = {open:'Відкрита', closed:'Закрита', archived:'Архів'};
+const VAC_STATUS_LABELS = {open:'Відкрита', paused:'На паузі', closed:'Закрита', archived:'Архів'};
 function addVacAttachment(e){
   const file = e.target.files[0];
   if(!file) return;
@@ -5894,14 +5896,13 @@ function saveVacancy(){
 function renderVacanciesTable(){
   const tbody = document.getElementById('vacanciesTableBody');
   if(!tbody) return;
-  const statusLabels = {open:'Відкрита', closed:'Закрита', archived:'Архів'};
   if(!VACANCIES.length){ tbody.innerHTML = '<tr><td colspan="5" class="empty-hint">Вакансій ще немає.</td></tr>'; return; }
   tbody.innerHTML = VACANCIES.map(v => {
     const count = CANDIDATES.filter(c=>c.vacancyId===v.id).length;
     return `
     <tr class="clickable" onclick="openVacancyPanel(${v.id})">
       <td>${v.title}</td>
-      <td><span class="vac-status-badge ${v.status}">${statusLabels[v.status]||v.status}</span></td>
+      <td><span class="vac-status-badge ${v.status}">${VAC_STATUS_LABELS[v.status]||v.status}</span></td>
       <td>${count}</td>
       <td>${v.createdByName||''}</td>
       <td>${v.createdAt||''}</td>
