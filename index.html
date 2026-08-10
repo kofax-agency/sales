@@ -635,7 +635,7 @@
      колонці "Назва") + перенесення довгих значень (назв компаній, email)
      замість розтягування таблиці за межі контейнера. */
   .coldbase-detail-table{table-layout:fixed;}
-  .coldbase-detail-table td{overflow-wrap:break-word;word-break:break-word;}
+  .coldbase-detail-table th, .coldbase-detail-table td{overflow-wrap:break-word;word-break:break-word;}
   .vac-status-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;}
   .vac-status-badge.open{background:#1AA35A1A;color:#1AA35A;}
   .vac-status-badge.closed{background:var(--surface-2);color:var(--text-muted);}
@@ -1007,7 +1007,7 @@
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
           <div class="table-scroll"><table class="coldbase-detail-table">
-            <thead><tr><th>Назва</th><th style="width:138px;">Телефон</th><th style="width:130px;">Email</th><th style="width:72px;">Веб-сайт</th><th style="width:118px;">Керівник</th><th style="width:78px;">Додзвонився</th><th style="width:160px;">Статус</th><th style="width:110px;">Дії</th></tr></thead>
+            <thead><tr><th style="width:190px;">Назва</th><th style="width:140px;">Телефон</th><th style="width:210px;">Email</th><th style="width:90px;">Веб-сайт</th><th style="width:190px;">Керівник</th><th style="width:140px;">Додзвонився</th><th style="width:190px;">Статус</th><th style="width:130px;">Дії</th></tr></thead>
             <tbody id="coldBaseTableBody"></tbody>
           </table></div>
         </div>
