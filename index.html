@@ -1007,7 +1007,7 @@
         </div>
         <div class="card" style="padding:8px 4px;margin-top:16px;">
           <div class="table-scroll"><table class="coldbase-detail-table">
-            <thead><tr><th style="width:190px;">Назва</th><th style="width:140px;">Телефон</th><th style="width:210px;">Email</th><th style="width:90px;">Веб-сайт</th><th style="width:190px;">Керівник</th><th style="width:140px;">Додзвонився</th><th style="width:190px;">Статус</th><th style="width:130px;">Дії</th></tr></thead>
+            <thead><tr><th style="width:15%;">Назва</th><th style="width:11%;">Телефон</th><th style="width:19%;">Email</th><th style="width:6%;">Веб-сайт</th><th style="width:15%;">Керівник</th><th style="width:7%;">Додзвон</th><th style="width:14%;">Статус</th><th style="width:13%;">Дії</th></tr></thead>
             <tbody id="coldBaseTableBody"></tbody>
           </table></div>
         </div>
@@ -4423,6 +4423,12 @@ async function deleteColdBase(baseId, e){
 
 const COLD_STATUS_LABELS = {new:'—', no_answer:'Не додзвонився', invalid:'Недійсний номер', callback:'Передзвонити'};
 const COLD_STATUS_ROW_CLASS = {new:'', no_answer:'cold-row-no_answer', invalid:'cold-row-invalid', callback:'cold-row-callback', called:'cold-row-called'};
+// Якщо в комірці кілька номерів через кому — розбиваємо на окремі рядки,
+// інакше довгий рядок "номер, номер" наліз на сусідню колонку Email.
+function coldPhoneHtml(phone){
+  if(!phone) return '—';
+  return phone.split(',').map(p=>p.trim()).filter(Boolean).join('<br>');
+}
 function coldRowHtml(base, c){
   const statusVal = (c.status==='no_answer'||c.status==='invalid'||c.status==='callback') ? c.status : 'new';
   const rowClass = c.status==='called' ? COLD_STATUS_ROW_CLASS.called : (COLD_STATUS_ROW_CLASS[statusVal] || '');
@@ -4437,7 +4443,7 @@ function coldRowHtml(base, c){
     : '—';
   return `<tr class="${rowClass}">
     <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.title)}')">${c.title||'—'}</td>
-    <td class="copyable" style="white-space:nowrap;" onclick="copyCellToClipboard(event,'${escAttr(c.phone)}')">${c.phone||'—'}</td>
+    <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.phone)}')">${coldPhoneHtml(c.phone)}</td>
     <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.email)}')">${c.email||'—'}</td>
     <td>${linkCell}</td>
     <td class="copyable" onclick="copyCellToClipboard(event,'${escAttr(c.director)}')">${c.director||'—'}</td>
