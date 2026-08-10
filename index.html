@@ -3108,6 +3108,12 @@ function ensureColdBaseIntegrity(){
     (b.contacts || []).forEach(c => {
       if(typeof c.id !== 'string'){ c.id = String(c.id); changed = true; }
     });
+    if(typeof b.contactCount !== 'number'){
+      b.contactCount = Array.isArray(b.contacts) ? b.contacts.length : 0;
+    }
+    if(typeof b.processedCount !== 'number'){
+      b.processedCount = Array.isArray(b.contacts) ? b.contacts.filter(c=>c.status!=='new').length : 0;
+    }
   });
   return changed;
 }
@@ -4225,7 +4231,10 @@ async function commitPipedriveImport(){
 }
 /* =========================================================
    "БАЗА КЛІЄНТІВ" — холодні бази контактів (окремо від Контактів/
-   воронки). Дані живуть у COLDBASES (масив баз, кожна — {contacts:[]}).
+   воронки). Локально дані живуть у COLDBASES (масив баз, кожна —
+   {..., contacts:[]}), але в Firestore контакти кожної бази зберігаються
+   в ОКРЕМОМУ документі (kofax/crm/coldBaseContacts/{id}), а не в
+   головному документі СРМ — див. coldBaseContactsRef().
    ========================================================= */
 // Ефективний менеджер рядка — тепер лише через менеджера бази (розкидати
 // окремі рядки різним менеджерам вирішили не робити — і керівник відділу,
@@ -4234,16 +4243,90 @@ function coldContactManagerId(base, c){
   return base.defaultManagerId || null;
 }
 // Контакти бази, видимі поточній ролі: CTO/керівник відділу бачать усе,
-// менеджер — лише якщо база призначена саме йому.
+// менеджер — лише якщо база призначена саме йому. Викликати лише коли
+// base.contacts вже завантажено (сторінка деталей бази) — для списку баз
+// використовуємо легкі лічильники coldBaseCount()/coldBaseProcessedCount().
 function coldBaseVisibleContacts(base){
+  if(!Array.isArray(base.contacts)) return [];
   if(state.role === 'cto' || state.role === 'admin') return base.contacts;
   return base.contacts.filter(c => coldContactManagerId(base, c) === state.userId);
 }
-// Бази, видимі у списку поточній ролі — менеджеру показуємо лише ті,
-// де в нього є хоч один видимий контакт.
+// Контакти бази живуть в ОКРЕМОМУ документі Firestore
+// (kofax/crm/coldBaseContacts/{id}), а не в головному спільному документі
+// СРМ — велика база (тисячі рядків) впритул підходила до ліміту Firestore
+// в 1 МБ на документ, і .set() мовчки провалювався (саме тому імпортована
+// база "губилась" після оновлення сторінки: локально виглядало гаразд, а в
+// хмару так і не потрапило). Головний документ тримає лише легкі метадані:
+// id/name/createdAt/defaultManagerId/contactCount/processedCount.
+function coldBaseContactsRef(baseId){
+  return fbDb ? fbDb.collection('kofax').doc('crm').collection('coldBaseContacts').doc(String(baseId)) : null;
+}
+function coldBaseCount(base){
+  if(typeof base.contactCount === 'number') return base.contactCount;
+  return Array.isArray(base.contacts) ? base.contacts.length : 0;
+}
+function coldBaseProcessedCount(base){
+  if(typeof base.processedCount === 'number') return base.processedCount;
+  return Array.isArray(base.contacts) ? base.contacts.filter(c=>c.status!=='new').length : 0;
+}
+// Хмара тепер шле лише легкі метадані баз (без масиву контактів). Зберігаємо
+// контакти, вже підвантажені в цій сесії (по кліку "відкрити базу"), щоб
+// відкрита сторінка деталей не "скидалась" у стан завантаження на кожен
+// пришлий снепшот з хмари (напр. зміну в іншій вкладці).
+function mergeRemoteColdBases(incoming){
+  const localContactsById = {};
+  COLDBASES.forEach(b => { if(Array.isArray(b.contacts)) localContactsById[b.id] = b.contacts; });
+  COLDBASES = incoming.map(b => {
+    const merged = Object.assign({}, b);
+    if(!Array.isArray(merged.contacts) && localContactsById[merged.id]){
+      merged.contacts = localContactsById[merged.id];
+    }
+    if(typeof merged.contactCount !== 'number'){
+      merged.contactCount = Array.isArray(merged.contacts) ? merged.contacts.length : 0;
+    }
+    if(typeof merged.processedCount !== 'number'){
+      merged.processedCount = Array.isArray(merged.contacts) ? merged.contacts.filter(c=>c.status!=='new').length : 0;
+    }
+    return merged;
+  });
+}
+async function loadColdBaseContacts(base){
+  const ref = coldBaseContactsRef(base.id);
+  if(!ref){ base.contacts = []; return; }
+  try{
+    const snap = await ref.get();
+    base.contacts = (snap.exists && Array.isArray(snap.data().contacts)) ? snap.data().contacts : [];
+    base.contactCount = base.contacts.length;
+    base.processedCount = base.contacts.filter(c=>c.status!=='new').length;
+  }catch(err){
+    console.error('Не вдалося завантажити контакти бази:', err);
+    base.contacts = [];
+    showAlertModal('Не вдалося завантажити контакти цієї бази. Перевірте інтернет-з’єднання і спробуйте ще раз.', 'Помилка завантаження');
+  }
+}
+// Дебаунсоване збереження контактів ОДНІЄЇ бази в її власний документ +
+// синхронне оновлення легких лічильників (contactCount/processedCount) у
+// головному документі СРМ, щоб список баз завжди показував актуальні числа.
+function scheduleColdBaseContactsSave(base){
+  base.contactCount = base.contacts.length;
+  base.processedCount = base.contacts.filter(c=>c.status!=='new').length;
+  fbScheduleSave();
+  const ref = coldBaseContactsRef(base.id);
+  if(!ref || !fbReady) return;
+  clearTimeout(fbColdContactsSaveTimers[base.id]);
+  fbColdContactsSaveTimers[base.id] = setTimeout(function(){
+    ref.set({contacts: base.contacts}, {merge:true}).catch(function(err){
+      console.error('Firestore save (cold base contacts) failed:', err);
+      showAlertModal('Не вдалося зберегти зміни в базі клієнтів у хмару. Перевірте інтернет-з’єднання; якщо проблема повториться — повідомте розробника.', 'Помилка збереження');
+    });
+  }, 400);
+}
+// Бази, видимі у списку поточній ролі — менеджеру показуємо лише ті, що
+// призначені саме йому і не порожні (per-contact розподіл не використовується,
+// видимість завжди на рівні цілої бази — див. coldContactManagerId).
 function coldBasesVisiblePool(){
   if(state.role === 'cto' || state.role === 'admin') return COLDBASES;
-  return COLDBASES.filter(b => coldBaseVisibleContacts(b).length > 0);
+  return COLDBASES.filter(b => b.defaultManagerId === state.userId && coldBaseCount(b) > 0);
 }
 // Кому можна призначити базу — усі менеджери компанії ТА керівник відділу
 // (керівник може забрати базу собі особисто, а не лише роздавати менеджерам).
@@ -4279,9 +4362,8 @@ function renderColdBasesList(){
     return;
   }
   tbody.innerHTML = pool.map(b => {
-    const visible = coldBaseVisibleContacts(b);
-    const total = visible.length;
-    const done = visible.filter(c=>c.status!=='new').length;
+    const total = coldBaseCount(b);
+    const done = coldBaseProcessedCount(b);
     const delBtn = canManage
       ? `<button class="danger-icon-btn" style="width:30px;height:30px;" title="Видалити базу" onclick="deleteColdBase('${b.id}', event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>`
       : '';
@@ -4296,13 +4378,19 @@ function renderColdBasesList(){
   }).join('');
 }
 
-function openColdBase(id){
+async function openColdBase(id){
   state.coldBaseViewId = id;
   coldDetailSearchQuery = '';
   coldDetailStatusFilter = '';
   const searchInput = document.getElementById('coldSearchInput');
   if(searchInput) searchInput.value = '';
   showView(null, 'coldbase-detail');
+  const base = COLDBASES.find(b=>b.id===id);
+  if(base && !Array.isArray(base.contacts)){
+    renderColdBaseDetail(); // одразу покаже стан "завантаження…"
+    await loadColdBaseContacts(base);
+    if(state.coldBaseViewId !== id) return; // користувач вже перейшов до іншої бази/сторінки
+  }
   renderColdBaseDetail();
 }
 // Якщо хтось інший (напр. інша вкладка) змінив дані, поки менеджер
@@ -4317,11 +4405,13 @@ async function deleteColdBase(baseId, e){
   if(!base) return;
   const ok = await showConfirmModal({
     title:'Видалити базу',
-    text:`Видалити базу "${base.name}" і всі ${base.contacts.length} контактів? Це незворотньо.`,
+    text:`Видалити базу "${base.name}" і всі ${coldBaseCount(base)} контактів? Це незворотньо.`,
     okText:'Видалити', danger:true
   });
   if(!ok) return;
   COLDBASES = COLDBASES.filter(b=>b.id!==baseId);
+  const coldContactsRef = coldBaseContactsRef(baseId);
+  if(coldContactsRef) coldContactsRef.delete().catch(function(err){ console.error('Не вдалося видалити контакти бази з хмари:', err); });
   logActivity(`Видалено базу клієнтів "${base.name}"`, {target:{type:'view', name:'coldbase'}});
   if(state.coldBaseViewId === baseId){
     state.coldBaseViewId = null;
@@ -4410,9 +4500,20 @@ function renderColdBaseDetail(){
   const title = document.getElementById('coldBaseDetailTitle');
   if(!base){ if(title) title.textContent = 'Базу не знайдено'; return; }
   if(title) title.textContent = base.name;
+  const summary = document.getElementById('coldBaseDetailSummary');
+  const tbody = document.getElementById('coldBaseTableBody');
+  // Контакти цієї бази ще не підвантажено з хмари (openColdBase() зробить
+  // це і перемалює сторінку) — показуємо стан завантаження замість того,
+  // щоб намагатись фільтрувати/сортувати ще не існуючий масив.
+  if(!Array.isArray(base.contacts)){
+    if(summary) summary.textContent = 'Завантаження контактів…';
+    if(tbody) tbody.innerHTML = '<tr><td colspan="8" class="empty-hint" style="text-align:center;padding:26px 12px;">Завантаження контактів…</td></tr>';
+    renderColdBaseManagerOptions();
+    renderColdStatusFilterOptions();
+    return;
+  }
   const visible = coldBaseVisibleContacts(base);
   const processedCount = visible.filter(c=>c.status!=='new').length;
-  const summary = document.getElementById('coldBaseDetailSummary');
   if(summary) summary.textContent = `Контактів: ${visible.length} · Оброблено: ${processedCount} · Залишилось: ${visible.length-processedCount}`;
 
   const filtered = visible.filter(coldContactMatchesFilters);
@@ -4422,7 +4523,6 @@ function renderColdBaseDetail(){
     const bDone = b.status!=='new' ? 1 : 0;
     return aDone - bDone;
   });
-  const tbody = document.getElementById('coldBaseTableBody');
   if(tbody){
     if(sorted.length){
       tbody.innerHTML = sorted.map(c=>coldRowHtml(base,c)).join('');
@@ -4473,14 +4573,14 @@ async function toggleColdCalled(baseId, contactId, checked, inputEl){
 }
 function setColdContactStatus(baseId, contactId, status){
   const base = COLDBASES.find(b=>b.id===baseId);
-  if(!base) return;
+  if(!base || !Array.isArray(base.contacts)) return;
   const c = base.contacts.find(x=>x.id===contactId);
   if(!c) return;
   c.status = status;
   c.updatedAt = nowTimeStr();
   renderColdBaseDetail();
   renderColdBasesList();
-  fbScheduleSave();
+  scheduleColdBaseContactsSave(base);
 }
 
 /* ---------- "Дії" → перенести в воронку (менеджер: лише свою; керівник
@@ -4551,6 +4651,7 @@ function confirmColdConvert(){
   renderClientsTable();
   renderBoard();
   renderDashboardStats();
+  scheduleColdBaseContactsSave(base);
   fbScheduleSave();
   showAlertModal(`Клієнта "${c.title}" створено в Контактах.`, 'Готово');
 }
@@ -4661,12 +4762,32 @@ async function commitColdImport(){
     id: String(nextColdContactId++), title:s.title, phone:s.phone, email:s.email, url:s.url, director:s.director,
     managerOverride:null, status:'new', convertedClientId:null
   }));
-  const newBase = { id:'cb'+(nextColdBaseId++), name, createdAt:new Date().toLocaleDateString('uk-UA'), defaultManagerId: coldImportSelectedManagerId || null, contacts };
+  const newBase = {
+    id:'cb'+(nextColdBaseId++), name, createdAt:new Date().toLocaleDateString('uk-UA'),
+    defaultManagerId: coldImportSelectedManagerId || null,
+    contactCount: contacts.length, processedCount: 0, contacts
+  };
+  // Контакти зберігаємо в ОКРЕМИЙ документ Firestore і чекаємо підтвердження
+  // ДО того, як показати "Готово" — велика база (тисячі рядків) в одному
+  // спільному документі СРМ впритул підходила до ліміту в 1 МБ, .set()
+  // мовчки провалювався, і база локально виглядала імпортованою, а в хмару
+  // так і не потрапляла (зникала після оновлення сторінки). Тепер, якщо
+  // запис не вдався, користувач одразу побачить помилку замість втрати даних.
+  const contactsRef = coldBaseContactsRef(newBase.id);
+  if(contactsRef){
+    try{
+      await contactsRef.set({contacts});
+    }catch(err){
+      console.error('Не вдалося зберегти контакти бази в хмару:', err);
+      showAlertModal(`Не вдалося зберегти базу "${name}" в хмару (${err && err.message ? err.message : 'помилка мережі'}). Перевірте інтернет-з’єднання і спробуйте ще раз.`, 'Помилка збереження');
+      return;
+    }
+  }
   COLDBASES.push(newBase);
   logActivity(`Імпортовано базу клієнтів "${name}" (${contacts.length} контактів)`, {target:{type:'view', name:'coldbase'}});
   renderColdBasesList();
   closeAllPanels();
-  fbScheduleSave();
+  fbSaveNow();
   showAlertModal(`Базу "${name}" імпортовано: ${contacts.length} контактів.`, 'Імпорт завершено');
   coldStagedImport = null;
 }
@@ -6884,8 +7005,10 @@ const firebaseConfig = {
   measurementId: "G-JL1DT5LSBX"
 };
 let fbDocRef = null;
+let fbDb = null;
 let fbApplyingRemote = false;
 let fbSaveTimer = null;
+let fbColdContactsSaveTimers = {};
 // КРИТИЧНО: доки не прийшов ПЕРШИЙ снепшот з хмари (реальні дані), локальний
 // стан у пам'яті — це лише "заглушки"-значення за замовчуванням (порожні
 // ліди/задачі, 3 стартові акаунти). Якщо дозволити запис у Firestore до
@@ -6918,6 +7041,7 @@ function fbInit(){
     if(typeof firebase === 'undefined') return;
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    fbDb = db;
     // enablePersistence повертає Promise — .catch() (не try/catch), інакше
     // відмова (кілька вкладок, приватний режим) лишає необроблений reject.
     db.enablePersistence({synchronizeTabs:true}).catch(function(err){ /* не критично — просто без офлайн-кешу */ });
@@ -6951,7 +7075,7 @@ function fbApplyRemoteData(data){
   let needsRepairSave = false;
   try{
     if(Array.isArray(data.leads)) LEADS = data.leads;
-    if(Array.isArray(data.coldBases)) COLDBASES = data.coldBases;
+    if(Array.isArray(data.coldBases)) mergeRemoteColdBases(data.coldBases);
     if(Array.isArray(data.tasks)) TASKS = data.tasks;
     if(Array.isArray(data.calls)) CALLS = data.calls;
     if(Array.isArray(data.reports)) REPORTS = data.reports;
@@ -7060,9 +7184,21 @@ function fbSaveNow(){
     return;
   }
   allowEmptyCoreSave = false;
+  // coldBases у головному документі — ЛИШЕ легкі метадані (без масиву
+  // контактів, який живе окремо в kofax/crm/coldBaseContacts/{id} — див.
+  // coldBaseContactsRef()). Якщо десь локально ще лежить старий формат із
+  // вкладеними contacts (легасі-дані до цього фіксу), сюди вони теж не
+  // потраплять — саме вкладені масиви на тисячі рядків впритул підходили
+  // до ліміту Firestore в 1 МБ і збереження мовчки провалювалось.
+  const coldBasesLite = COLDBASES.map(function(b){
+    return {
+      id: b.id, name: b.name, createdAt: b.createdAt, defaultManagerId: b.defaultManagerId,
+      contactCount: coldBaseCount(b), processedCount: coldBaseProcessedCount(b)
+    };
+  });
   const payload = {
     leads: LEADS,
-    coldBases: COLDBASES,
+    coldBases: coldBasesLite,
     tasks: TASKS,
     calls: CALLS,
     reports: REPORTS,
@@ -7084,7 +7220,10 @@ function fbSaveNow(){
     nextSpecialistId: nextSpecialistId,
     updatedAt: Date.now()
   };
-  fbDocRef.set(payload, {merge:true}).catch(function(err){ console.error('Firestore save failed:', err); });
+  fbDocRef.set(payload, {merge:true}).catch(function(err){
+    console.error('Firestore save failed:', err);
+    showAlertModal('Не вдалося зберегти зміни в хмару. Перевірте інтернет-з’єднання; якщо проблема повториться після оновлення сторінки — повідомте розробника.', 'Помилка збереження');
+  });
 }
 fbInit();
 
