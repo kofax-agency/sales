@@ -770,6 +770,19 @@
           <svg id="themeIconMoon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
         </button>
 
+        <!-- Статус синхронізації з Firestore — видима крапка (сірий/зелений/
+             жовтий/червоний) + панель з деталями останньої помилки, щоб збій
+             збереження було видно одразу в СРМ, а не лише в консолі браузера. -->
+        <div class="account-wrap">
+          <button class="icon-btn hide-mobile" id="fbStatusBtn" onclick="toggleDropdown('fbStatusPanel', this)" title="Підключення до хмари"><span class="dot" id="fbStatusDot" style="background:var(--text-muted);"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+          </button>
+          <div class="dropdown-panel" id="fbStatusPanel" style="width:290px;">
+            <div class="dropdown-head"><span>Синхронізація з хмарою</span></div>
+            <div id="fbStatusBody" style="padding:12px 14px;font-size:13px;line-height:1.5;">Перевірка з'єднання…</div>
+          </div>
+        </div>
+
         <div class="account-wrap">
           <button class="icon-btn hide-mobile" onclick="toggleDropdown('notifPanel', this)" title="Сповіщення"><span class="dot" id="notifDot"></span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -4333,15 +4346,25 @@ function mergeRemoteColdBases(incoming){
 }
 async function loadColdBaseContacts(base){
   const ref = coldBaseContactsRef(base.id);
-  if(!ref){ base.contacts = []; return; }
+  if(!ref){
+    // Firestore не підключено — раніше тут мовчки виставлявся порожній
+    // масив, і база виглядала так, ніби в ній і справді немає контактів,
+    // хоча насправді вони просто ще не завантажились.
+    base.contacts = [];
+    fbSetStatus('error', 'Firestore не підключено — не вдалося завантажити контакти бази.');
+    showAlertModal('Немає з’єднання з хмарною базою даних, тому контакти цієї бази не завантажились. Перевірте інтернет і оновіть сторінку.', 'Помилка завантаження');
+    return;
+  }
   try{
     const snap = await ref.get();
     base.contacts = (snap.exists && Array.isArray(snap.data().contacts)) ? snap.data().contacts : [];
     base.contactCount = base.contacts.length;
     base.processedCount = base.contacts.filter(c=>c.status!=='new').length;
+    fbSetStatus('ok', '');
   }catch(err){
     console.error('Не вдалося завантажити контакти бази:', err);
     base.contacts = [];
+    fbSetStatus('error', `Не вдалося завантажити контакти бази: ${err && err.message ? err.message : err} (код: ${err && err.code ? err.code : 'невідомий'}).`);
     showAlertModal('Не вдалося завантажити контакти цієї бази. Перевірте інтернет-з’єднання і спробуйте ще раз.', 'Помилка завантаження');
   }
 }
@@ -4353,11 +4376,19 @@ function scheduleColdBaseContactsSave(base){
   base.processedCount = base.contacts.filter(c=>c.status!=='new').length;
   fbScheduleSave();
   const ref = coldBaseContactsRef(base.id);
-  if(!ref || !fbReady) return;
+  if(!ref){
+    fbSetStatus('error', 'Firestore не підключено — зміни в базі клієнтів не зберігаються в хмару.');
+    return;
+  }
+  if(!fbReady) return;
   clearTimeout(fbColdContactsSaveTimers[base.id]);
   fbColdContactsSaveTimers[base.id] = setTimeout(function(){
-    ref.set({contacts: base.contacts}, {merge:true}).catch(function(err){
+    fbSetStatus('saving', '');
+    ref.set({contacts: base.contacts}, {merge:true}).then(function(){
+      fbSetStatus('ok', '');
+    }).catch(function(err){
       console.error('Firestore save (cold base contacts) failed:', err);
+      fbSetStatus('error', `Не вдалося зберегти зміни в базі клієнтів: ${err && err.message ? err.message : err} (код: ${err && err.code ? err.code : 'невідомий'}).`);
       showAlertModal('Не вдалося зберегти зміни в базі клієнтів у хмару. Перевірте інтернет-з’єднання; якщо проблема повториться — повідомте розробника.', 'Помилка збереження');
     });
   }, 400);
@@ -4821,14 +4852,22 @@ async function commitColdImport(){
   // так і не потрапляла (зникала після оновлення сторінки). Тепер, якщо
   // запис не вдався, користувач одразу побачить помилку замість втрати даних.
   const contactsRef = coldBaseContactsRef(newBase.id);
-  if(contactsRef){
-    try{
-      await contactsRef.set({contacts});
-    }catch(err){
-      console.error('Не вдалося зберегти контакти бази в хмару:', err);
-      showAlertModal(`Не вдалося зберегти базу "${name}" в хмару (${err && err.message ? err.message : 'помилка мережі'}). Перевірте інтернет-з’єднання і спробуйте ще раз.`, 'Помилка збереження');
-      return;
-    }
+  if(!contactsRef){
+    // fbDb ще не готовий (Firestore не підключено) — раніше цей випадок
+    // мовчки пропускався, і база "успішно" імпортувалась лише в пам'яті
+    // вкладки, а після оновлення сторінки зникала без жодної помилки.
+    console.error('Не вдалося зберегти контакти бази: Firestore не підключено (fbDb відсутній).');
+    fbSetStatus('error', 'Firestore не підключено — імпорт бази не зберігся в хмару.');
+    showAlertModal(`Не вдалося зберегти базу "${name}": немає з'єднання з хмарною базою даних. Перевірте інтернет і спробуйте оновити сторінку, перш ніж імпортувати знову.`, 'Помилка збереження');
+    return;
+  }
+  try{
+    await contactsRef.set({contacts});
+  }catch(err){
+    console.error('Не вдалося зберегти контакти бази в хмару:', err);
+    fbSetStatus('error', `Не вдалося зберегти базу "${name}": ${err && err.message ? err.message : err} (код: ${err && err.code ? err.code : 'невідомий'}).`);
+    showAlertModal(`Не вдалося зберегти базу "${name}" в хмару (${err && err.message ? err.message : 'помилка мережі'}). Перевірте інтернет-з’єднання і спробуйте ще раз.`, 'Помилка збереження');
+    return;
   }
   COLDBASES.push(newBase);
   logActivity(`Імпортовано базу клієнтів "${name}" (${contacts.length} контактів)`, {target:{type:'view', name:'coldbase'}});
@@ -7082,9 +7121,44 @@ let fbReady = false;
 let everHadCoreData = false;
 let allowEmptyCoreSave = false;
 
+/* =========================================================
+   СТАТУС СИНХРОНІЗАЦІЇ — видимий у СРМ індикатор (іконка з кольоровою
+   крапкою в шапці), що показує реальний стан звʼязку з Firestore: чи
+   підключено, коли востаннє успішно збережено, і текст останньої помилки
+   (якщо була). Це напряму показує "відповіді від Firebase" в інтерфейсі,
+   а не лише в консолі браузера — щоб збій було видно одразу, а не
+   виявляти його заднім числом через зникнення даних після оновлення.
+   ========================================================= */
+let fbStatus = {state:'connecting', message:'', time:null};
+function fbSetStatus(state, message){
+  fbStatus = {state, message: message||'', time: new Date()};
+  renderFbStatus();
+}
+function renderFbStatus(){
+  const dot = document.getElementById('fbStatusDot');
+  const body = document.getElementById('fbStatusBody');
+  const btn = document.getElementById('fbStatusBtn');
+  if(!dot || !body) return;
+  const colors = {connecting:'var(--text-muted)', ok:'#1AA35A', saving:'var(--warning)', error:'var(--danger)'};
+  dot.style.background = colors[fbStatus.state] || 'var(--text-muted)';
+  const labels = {connecting:'Підключення до хмари…', ok:'Синхронізовано', saving:'Збереження…', error:'Помилка синхронізації'};
+  const timeStr = fbStatus.time ? fbStatus.time.toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) : '';
+  if(btn) btn.title = labels[fbStatus.state] || '';
+  let html = `<div style="font-weight:700;margin-bottom:4px;">${labels[fbStatus.state] || fbStatus.state}</div>`;
+  if(timeStr) html += `<div style="color:var(--text-muted);font-size:12px;margin-bottom:8px;">о ${timeStr}</div>`;
+  if(fbStatus.state === 'error' && fbStatus.message){
+    html += `<div style="background:#E5484D1A;color:var(--danger);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.4;word-break:break-word;margin-bottom:10px;">${fbStatus.message}</div>`;
+  }
+  html += `<button type="button" class="btn secondary small" style="width:100%;" onclick="fbSaveNow();closeAllDropdowns();">Спробувати зберегти ще раз</button>`;
+  body.innerHTML = html;
+}
+
 function fbInit(){
   try{
-    if(typeof firebase === 'undefined') return;
+    if(typeof firebase === 'undefined'){
+      fbSetStatus('error', 'Firebase SDK не завантажився в браузері. Можливо, його блокує розширення-блокувальник реклами/трекерів або мережа/проксі. Дані НЕ зберігаються в хмару, поки це не вирішено.');
+      return;
+    }
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     fbDb = db;
@@ -7093,7 +7167,7 @@ function fbInit(){
     db.enablePersistence({synchronizeTabs:true}).catch(function(err){ /* не критично — просто без офлайн-кешу */ });
     fbDocRef = db.collection('kofax').doc('crm');
     fbDocRef.onSnapshot(function(snap){
-      if(!snap.exists){ if(!snap.metadata.fromCache){ fbReady = true; fbSaveNow(); } return; }
+      if(!snap.exists){ if(!snap.metadata.fromCache){ fbReady = true; fbSetStatus('ok', ''); fbSaveNow(); } return; }
       const data = snap.data();
       fbApplyRemoteData(data);
       // Дозволяємо запис лише після снепшоту, підтвердженого сервером —
@@ -7101,15 +7175,18 @@ function fbInit(){
       // втрату даних 07.08.2026 (див. коментар вище біля let fbReady).
       if(!snap.metadata.fromCache){
         fbReady = true;
+        fbSetStatus('ok', '');
         if((Array.isArray(data.leads)&&data.leads.length) || (Array.isArray(data.tasks)&&data.tasks.length) || (Array.isArray(data.calls)&&data.calls.length) || (Array.isArray(data.coldBases)&&data.coldBases.length)){
           everHadCoreData = true;
         }
       }
     }, function(err){
       console.error('Firestore sync error:', err);
+      fbSetStatus('error', `Помилка синхронізації з Firestore: ${err && err.message ? err.message : err} (код: ${err && err.code ? err.code : 'невідомий'}).`);
     });
   }catch(err){
     console.error('Firebase init failed:', err);
+    fbSetStatus('error', `Firebase не ініціалізувався: ${err && err.message ? err.message : err}.`);
   }
 }
 // Застосовує дані, що прийшли з хмари (від будь-якого пристрою/акаунта),
@@ -7217,7 +7294,10 @@ function fbScheduleSave(){
   fbSaveTimer = setTimeout(fbSaveNow, 400);
 }
 function fbSaveNow(){
-  if(!fbDocRef) return;
+  if(!fbDocRef){
+    fbSetStatus('error', 'Firestore ще не підключено (немає fbDocRef) — зміни зберігаються лише локально в цій вкладці і зникнуть після оновлення сторінки.');
+    return;
+  }
   // Захист від повтору інциденту 07.08.2026 (див. коментарі біля fbReady):
   // якщо ця сесія вже підтверджено бачила реальні дані з сервера, а зараз
   // локально раптом усі чотири базові масиви одночасно порожні — це
@@ -7227,49 +7307,64 @@ function fbSaveNow(){
   const allCoreEmptyNow = LEADS.length===0 && TASKS.length===0 && CALLS.length===0 && COLDBASES.length===0;
   if(everHadCoreData && allCoreEmptyNow && !allowEmptyCoreSave){
     console.error('Firestore save ЗАБЛОКОВАНО: спроба записати повністю порожні leads/tasks/calls/coldBases поверх бази, де раніше точно були дані. Це майже напевно баг синхронізації, а не свідома дія — збереження скасовано, щоб захистити базу. Перезавантажте сторінку.');
+    fbSetStatus('error', 'Збереження заблоковано: локально всі дані раптом порожні, хоча в хмарі раніше точно щось було. Схоже на баг синхронізації — перезавантажте сторінку, щоб не втратити базу.');
     return;
   }
   allowEmptyCoreSave = false;
-  // coldBases у головному документі — ЛИШЕ легкі метадані (без масиву
-  // контактів, який живе окремо в kofax/crm/coldBaseContacts/{id} — див.
-  // coldBaseContactsRef()). Якщо десь локально ще лежить старий формат із
-  // вкладеними contacts (легасі-дані до цього фіксу), сюди вони теж не
-  // потраплять — саме вкладені масиви на тисячі рядків впритул підходили
-  // до ліміту Firestore в 1 МБ і збереження мовчки провалювалось.
-  const coldBasesLite = COLDBASES.map(function(b){
-    return {
-      id: b.id, name: b.name, createdAt: b.createdAt, defaultManagerId: b.defaultManagerId,
-      contactCount: coldBaseCount(b), processedCount: coldBaseProcessedCount(b)
+  fbSetStatus('saving', '');
+  // Вся побудова payload — у тому самому try, що й сам запис: якщо тут
+  // станеться синхронна помилка (напр. якийсь масив несподівано не масив),
+  // вона раніше просто "губилась" і збереження мовчки не відбувалось без
+  // жодного сліду ні в консолі, ні тим паче в інтерфейсі.
+  try{
+    // coldBases у головному документі — ЛИШЕ легкі метадані (без масиву
+    // контактів, який живе окремо в kofax/crm/coldBaseContacts/{id} — див.
+    // coldBaseContactsRef()). Якщо десь локально ще лежить старий формат із
+    // вкладеними contacts (легасі-дані до цього фіксу), сюди вони теж не
+    // потраплять — саме вкладені масиви на тисячі рядків впритул підходили
+    // до ліміту Firestore в 1 МБ і збереження мовчки провалювалось.
+    const coldBasesLite = COLDBASES.map(function(b){
+      return {
+        id: b.id, name: b.name, createdAt: b.createdAt, defaultManagerId: b.defaultManagerId,
+        contactCount: coldBaseCount(b), processedCount: coldBaseProcessedCount(b)
+      };
+    });
+    const payload = {
+      leads: LEADS,
+      coldBases: coldBasesLite,
+      tasks: TASKS,
+      calls: CALLS,
+      reports: REPORTS,
+      notifications: NOTIFICATIONS.slice(0,300),
+      history: HISTORY.slice(0,200),
+      users: USERS,
+      pipelines: PIPELINES,
+      vacancies: VACANCIES,
+      candidates: CANDIDATES,
+      specDirections: SPEC_DIRECTIONS,
+      specLanguages: SPEC_LANGUAGES,
+      specialists: SPECIALISTS,
+      nextLeadId: nextLeadId,
+      nextReportId: nextReportId,
+      nextColdBaseId: nextColdBaseId,
+      nextColdContactId: nextColdContactId,
+      nextVacancyId: nextVacancyId,
+      nextCandidateId: nextCandidateId,
+      nextSpecialistId: nextSpecialistId,
+      updatedAt: Date.now()
     };
-  });
-  const payload = {
-    leads: LEADS,
-    coldBases: coldBasesLite,
-    tasks: TASKS,
-    calls: CALLS,
-    reports: REPORTS,
-    notifications: NOTIFICATIONS.slice(0,300),
-    history: HISTORY.slice(0,200),
-    users: USERS,
-    pipelines: PIPELINES,
-    vacancies: VACANCIES,
-    candidates: CANDIDATES,
-    specDirections: SPEC_DIRECTIONS,
-    specLanguages: SPEC_LANGUAGES,
-    specialists: SPECIALISTS,
-    nextLeadId: nextLeadId,
-    nextReportId: nextReportId,
-    nextColdBaseId: nextColdBaseId,
-    nextColdContactId: nextColdContactId,
-    nextVacancyId: nextVacancyId,
-    nextCandidateId: nextCandidateId,
-    nextSpecialistId: nextSpecialistId,
-    updatedAt: Date.now()
-  };
-  fbDocRef.set(payload, {merge:true}).catch(function(err){
-    console.error('Firestore save failed:', err);
-    showAlertModal('Не вдалося зберегти зміни в хмару. Перевірте інтернет-з’єднання; якщо проблема повториться після оновлення сторінки — повідомте розробника.', 'Помилка збереження');
-  });
+    fbDocRef.set(payload, {merge:true}).then(function(){
+      fbSetStatus('ok', '');
+    }).catch(function(err){
+      console.error('Firestore save failed:', err);
+      fbSetStatus('error', `Firestore відхилив запис: ${err && err.message ? err.message : err} (код: ${err && err.code ? err.code : 'невідомий'}).`);
+      showAlertModal('Не вдалося зберегти зміни в хмару. Перевірте інтернет-з’єднання; якщо проблема повториться після оновлення сторінки — повідомте розробника.', 'Помилка збереження');
+    });
+  }catch(err){
+    console.error('Firestore save threw synchronously:', err);
+    fbSetStatus('error', `Помилка перед записом у Firestore: ${err && err.message ? err.message : err}.`);
+    showAlertModal('Не вдалося підготувати дані для збереження в хмару. Повідомте розробника з описом дії, яку ви щойно виконали.', 'Помилка збереження');
+  }
 }
 fbInit();
 
