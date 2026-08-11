@@ -4654,11 +4654,28 @@ function setColdContactStatus(baseId, contactId, status){
   if(!base || !Array.isArray(base.contacts)) return;
   const c = base.contacts.find(x=>x.id===contactId);
   if(!c) return;
+  const wasCallback = c.status === 'callback';
   c.status = status;
   c.updatedAt = nowTimeStr();
+  // При переході саме В статус "Передзвонити" (не при повторному виборі
+  // того ж статусу) одразу створюємо завдання з дедлайном через 3 дні на
+  // менеджера бази — щоб повторний дзвінок не загубився.
+  if(status === 'callback' && !wasCallback) scheduleColdCallbackTask(base, c);
   renderColdBaseDetail();
   renderColdBasesList();
   scheduleColdBaseContactsSave(base);
+}
+function scheduleColdCallbackTask(base, c){
+  const mgrId = base.defaultManagerId || state.userId || 'oksana';
+  const due = new Date();
+  due.setDate(due.getDate() + 3);
+  const dueStr = fmtDate(due) + ' 09:00';
+  const task = {id: Date.now()+Math.random(), title:`Передзвонити: ${c.title}`, due:dueStr, done:false, leadId:null, leadName:c.title, managerId:mgrId};
+  TASKS.unshift(task);
+  renderDashboardTasks();
+  renderTasksTable();
+  renderDashboardStats();
+  logActivity(`Створено завдання "Передзвонити: ${c.title}" (${coldManagerLabel(mgrId)}), дедлайн ${dueStr}`, {target:{type:'task', tab:'active'}});
 }
 
 /* ---------- "Дії" → перенести в воронку (менеджер: лише свою; керівник
@@ -4715,8 +4732,10 @@ function confirmColdConvert(){
   const targetStage = stageTrigger ? stageTrigger.textContent : (targetPipeline ? targetPipeline.stages[0] : null);
   if(!base || !c || !targetPipeline || !targetStage) return;
   const newId = nextLeadId++;
+  // Мапінг полів з холодної бази в картку угоди: керівник → ім'я контакту,
+  // назва компанії з бази → назва компанії, назва самої бази → ніша.
   LEADS.push({
-    id:newId, name:c.title, phone:c.phone||'', email:c.email||'', company:'', niche:'',
+    id:newId, name:c.director||c.title, phone:c.phone||'', email:c.email||'', company:c.title||'', niche:base.name||'',
     link:c.url||'', stage:targetStage, value:0, pipelineId:targetPipeline.id, managerId:targetPipeline.ownerId,
     createdAt: new Date().toLocaleDateString('uk-UA'),
     notes:[{author:currentActorLabel(), date:nowTimeStr(), text:`Створено з холодної бази "${base.name}"${c.director?` (керівник: ${c.director})`:''}`}],
