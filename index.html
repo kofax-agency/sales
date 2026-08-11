@@ -7162,11 +7162,32 @@ function fbInit(){
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     fbDb = db;
+    // КРИТИЧНО: деякі мережі/проксі/розширення браузера блокують саме
+    // "стрімінговий" канал (WebChannel), яким Firestore тримає живе
+    // з'єднання для onSnapshot — при цьому звичайні REST-запити (GET) далі
+    // працюють нормально. Симптом: іконка синхронізації в СРМ назавжди
+    // лишається сірою ("Підключення до хмари…"), онSnapshot ніколи не
+    // спрацьовує (ні успіх, ні помилка) — і через fbReady=false ЖОДНЕ
+    // збереження не проходить. experimentalAutoDetectLongPolling просить
+    // SDK автоматично перемкнутись на довге опитування (long polling),
+    // яке працює навіть там, де стрімінговий канал заблоковано.
+    db.settings({experimentalAutoDetectLongPolling: true});
     // enablePersistence повертає Promise — .catch() (не try/catch), інакше
     // відмова (кілька вкладок, приватний режим) лишає необроблений reject.
     db.enablePersistence({synchronizeTabs:true}).catch(function(err){ /* не критично — просто без офлайн-кешу */ });
     fbDocRef = db.collection('kofax').doc('crm');
+    // Watchdog: якщо перший снепшот (успіх чи помилка) не прийшов за 12с —
+    // з'єднання, найімовірніше, заблоковане мережею. Раніше в цьому випадку
+    // іконка статусу мовчки лишалась сірою назавжди, і користувач не мав
+    // жодного сигналу, що саме зараз відбувається (чи це просто повільно
+    // вантажиться, чи взагалі ніколи не з'єднається).
+    const fbConnectTimeout = setTimeout(function(){
+      if(!fbReady){
+        fbSetStatus('error', 'Не вдалося встановити з’єднання з Firestore за 12 секунд. Дані НЕ зберігаються в хмару. Найімовірніша причина — мережа/проксі/розширення браузера (блокувальник реклами) блокує з’єднання з Firestore. Спробуйте: вимкнути блокувальники реклами для цього сайту, інший браузер, або іншу мережу (напр. мобільний інтернет).');
+      }
+    }, 12000);
     fbDocRef.onSnapshot(function(snap){
+      clearTimeout(fbConnectTimeout);
       if(!snap.exists){ if(!snap.metadata.fromCache){ fbReady = true; fbSetStatus('ok', ''); fbSaveNow(); } return; }
       const data = snap.data();
       fbApplyRemoteData(data);
@@ -7181,6 +7202,7 @@ function fbInit(){
         }
       }
     }, function(err){
+      clearTimeout(fbConnectTimeout);
       console.error('Firestore sync error:', err);
       fbSetStatus('error', `Помилка синхронізації з Firestore: ${err && err.message ? err.message : err} (код: ${err && err.code ? err.code : 'невідомий'}).`);
     });
