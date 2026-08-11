@@ -7202,15 +7202,23 @@ function fbInit(){
       });
     }, 8000);
     fbDocRef.onSnapshot(function(snap){
-      clearTimeout(fbConnectTimeout);
       console.log('[CRM][FB] onSnapshot спрацював, fromCache =', snap.metadata.fromCache, 'exists =', snap.exists);
-      if(!snap.exists){ if(!snap.metadata.fromCache){ fbReady = true; fbSetStatus('ok', ''); fbSaveNow(); } return; }
-      const data = snap.data();
-      fbApplyRemoteData(data);
+      // ВАЖЛИВО: НЕ скасовуємо watchdog тут для кеш-снепшотів (fromCache=true) —
+      // саме це й було причиною "вічно сірої іконки": локальний кеш (з
+      // enablePersistence) відповідає майже миттєво, watchdog скасовувався,
+      // а підтвердженого сервером снепшоту так ніколи й не приходило через
+      // мережеву проблему — і запасний .get() ніколи не пробувався.
       // Дозволяємо запис лише після снепшоту, підтвердженого сервером —
       // саме кеш-версія, помилково прийнята за "готову", й спричинила
       // втрату даних 07.08.2026 (див. коментар вище біля let fbReady).
+      if(!snap.exists){
+        if(!snap.metadata.fromCache){ clearTimeout(fbConnectTimeout); fbReady = true; fbSetStatus('ok', ''); fbSaveNow(); }
+        return;
+      }
+      const data = snap.data();
+      fbApplyRemoteData(data);
       if(!snap.metadata.fromCache){
+        clearTimeout(fbConnectTimeout);
         fbReady = true;
         fbSetStatus('ok', '');
         if((Array.isArray(data.leads)&&data.leads.length) || (Array.isArray(data.tasks)&&data.tasks.length) || (Array.isArray(data.calls)&&data.calls.length) || (Array.isArray(data.coldBases)&&data.coldBases.length)){
