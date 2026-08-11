@@ -7146,8 +7146,10 @@ function renderFbStatus(){
   if(btn) btn.title = labels[fbStatus.state] || '';
   let html = `<div style="font-weight:700;margin-bottom:4px;">${labels[fbStatus.state] || fbStatus.state}</div>`;
   if(timeStr) html += `<div style="color:var(--text-muted);font-size:12px;margin-bottom:8px;">о ${timeStr}</div>`;
-  if(fbStatus.state === 'error' && fbStatus.message){
-    html += `<div style="background:#E5484D1A;color:var(--danger);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.4;word-break:break-word;margin-bottom:10px;">${fbStatus.message}</div>`;
+  if(fbStatus.message){
+    const msgColors = {error:{bg:'#E5484D1A', fg:'var(--danger)'}, ok:{bg:'#1AA35A1A', fg:'#1AA35A'}, saving:{bg:'#F5A52422', fg:'var(--warning)'}};
+    const mc = msgColors[fbStatus.state] || {bg:'var(--surface-2)', fg:'var(--text-muted)'};
+    html += `<div style="background:${mc.bg};color:${mc.fg};border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.4;word-break:break-word;margin-bottom:10px;">${fbStatus.message}</div>`;
   }
   html += `<button type="button" class="btn secondary small" style="width:100%;" onclick="fbSaveNow();closeAllDropdowns();">Спробувати зберегти ще раз</button>`;
   body.innerHTML = html;
@@ -7159,6 +7161,7 @@ function fbInit(){
       fbSetStatus('error', 'Firebase SDK не завантажився в браузері. Можливо, його блокує розширення-блокувальник реклами/трекерів або мережа/проксі. Дані НЕ зберігаються в хмару, поки це не вирішено.');
       return;
     }
+    console.log('[CRM][FB] fbInit почав виконання');
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     fbDb = db;
@@ -7168,26 +7171,39 @@ function fbInit(){
     // працюють нормально. Симптом: іконка синхронізації в СРМ назавжди
     // лишається сірою ("Підключення до хмари…"), онSnapshot ніколи не
     // спрацьовує (ні успіх, ні помилка) — і через fbReady=false ЖОДНЕ
-    // збереження не проходить. experimentalAutoDetectLongPolling просить
-    // SDK автоматично перемкнутись на довге опитування (long polling),
-    // яке працює навіть там, де стрімінговий канал заблоковано.
-    db.settings({experimentalAutoDetectLongPolling: true});
+    // збереження не проходить. experimentalAutoDetectLongPolling (спроба
+    // з автовизначенням) сама іноді "зависає" на етапі проби з'єднання в
+    // особливо суворих мережах — experimentalForceLongPolling пропускає
+    // пробу й одразу примусово йде через довге опитування (long polling),
+    // яке працює майже завжди, де звичайний стрімінговий канал заблоковано.
+    db.settings({experimentalForceLongPolling: true});
+    console.log('[CRM][FB] db.settings застосовано (forceLongPolling)');
     // enablePersistence повертає Promise — .catch() (не try/catch), інакше
     // відмова (кілька вкладок, приватний режим) лишає необроблений reject.
     db.enablePersistence({synchronizeTabs:true}).catch(function(err){ /* не критично — просто без офлайн-кешу */ });
     fbDocRef = db.collection('kofax').doc('crm');
-    // Watchdog: якщо перший снепшот (успіх чи помилка) не прийшов за 12с —
-    // з'єднання, найімовірніше, заблоковане мережею. Раніше в цьому випадку
-    // іконка статусу мовчки лишалась сірою назавжди, і користувач не мав
-    // жодного сигналу, що саме зараз відбувається (чи це просто повільно
-    // вантажиться, чи взагалі ніколи не з'єднається).
+    // Watchdog: якщо перший снепшот (успіх чи помилка) не прийшов за 8с —
+    // пробуємо одноразовий прямий .get() як запасний канал. Якщо і він
+    // проходить — це достатньо, щоб дозволити збереження (fbReady=true),
+    // навіть без "живого" синхронізатора між вкладками/пристроями. Раніше
+    // в цьому випадку іконка статусу мовчки лишалась сірою назавжди.
     const fbConnectTimeout = setTimeout(function(){
-      if(!fbReady){
-        fbSetStatus('error', 'Не вдалося встановити з’єднання з Firestore за 12 секунд. Дані НЕ зберігаються в хмару. Найімовірніша причина — мережа/проксі/розширення браузера (блокувальник реклами) блокує з’єднання з Firestore. Спробуйте: вимкнути блокувальники реклами для цього сайту, інший браузер, або іншу мережу (напр. мобільний інтернет).');
-      }
-    }, 12000);
+      if(fbReady) return;
+      console.warn('[CRM][FB] onSnapshot не відповів за 8с — пробуємо запасний прямий .get()');
+      fbSetStatus('saving', 'Основний канал синхронізації не відповідає, пробуємо запасний…');
+      fbDocRef.get({source:'server'}).then(function(snap){
+        console.log('[CRM][FB] запасний .get() успішний, snap.exists =', snap.exists);
+        if(snap.exists) fbApplyRemoteData(snap.data());
+        fbReady = true;
+        fbSetStatus('ok', 'Підключено через запасний канал — можливі затримки з оновленням між вкладками/пристроями.');
+      }).catch(function(err){
+        console.error('[CRM][FB] запасний .get() теж провалився:', err);
+        fbSetStatus('error', `Не вдалося з'єднатися з Firestore навіть запасним каналом за 8 секунд. Дані НЕ зберігаються в хмару. Помилка: ${err && err.message ? err.message : err} (код: ${err && err.code ? err.code : 'невідомий'}). Найімовірніша причина — мережа/проксі/розширення браузера блокує з'єднання з Firestore. Спробуйте: вимкнути блокувальники реклами для цього сайту, інший браузер, або іншу мережу (напр. мобільний інтернет).`);
+      });
+    }, 8000);
     fbDocRef.onSnapshot(function(snap){
       clearTimeout(fbConnectTimeout);
+      console.log('[CRM][FB] onSnapshot спрацював, fromCache =', snap.metadata.fromCache, 'exists =', snap.exists);
       if(!snap.exists){ if(!snap.metadata.fromCache){ fbReady = true; fbSetStatus('ok', ''); fbSaveNow(); } return; }
       const data = snap.data();
       fbApplyRemoteData(data);
