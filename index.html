@@ -4574,6 +4574,7 @@ function deleteAttachmentDoc(a){
 // onCandidateAttachDrop / onSpecAttachDrop), лише підсвічують зону.
 function onAttachDragOver(e){ e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
 function onAttachDragLeave(e){ e.currentTarget.classList.remove('drag-over'); }
+let docViewerBlobUrl = null;
 async function openDocViewer(a){
   if(!a) return;
   if(a.pending){ showAlertModal('Файл ще завантажується — зачекайте кілька секунд і спробуйте ще раз.', 'Завантаження...'); return; }
@@ -4581,7 +4582,7 @@ async function openDocViewer(a){
   const titleEl = document.getElementById('docViewerTitle');
   if(titleEl) titleEl.textContent = a.name || 'Документ';
   const openTab = document.getElementById('docViewerOpenTab');
-  if(openTab) openTab.removeAttribute('href');
+  if(openTab){ openTab.removeAttribute('href'); openTab.removeAttribute('download'); openTab.textContent = 'Відкрити в новій вкладці'; }
   const body = document.getElementById('docViewerBody');
   if(body) body.innerHTML = '<div style="color:#fff;">Завантаження документа…</div>';
   document.getElementById('docViewerOverlay').classList.add('open');
@@ -4592,28 +4593,42 @@ async function openDocViewer(a){
     if(!snap.exists){ if(body) body.innerHTML = '<div style="color:#fff;">Файл не знайдено в базі (можливо, видалений).</div>'; return; }
     const dataUrl = snap.data().dataUrl;
     if(!dataUrl){ if(body) body.innerHTML = '<div style="color:#fff;">Файл пошкоджено — вміст порожній.</div>'; return; }
-    if(openTab) openTab.href = dataUrl;
+    const blob = await (await fetch(dataUrl)).blob();
+    if(docViewerBlobUrl){ URL.revokeObjectURL(docViewerBlobUrl); docViewerBlobUrl = null; }
+    const blobUrl = URL.createObjectURL(blob);
+    docViewerBlobUrl = blobUrl;
+    const canOpenInTab = isImageAttachment(a) || isPdfAttachment(a);
+    if(openTab){
+      openTab.href = blobUrl;
+      if(canOpenInTab){
+        openTab.textContent = 'Відкрити в новій вкладці';
+        openTab.removeAttribute('download');
+      } else {
+        openTab.textContent = 'Скачати';
+        openTab.setAttribute('download', a.name || 'file');
+      }
+    }
     if(!body) return;
     if(isImageAttachment(a)){
-      body.innerHTML = `<img src="${escAttr(dataUrl)}" alt="${escAttr(a.name||'')}">`;
+      body.innerHTML = `<img src="${escAttr(blobUrl)}" alt="${escAttr(a.name||'')}">`;
     } else if(isPdfAttachment(a)){
-      body.innerHTML = `<iframe src="${escAttr(dataUrl)}" title="${escAttr(a.name||'')}"></iframe>`;
+      body.innerHTML = `<iframe src="${escAttr(blobUrl)}" title="${escAttr(a.name||'')}"></iframe>`;
     } else if(isDocxAttachment(a)){
       body.innerHTML = '<div class="doc-viewer-office" id="docViewerOfficeBody">Завантаження документа…</div>';
       try{
-        const buf = await (await fetch(dataUrl)).arrayBuffer();
+        const buf = await blob.arrayBuffer();
         const result = await mammoth.convertToHtml({arrayBuffer:buf});
         const officeEl = document.getElementById('docViewerOfficeBody');
         if(officeEl) officeEl.innerHTML = result.value || '<div class="empty-hint">Порожній документ.</div>';
       }catch(err){
         console.error('Не вдалося показати docx:', err);
         const officeEl = document.getElementById('docViewerOfficeBody');
-        if(officeEl) officeEl.textContent = 'Не вдалося показати вміст файлу. Спробуйте "Відкрити в новій вкладці".';
+        if(officeEl) officeEl.textContent = 'Не вдалося показати вміст файлу. Спробуйте "Скачати".';
       }
     } else if(isSheetAttachment(a)){
       body.innerHTML = '<div class="doc-viewer-office" id="docViewerOfficeBody">Завантаження таблиці…</div>';
       try{
-        const buf = await (await fetch(dataUrl)).arrayBuffer();
+        const buf = await blob.arrayBuffer();
         const wb = XLSX.read(buf, {type:'array'});
         const firstName = wb.SheetNames[0];
         const html = XLSX.utils.sheet_to_html(wb.Sheets[firstName]);
@@ -4623,10 +4638,10 @@ async function openDocViewer(a){
       }catch(err){
         console.error('Не вдалося показати таблицю:', err);
         const officeEl = document.getElementById('docViewerOfficeBody');
-        if(officeEl) officeEl.textContent = 'Не вдалося показати вміст файлу. Спробуйте "Відкрити в новій вкладці".';
+        if(officeEl) officeEl.textContent = 'Не вдалося показати вміст файлу. Спробуйте "Скачати".';
       }
     } else {
-      body.innerHTML = `<div style="color:#fff;text-align:center;padding:24px;max-width:420px;">Перегляд цього типу файлу в СРМ не підтримується.<br>Натисніть "Відкрити в новій вкладці" — браузер покаже або запропонує завантажити файл.</div>`;
+      body.innerHTML = `<div style="color:#fff;text-align:center;padding:24px;max-width:420px;">Перегляд цього типу файлу в СРМ не підтримується.<br>Натисніть "Скачати", щоб зберегти файл на комп'ютер.</div>`;
     }
   }catch(err){
     console.error('Не вдалося завантажити документ з бази:', err);
@@ -4638,6 +4653,9 @@ function closeDocViewer(){
   document.getElementById('docViewerModal').classList.remove('open');
   const body = document.getElementById('docViewerBody');
   if(body) body.innerHTML = '';
+  if(docViewerBlobUrl){ URL.revokeObjectURL(docViewerBlobUrl); docViewerBlobUrl = null; }
+  const openTab = document.getElementById('docViewerOpenTab');
+  if(openTab){ openTab.removeAttribute('href'); openTab.removeAttribute('download'); openTab.textContent = 'Відкрити в новій вкладці'; }
 }
 
 function renderColdBasesList(){
