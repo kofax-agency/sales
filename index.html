@@ -9,8 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.1/mammoth.browser.min.js"></script>
 <style>
   :root{
     --radius: 14px;
@@ -380,6 +380,12 @@
   .attach-row.uploading{opacity:.6;}
   .clickable-attach{cursor:pointer;}
   .clickable-attach:hover{text-decoration:underline;color:var(--accent-1);}
+  /* Зона перетягування файлу (drag & drop) — щоб не треба було спершу
+     зберігати файл на комп'ютер, а просто перетягнути його з листа/іншої
+     вкладки прямо сюди. Клік по кнопці всередині так само працює. */
+  .attach-dropzone{border:1.5px dashed var(--border);border-radius:var(--radius-sm);padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;transition:border-color .15s,background .15s;}
+  .attach-dropzone.drag-over{border-color:var(--accent-1);background:var(--surface-2);}
+  .attach-dropzone-hint{font-size:12px;color:var(--text-muted);}
 
   /* ---------- Analytics ---------- */
   .analytics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;}
@@ -432,6 +438,10 @@
   .doc-viewer-body{flex:1;overflow:auto;background:#525659;display:flex;align-items:center;justify-content:center;}
   .doc-viewer-body iframe{width:100%;height:100%;border:0;}
   .doc-viewer-body img{max-width:100%;max-height:100%;object-fit:contain;}
+  .doc-viewer-office{background:#fff;color:#1a1a1a;width:100%;height:100%;overflow:auto;padding:24px;box-sizing:border-box;font-size:14px;line-height:1.6;}
+  .doc-viewer-office table{border-collapse:collapse;font-size:12.5px;}
+  .doc-viewer-office table td, .doc-viewer-office table th{border:1px solid #ddd;padding:4px 8px;}
+  .doc-viewer-office img{max-width:100%;}
   @media (max-width:960px){ .doc-viewer-modal{width:96vw;height:92vh;height:92dvh;} }
 
   /* ---------- Side panels ---------- */
@@ -1401,7 +1411,10 @@
         </div>
       </div>
       <div class="field"><label>Резюме / файли вакансії</label>
-        <label class="file-btn" style="margin:0;">📎 Додати файл<input type="file" style="display:none" onchange="addVacAttachment(event)"></label>
+        <div class="attach-dropzone" ondragover="onAttachDragOver(event)" ondragleave="onAttachDragLeave(event)" ondrop="onVacAttachDrop(event)">
+          <label class="file-btn" style="margin:0;">📎 Додати файл<input type="file" style="display:none" onchange="addVacAttachment(event)"></label>
+          <div class="attach-dropzone-hint">або перетягніть файл сюди</div>
+        </div>
         <div id="vacAttachList" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;"></div>
       </div>
     </div>
@@ -1454,7 +1467,10 @@
       <button type="button" class="btn secondary small" style="align-self:flex-start;margin-top:2px;" onclick="addSpecLangRow()">+ Додати мову</button>
     </div>
     <div class="field"><label>Резюме / файли</label>
-      <label class="file-btn" style="margin:0;">📎 Додати файл<input type="file" style="display:none" onchange="addSpecAttachment(event)"></label>
+      <div class="attach-dropzone" ondragover="onAttachDragOver(event)" ondragleave="onAttachDragLeave(event)" ondrop="onSpecAttachDrop(event)">
+        <label class="file-btn" style="margin:0;">📎 Додати файл<input type="file" style="display:none" onchange="addSpecAttachment(event)"></label>
+        <div class="attach-dropzone-hint">або перетягніть файл сюди</div>
+      </div>
       <div id="specAttachList" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;"></div>
     </div>
     <div class="field"><label>Нотатки</label><textarea id="specNotes" style="min-height:70px;" placeholder="Враження, коментарі..."></textarea></div>
@@ -1487,7 +1503,10 @@
       </div>
 
       <div class="field"><label>Вкладення</label>
-        <label class="file-btn" style="margin:0;">📎 Додати файл<input type="file" style="display:none" onchange="addCandidateAttachment(event)"></label>
+        <div class="attach-dropzone" ondragover="onAttachDragOver(event)" ondragleave="onAttachDragLeave(event)" ondrop="onCandidateAttachDrop(event)">
+          <label class="file-btn" style="margin:0;">📎 Додати файл<input type="file" style="display:none" onchange="addCandidateAttachment(event)"></label>
+          <div class="attach-dropzone-hint">або перетягніть файл сюди</div>
+        </div>
         <div id="candAttachList" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;"></div>
       </div>
 
@@ -1741,7 +1760,10 @@
           <div class="section-title" style="font-size:13px;">Документи</div>
         </div>
         <div id="dealAttachList"></div>
-        <label class="file-btn" style="margin-top:8px;">📎 Прикріпити документ<input type="file" style="display:none" onchange="addDealAttachment(event)"></label>
+        <div class="attach-dropzone" style="margin-top:8px;" ondragover="onAttachDragOver(event)" ondragleave="onAttachDragLeave(event)" ondrop="onDealAttachDrop(event)">
+          <label class="file-btn" style="margin:0;">📎 Прикріпити документ<input type="file" style="display:none" onchange="addDealAttachment(event)"></label>
+          <div class="attach-dropzone-hint">або перетягніть файл сюди</div>
+        </div>
       </div>
     </div>
   </div>
@@ -3723,6 +3745,7 @@ async function deleteDealAttachment(leadId, idx){
   const ok = await showConfirmModal({title:'Видалити документ', text:`Видалити документ "${a.name}"?`, okText:'Видалити', danger:true});
   if(!ok) return;
   l.attachments.splice(idx,1);
+  deleteAttachmentDoc(a);
   renderDealAttachments(l);
   logActivity(`Видалено документ "${a.name}" з угоди "${l.name}"`, {target:{type:'lead', id:l.id}});
 }
@@ -3831,15 +3854,20 @@ function addDealMeeting(){
 }
 async function addDealAttachment(e){
   const file = e.target.files[0];
-  if(!file) return;
   e.target.value = '';
+  if(file) await addDealAttachmentFile(file);
+}
+// Спільна логіка для вибору файлу через кнопку ТА для перетягування
+// (drag & drop) — щоб не треба було спершу зберігати файл на комп'ютер,
+// а просто перетягнути його з листа/іншої вкладки прямо в СРМ.
+async function addDealAttachmentFile(file){
   if(state.currentDealId !== null){
     const l = LEADS.find(l=>l.id===state.currentDealId);
     const placeholder = {name:file.name, pending:true};
     l.attachments.push(placeholder);
     renderDealAttachments(l);
     try{
-      const uploaded = await uploadAttachmentFile(file, `deals/${l.id}`);
+      const uploaded = await saveAttachmentToFirestore(file);
       Object.assign(placeholder, uploaded);
       delete placeholder.pending;
       renderDealAttachments(l);
@@ -3854,6 +3882,12 @@ async function addDealAttachment(e){
   } else {
     document.getElementById('dealAttachList').insertAdjacentHTML('beforeend', `<div class="timeline-item">📎 ${file.name} (завантажиться після створення угоди)</div>`);
   }
+}
+function onDealAttachDrop(e){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(file) addDealAttachmentFile(file);
 }
 function saveDeal(){
   const nameEl = document.getElementById('dealName');
@@ -4471,11 +4505,23 @@ function openLinkIconSvg(){
 }
 
 /* =========================================================
-   ДОКУМЕНТИ: реальне завантаження у Firebase Storage + перегляд
-   ВСЕРЕДИНІ СРМ (модалка з iframe/img) замість скачування на диск.
-   PDF і зображення рендеряться напряму; інші формати (docx/xlsx/pptx
-   тощо) — через Google Docs Viewer, який теж вбудовується в модалку.
+   ДОКУМЕНТИ: реальне збереження файлів прямо у Firestore (без Firebase
+   Storage — на плані Spark він недоступний без переходу на Blaze) +
+   перегляд ВСЕРЕДИНІ СРМ замість скачування на диск.
+   Кожен файл кодується в base64 і зберігається ОКРЕМИМ документом у
+   колекції "attachments" (а не в спільному документі kofax/crm) — так
+   один великий файл не роздує й не ламає збереження решти бази. У самих
+   угодах/вакансіях/кандидатах/спеціалістах лишається лише легка мітка
+   {name, type, size, docId}, а вміст файлу підвантажується з Firestore
+   лише в момент, коли користувач відкриває перегляд.
+   Ліміт Firestore на документ — 1МБ, base64 роздуває розмір файлу
+   приблизно на третину, тож реальний ліміт на оригінальний файл — ~650КБ.
+   PDF і зображення показуються напряму; .docx — через mammoth.js;
+   .xlsx/.xls/.csv — через вже підключений SheetJS (як у імпорті холодної
+   бази); інші формати перегляду в СРМ не мають, лише "Відкрити в новій
+   вкладці" (браузер сам вирішує — показати чи завантажити).
    ========================================================= */
+const MAX_ATTACHMENT_BYTES = 650*1024;
 function isImageAttachment(a){
   if(!a) return false;
   if(a.type && a.type.startsWith('image/')) return true;
@@ -4486,31 +4532,106 @@ function isPdfAttachment(a){
   if(a.type === 'application/pdf') return true;
   return /\.pdf$/i.test(a.name||'');
 }
-async function uploadAttachmentFile(file, folder){
-  if(!fbStorage) throw new Error('Firebase Storage не підключено (немає з\'єднання з хмарою).');
-  const safeName = String(file.name||'file').replace(/[^\w.\-]+/g, '_');
-  const path = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2,8)}_${safeName}`;
-  const ref = fbStorage.ref().child(path);
-  await ref.put(file);
-  const url = await ref.getDownloadURL();
-  return {name:file.name, url, path, type:file.type||'', size:file.size||0};
+function isDocxAttachment(a){
+  if(!a) return false;
+  if(a.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return true;
+  return /\.docx$/i.test(a.name||'');
 }
-function openDocViewer(a){
+function isSheetAttachment(a){
+  if(!a) return false;
+  if(a.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || a.type === 'application/vnd.ms-excel' || a.type === 'text/csv') return true;
+  return /\.(xlsx|xls|csv)$/i.test(a.name||'');
+}
+// Читає файл як base64 (data URL) і зберігає окремим документом у
+// колекції "attachments". Повертає легку мітку без самого вмісту — саме
+// її кладемо в масив attachments угоди/вакансії/кандидата/спеціаліста.
+async function saveAttachmentToFirestore(file){
+  if(!fbDb) throw new Error('Немає з\'єднання з хмарною базою.');
+  if(file.size > MAX_ATTACHMENT_BYTES){
+    throw new Error(`Файл завеликий (${Math.round(file.size/1024)} КБ). Максимум — ${Math.round(MAX_ATTACHMENT_BYTES/1024)} КБ, бо файли зберігаються прямо в базі даних (Firestore) без окремого сховища. Стисніть файл або зменшіть якість сканування.`);
+  }
+  const dataUrl = await new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>resolve(reader.result);
+    reader.onerror = ()=>reject(reader.error || new Error('Не вдалося прочитати файл'));
+    reader.readAsDataURL(file);
+  });
+  const ref = fbDb.collection('attachments').doc();
+  await ref.set({name:file.name, type:file.type||'', size:file.size||0, dataUrl, createdAt: Date.now()});
+  return {name:file.name, type:file.type||'', size:file.size||0, docId:ref.id};
+}
+// Прибирає документ із колекції "attachments" при видаленні вкладення —
+// без цього в базі назавжди лишався б "осиротілий" вміст файлу. Не
+// блокує UI (fire-and-forget) і не критична дія, тож помилку лише логуємо.
+function deleteAttachmentDoc(a){
+  if(!a || !a.docId || !fbDb) return;
+  fbDb.collection('attachments').doc(a.docId).delete().catch(function(err){
+    console.error('Не вдалося видалити файл з бази:', err);
+  });
+}
+// Спільні drag&drop-хендлери для всіх зон завантаження файлів — самі не
+// знають, куди саме йде файл (це роблять onDealAttachDrop / onVacAttachDrop /
+// onCandidateAttachDrop / onSpecAttachDrop), лише підсвічують зону.
+function onAttachDragOver(e){ e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function onAttachDragLeave(e){ e.currentTarget.classList.remove('drag-over'); }
+async function openDocViewer(a){
   if(!a) return;
-  if(a.pending){ showAlertModal('Файл ще завантажується в хмару — зачекайте кілька секунд і спробуйте ще раз.', 'Завантаження...'); return; }
-  if(!a.url){ showAlertModal('Не вдалося завантажити цей файл у хмару. Видаліть його і додайте ще раз.', 'Файл недоступний'); return; }
+  if(a.pending){ showAlertModal('Файл ще завантажується — зачекайте кілька секунд і спробуйте ще раз.', 'Завантаження...'); return; }
+  if(!a.docId){ showAlertModal('Цей файл недоступний для перегляду (немає збереженого вмісту). Видаліть його і додайте ще раз.', 'Файл недоступний'); return; }
   const titleEl = document.getElementById('docViewerTitle');
   if(titleEl) titleEl.textContent = a.name || 'Документ';
   const openTab = document.getElementById('docViewerOpenTab');
-  if(openTab) openTab.href = a.url;
+  if(openTab) openTab.removeAttribute('href');
   const body = document.getElementById('docViewerBody');
-  if(body){
-    if(isImageAttachment(a)) body.innerHTML = `<img src="${escAttr(a.url)}" alt="${escAttr(a.name||'')}">`;
-    else if(isPdfAttachment(a)) body.innerHTML = `<iframe src="${escAttr(a.url)}" title="${escAttr(a.name||'')}"></iframe>`;
-    else body.innerHTML = `<iframe src="https://docs.google.com/gview?url=${encodeURIComponent(a.url)}&embedded=true" title="${escAttr(a.name||'')}"></iframe>`;
-  }
+  if(body) body.innerHTML = '<div style="color:#fff;">Завантаження документа…</div>';
   document.getElementById('docViewerOverlay').classList.add('open');
   document.getElementById('docViewerModal').classList.add('open');
+  if(!fbDb){ if(body) body.innerHTML = '<div style="color:#fff;">Немає з\'єднання з хмарною базою.</div>'; return; }
+  try{
+    const snap = await fbDb.collection('attachments').doc(a.docId).get();
+    if(!snap.exists){ if(body) body.innerHTML = '<div style="color:#fff;">Файл не знайдено в базі (можливо, видалений).</div>'; return; }
+    const dataUrl = snap.data().dataUrl;
+    if(!dataUrl){ if(body) body.innerHTML = '<div style="color:#fff;">Файл пошкоджено — вміст порожній.</div>'; return; }
+    if(openTab) openTab.href = dataUrl;
+    if(!body) return;
+    if(isImageAttachment(a)){
+      body.innerHTML = `<img src="${escAttr(dataUrl)}" alt="${escAttr(a.name||'')}">`;
+    } else if(isPdfAttachment(a)){
+      body.innerHTML = `<iframe src="${escAttr(dataUrl)}" title="${escAttr(a.name||'')}"></iframe>`;
+    } else if(isDocxAttachment(a)){
+      body.innerHTML = '<div class="doc-viewer-office" id="docViewerOfficeBody">Завантаження документа…</div>';
+      try{
+        const buf = await (await fetch(dataUrl)).arrayBuffer();
+        const result = await mammoth.convertToHtml({arrayBuffer:buf});
+        const officeEl = document.getElementById('docViewerOfficeBody');
+        if(officeEl) officeEl.innerHTML = result.value || '<div class="empty-hint">Порожній документ.</div>';
+      }catch(err){
+        console.error('Не вдалося показати docx:', err);
+        const officeEl = document.getElementById('docViewerOfficeBody');
+        if(officeEl) officeEl.textContent = 'Не вдалося показати вміст файлу. Спробуйте "Відкрити в новій вкладці".';
+      }
+    } else if(isSheetAttachment(a)){
+      body.innerHTML = '<div class="doc-viewer-office" id="docViewerOfficeBody">Завантаження таблиці…</div>';
+      try{
+        const buf = await (await fetch(dataUrl)).arrayBuffer();
+        const wb = XLSX.read(buf, {type:'array'});
+        const firstName = wb.SheetNames[0];
+        const html = XLSX.utils.sheet_to_html(wb.Sheets[firstName]);
+        const note = wb.SheetNames.length>1 ? `<div style="color:#888;font-size:12px;margin-bottom:8px;">Показано аркуш "${firstName}" (усього аркушів: ${wb.SheetNames.length})</div>` : '';
+        const officeEl = document.getElementById('docViewerOfficeBody');
+        if(officeEl) officeEl.innerHTML = note + html;
+      }catch(err){
+        console.error('Не вдалося показати таблицю:', err);
+        const officeEl = document.getElementById('docViewerOfficeBody');
+        if(officeEl) officeEl.textContent = 'Не вдалося показати вміст файлу. Спробуйте "Відкрити в новій вкладці".';
+      }
+    } else {
+      body.innerHTML = `<div style="color:#fff;text-align:center;padding:24px;max-width:420px;">Перегляд цього типу файлу в СРМ не підтримується.<br>Натисніть "Відкрити в новій вкладці" — браузер покаже або запропонує завантажити файл.</div>`;
+    }
+  }catch(err){
+    console.error('Не вдалося завантажити документ з бази:', err);
+    if(body) body.innerHTML = `<div style="color:#fff;">Не вдалося завантажити файл: ${err && err.message ? err.message : err}</div>`;
+  }
 }
 function closeDocViewer(){
   document.getElementById('docViewerOverlay').classList.remove('open');
@@ -5988,13 +6109,15 @@ let tempVacAttachments = [];
 const VAC_STATUS_LABELS = {open:'Відкрита', paused:'На паузі', closed:'Закрита', archived:'Архів'};
 async function addVacAttachment(e){
   const file = e.target.files[0];
-  if(!file) return;
   e.target.value = '';
+  if(file) await addVacAttachmentFile(file);
+}
+async function addVacAttachmentFile(file){
   const placeholder = {name:file.name, pending:true};
   tempVacAttachments.push(placeholder);
   renderVacAttachList();
   try{
-    const uploaded = await uploadAttachmentFile(file, `vacancies/${editingVacancyId===null?'new':editingVacancyId}`);
+    const uploaded = await saveAttachmentToFirestore(file);
     Object.assign(placeholder, uploaded);
     delete placeholder.pending;
     renderVacAttachList();
@@ -6006,7 +6129,13 @@ async function addVacAttachment(e){
     showAlertModal(`Не вдалося завантажити файл "${file.name}" у хмару: ${err && err.message ? err.message : err}`, 'Помилка завантаження');
   }
 }
-function removeVacAttachment(i){ tempVacAttachments.splice(i,1); renderVacAttachList(); }
+function onVacAttachDrop(e){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(file) addVacAttachmentFile(file);
+}
+function removeVacAttachment(i){ deleteAttachmentDoc(tempVacAttachments[i]); tempVacAttachments.splice(i,1); renderVacAttachList(); }
 function renderVacAttachList(){
   const el = document.getElementById('vacAttachList');
   if(!el) return;
@@ -6425,10 +6554,12 @@ function openCandidateAttachmentView(idx){
   openDocViewer(c && (c.attachments||[])[idx]);
 }
 async function addCandidateAttachment(e){
-  if(editingCandidateId === null) return;
   const file = e.target.files[0];
-  if(!file) return;
   e.target.value = '';
+  if(file) await addCandidateAttachmentFile(file);
+}
+async function addCandidateAttachmentFile(file){
+  if(editingCandidateId === null) return;
   const c = candidateById(editingCandidateId);
   if(!c) return;
   c.attachments = c.attachments || [];
@@ -6436,7 +6567,7 @@ async function addCandidateAttachment(e){
   c.attachments.push(placeholder);
   renderCandidateAttachments(c);
   try{
-    const uploaded = await uploadAttachmentFile(file, `candidates/${c.id}`);
+    const uploaded = await saveAttachmentToFirestore(file);
     Object.assign(placeholder, uploaded);
     delete placeholder.pending;
     renderCandidateAttachments(c);
@@ -6450,10 +6581,17 @@ async function addCandidateAttachment(e){
     showAlertModal(`Не вдалося завантажити файл "${file.name}" у хмару: ${err && err.message ? err.message : err}`, 'Помилка завантаження');
   }
 }
+function onCandidateAttachDrop(e){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(file) addCandidateAttachmentFile(file);
+}
 function removeCandidateAttachment(i){
   if(editingCandidateId === null) return;
   const c = candidateById(editingCandidateId);
   if(!c) return;
+  deleteAttachmentDoc(c.attachments[i]);
   c.attachments.splice(i,1);
   renderCandidateAttachments(c);
   renderHrBoard();
@@ -6591,13 +6729,15 @@ function removeSpecLangRow(i){
 }
 async function addSpecAttachment(e){
   const file = e.target.files[0];
-  if(!file) return;
   e.target.value = '';
+  if(file) await addSpecAttachmentFile(file);
+}
+async function addSpecAttachmentFile(file){
   const placeholder = {name:file.name, pending:true};
   tempSpecAttachments.push(placeholder);
   renderSpecAttachList();
   try{
-    const uploaded = await uploadAttachmentFile(file, `specialists/${editingSpecialistId===null?'new':editingSpecialistId}`);
+    const uploaded = await saveAttachmentToFirestore(file);
     Object.assign(placeholder, uploaded);
     delete placeholder.pending;
     renderSpecAttachList();
@@ -6609,7 +6749,13 @@ async function addSpecAttachment(e){
     showAlertModal(`Не вдалося завантажити файл "${file.name}" у хмару: ${err && err.message ? err.message : err}`, 'Помилка завантаження');
   }
 }
-function removeSpecAttachment(i){ tempSpecAttachments.splice(i,1); renderSpecAttachList(); }
+function onSpecAttachDrop(e){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(file) addSpecAttachmentFile(file);
+}
+function removeSpecAttachment(i){ deleteAttachmentDoc(tempSpecAttachments[i]); tempSpecAttachments.splice(i,1); renderSpecAttachList(); }
 function renderSpecAttachList(){
   const el = document.getElementById('specAttachList');
   if(!el) return;
@@ -7254,10 +7400,6 @@ const firebaseConfig = {
 };
 let fbDocRef = null;
 let fbDb = null;
-// Firebase Storage — для реального зберігання файлів (нотатки/вакансії/
-// кандидати/спеціалісти), щоб їх можна було відкривати прямо в СРМ, а не
-// лише пам'ятати назву файлу без самого вмісту.
-let fbStorage = null;
 let fbApplyingRemote = false;
 let fbSaveTimer = null;
 let fbColdContactsSaveTimers = {};
@@ -7332,14 +7474,6 @@ function fbInit(){
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     fbDb = db;
-    // Storage ініціалізуємо окремо (try/catch) — якщо в проєкті Firebase
-    // ще не увімкнено Storage, це не повинно ламати підключення Firestore.
-    try{
-      fbStorage = firebase.storage();
-      console.log('[CRM][FB] Firebase Storage підключено');
-    }catch(err){
-      console.error('[CRM][FB] Firebase Storage не ініціалізувався:', err);
-    }
     // КРИТИЧНО: деякі мережі/проксі/розширення браузера блокують саме
     // "стрімінговий" канал (WebChannel), яким Firestore тримає живе
     // з'єднання для onSnapshot — при цьому звичайні REST-запити (GET) далі
