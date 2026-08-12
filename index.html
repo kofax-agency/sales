@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -376,6 +377,9 @@
   .board-card-labels{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
   .board-card-label-bar{width:28px;height:6px;border-radius:3px;}
   .attach-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--surface-2);border-radius:8px;font-size:13px;}
+  .attach-row.uploading{opacity:.6;}
+  .clickable-attach{cursor:pointer;}
+  .clickable-attach:hover{text-decoration:underline;color:var(--accent-1);}
 
   /* ---------- Analytics ---------- */
   .analytics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;}
@@ -418,6 +422,17 @@
   .confirm-modal-title{font-size:16.5px;font-weight:800;margin-bottom:8px;}
   .confirm-modal-text{font-size:13.5px;color:var(--text-muted);line-height:1.55;}
   .confirm-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;}
+
+  /* ---------- Перегляд документів усередині СРМ (PDF/зображення/офісні
+     файли рендеряться прямо в модалці — нічого не скачується на диск) ---------- */
+  .doc-viewer-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.97);width:92vw;max-width:1080px;height:88vh;height:88dvh;background:var(--surface);border-radius:var(--radius);box-shadow:0 24px 60px rgba(16,24,64,.28);z-index:96;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;display:flex;flex-direction:column;overflow:hidden;}
+  .doc-viewer-modal.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1);}
+  .doc-viewer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);}
+  .doc-viewer-title{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .doc-viewer-body{flex:1;overflow:auto;background:#525659;display:flex;align-items:center;justify-content:center;}
+  .doc-viewer-body iframe{width:100%;height:100%;border:0;}
+  .doc-viewer-body img{max-width:100%;max-height:100%;object-fit:contain;}
+  @media (max-width:960px){ .doc-viewer-modal{width:96vw;height:92vh;height:92dvh;} }
 
   /* ---------- Side panels ---------- */
   .panel-overlay{position:fixed;inset:0;background:transparent;opacity:0;pointer-events:none;transition:opacity .2s;z-index:55;}
@@ -1589,6 +1604,19 @@
     <button class="btn secondary" onclick="closeColdConvertModal()">Скасувати</button>
     <button class="btn" onclick="confirmColdConvert()">Перенести</button>
   </div>
+</div>
+
+<!-- ================= ПЕРЕГЛЯД ДОКУМЕНТА (PDF/зображення/офісний файл — прямо в СРМ, без скачування) ================= -->
+<div class="modal-overlay" id="docViewerOverlay" onclick="closeDocViewer()"></div>
+<div class="doc-viewer-modal" id="docViewerModal">
+  <div class="doc-viewer-head">
+    <div class="doc-viewer-title" id="docViewerTitle">Документ</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <a id="docViewerOpenTab" href="#" target="_blank" rel="noopener" class="btn secondary small">Відкрити в новій вкладці</a>
+      <button class="close-btn" onclick="closeDocViewer()">✕</button>
+    </div>
+  </div>
+  <div class="doc-viewer-body" id="docViewerBody"></div>
 </div>
 
 <!-- ================= DEAL PANEL (half-page) ================= -->
@@ -3679,9 +3707,13 @@ async function deleteDealMeeting(callId){
 }
 function renderDealAttachments(l){
   document.getElementById('dealAttachList').innerHTML = l.attachments.length
-    ? l.attachments.map((a,i)=>`<div class="timeline-item doc-row"><span>📎 ${a.name}</span><button type="button" class="row-icon-btn danger" title="Видалити" onclick="deleteDealAttachment(${l.id},${i})">${trashIconSvg(14)}</button></div>`).join('')
+    ? l.attachments.map((a,i)=>`<div class="timeline-item doc-row"><span class="${a.pending?'':'clickable-attach'}"${a.pending?'':` onclick="openDealAttachmentView(${l.id},${i})"`}>📎 ${a.name}${a.pending?' (завантаження…)':''}</span><button type="button" class="row-icon-btn danger" title="Видалити" onclick="deleteDealAttachment(${l.id},${i})">${trashIconSvg(14)}</button></div>`).join('')
     : '<div class="empty-hint">Документів ще немає.</div>';
   updateDealPanelTabCounts(l);
+}
+function openDealAttachmentView(leadId, idx){
+  const l = LEADS.find(l=>l.id===leadId);
+  openDocViewer(l && l.attachments[idx]);
 }
 async function deleteDealAttachment(leadId, idx){
   const l = LEADS.find(l=>l.id===leadId);
@@ -3797,16 +3829,30 @@ function addDealMeeting(){
   document.getElementById('newMeetingTitle').value='';
   clearMeetingDate();
 }
-function addDealAttachment(e){
+async function addDealAttachment(e){
   const file = e.target.files[0];
   if(!file) return;
+  e.target.value = '';
   if(state.currentDealId !== null){
     const l = LEADS.find(l=>l.id===state.currentDealId);
-    l.attachments.push({name:file.name});
+    const placeholder = {name:file.name, pending:true};
+    l.attachments.push(placeholder);
     renderDealAttachments(l);
-    logActivity(`Додано документ "${file.name}" до угоди "${l.name}"`, {target:{type:'lead', id:l.id}});
+    try{
+      const uploaded = await uploadAttachmentFile(file, `deals/${l.id}`);
+      Object.assign(placeholder, uploaded);
+      delete placeholder.pending;
+      renderDealAttachments(l);
+      logActivity(`Додано документ "${file.name}" до угоди "${l.name}"`, {target:{type:'lead', id:l.id}});
+    }catch(err){
+      console.error('Не вдалося завантажити документ у Storage:', err);
+      const idx = l.attachments.indexOf(placeholder);
+      if(idx>-1) l.attachments.splice(idx,1);
+      renderDealAttachments(l);
+      showAlertModal(`Не вдалося завантажити файл "${file.name}" у хмару: ${err && err.message ? err.message : err}`, 'Помилка завантаження');
+    }
   } else {
-    document.getElementById('dealAttachList').insertAdjacentHTML('beforeend', `<div class="timeline-item">📎 ${file.name}</div>`);
+    document.getElementById('dealAttachList').insertAdjacentHTML('beforeend', `<div class="timeline-item">📎 ${file.name} (завантажиться після створення угоди)</div>`);
   }
 }
 function saveDeal(){
@@ -3953,7 +3999,7 @@ function openClientCard(id){
   document.getElementById('clientCompanyInfo').innerHTML = `Компанія: <strong>${l.company}</strong><br>Ніша: ${l.niche}<br>Посилання: ${l.link}<br>Менеджер: ${managerName(l.managerId)}<br>Стадія: ${l.stage}`;
   document.getElementById('clientNotesHistory').innerHTML = l.notes.length ? l.notes.map(n=>`<div class="timeline-item">${n.text}<div class="timeline-meta">${n.author} · ${n.date}</div></div>`).join('') : '<div class="empty-hint">Нотаток ще немає.</div>';
   document.getElementById('clientTasksHistory').innerHTML = l.tasks.length ? l.tasks.map(t=>`<div class="timeline-item" style="display:flex;align-items:center;gap:10px;justify-content:space-between;">${t.title}${t.done?' · виконано':''} ${dtChip(t.due)}</div>`).join('') : '<div class="empty-hint">Завдань ще немає.</div>';
-  document.getElementById('clientAttachHistory').innerHTML = l.attachments.length ? l.attachments.map(a=>`<div class="timeline-item">📎 ${a.name}</div>`).join('') : '<div class="empty-hint">Документів ще немає.</div>';
+  document.getElementById('clientAttachHistory').innerHTML = l.attachments.length ? l.attachments.map((a,i)=>`<div class="timeline-item"><span class="${a.pending?'':'clickable-attach'}"${a.pending?'':` onclick="openDealAttachmentView(${l.id},${i})"`}>📎 ${a.name}</span></div>`).join('') : '<div class="empty-hint">Документів ще немає.</div>';
   openPanel('clientPanel');
 }
 function editFromClientCard(){
@@ -4422,6 +4468,55 @@ function copyIconSvg(){
 }
 function openLinkIconSvg(){
   return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>`;
+}
+
+/* =========================================================
+   ДОКУМЕНТИ: реальне завантаження у Firebase Storage + перегляд
+   ВСЕРЕДИНІ СРМ (модалка з iframe/img) замість скачування на диск.
+   PDF і зображення рендеряться напряму; інші формати (docx/xlsx/pptx
+   тощо) — через Google Docs Viewer, який теж вбудовується в модалку.
+   ========================================================= */
+function isImageAttachment(a){
+  if(!a) return false;
+  if(a.type && a.type.startsWith('image/')) return true;
+  return /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(a.name||'');
+}
+function isPdfAttachment(a){
+  if(!a) return false;
+  if(a.type === 'application/pdf') return true;
+  return /\.pdf$/i.test(a.name||'');
+}
+async function uploadAttachmentFile(file, folder){
+  if(!fbStorage) throw new Error('Firebase Storage не підключено (немає з\'єднання з хмарою).');
+  const safeName = String(file.name||'file').replace(/[^\w.\-]+/g, '_');
+  const path = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2,8)}_${safeName}`;
+  const ref = fbStorage.ref().child(path);
+  await ref.put(file);
+  const url = await ref.getDownloadURL();
+  return {name:file.name, url, path, type:file.type||'', size:file.size||0};
+}
+function openDocViewer(a){
+  if(!a) return;
+  if(a.pending){ showAlertModal('Файл ще завантажується в хмару — зачекайте кілька секунд і спробуйте ще раз.', 'Завантаження...'); return; }
+  if(!a.url){ showAlertModal('Не вдалося завантажити цей файл у хмару. Видаліть його і додайте ще раз.', 'Файл недоступний'); return; }
+  const titleEl = document.getElementById('docViewerTitle');
+  if(titleEl) titleEl.textContent = a.name || 'Документ';
+  const openTab = document.getElementById('docViewerOpenTab');
+  if(openTab) openTab.href = a.url;
+  const body = document.getElementById('docViewerBody');
+  if(body){
+    if(isImageAttachment(a)) body.innerHTML = `<img src="${escAttr(a.url)}" alt="${escAttr(a.name||'')}">`;
+    else if(isPdfAttachment(a)) body.innerHTML = `<iframe src="${escAttr(a.url)}" title="${escAttr(a.name||'')}"></iframe>`;
+    else body.innerHTML = `<iframe src="https://docs.google.com/gview?url=${encodeURIComponent(a.url)}&embedded=true" title="${escAttr(a.name||'')}"></iframe>`;
+  }
+  document.getElementById('docViewerOverlay').classList.add('open');
+  document.getElementById('docViewerModal').classList.add('open');
+}
+function closeDocViewer(){
+  document.getElementById('docViewerOverlay').classList.remove('open');
+  document.getElementById('docViewerModal').classList.remove('open');
+  const body = document.getElementById('docViewerBody');
+  if(body) body.innerHTML = '';
 }
 
 function renderColdBasesList(){
@@ -5891,24 +5986,42 @@ let editingVacancyId = null;
 let vacEditing = false;
 let tempVacAttachments = [];
 const VAC_STATUS_LABELS = {open:'Відкрита', paused:'На паузі', closed:'Закрита', archived:'Архів'};
-function addVacAttachment(e){
+async function addVacAttachment(e){
   const file = e.target.files[0];
   if(!file) return;
-  tempVacAttachments.push({name:file.name});
   e.target.value = '';
+  const placeholder = {name:file.name, pending:true};
+  tempVacAttachments.push(placeholder);
   renderVacAttachList();
+  try{
+    const uploaded = await uploadAttachmentFile(file, `vacancies/${editingVacancyId===null?'new':editingVacancyId}`);
+    Object.assign(placeholder, uploaded);
+    delete placeholder.pending;
+    renderVacAttachList();
+  }catch(err){
+    console.error('Не вдалося завантажити файл вакансії у Storage:', err);
+    const idx = tempVacAttachments.indexOf(placeholder);
+    if(idx>-1) tempVacAttachments.splice(idx,1);
+    renderVacAttachList();
+    showAlertModal(`Не вдалося завантажити файл "${file.name}" у хмару: ${err && err.message ? err.message : err}`, 'Помилка завантаження');
+  }
 }
 function removeVacAttachment(i){ tempVacAttachments.splice(i,1); renderVacAttachList(); }
 function renderVacAttachList(){
   const el = document.getElementById('vacAttachList');
   if(!el) return;
-  el.innerHTML = tempVacAttachments.map((a,i)=>`<div class="attach-row">📎 ${a.name}<button type="button" class="row-icon-btn danger" title="Видалити" onclick="removeVacAttachment(${i})">${trashIconSvg(14)}</button></div>`).join('') || '<div class="empty-hint">Файлів ще немає.</div>';
+  el.innerHTML = tempVacAttachments.map((a,i)=>`<div class="attach-row"><span class="${a.pending?'':'clickable-attach'}"${a.pending?'':` onclick="openVacAttachmentView(${i})"`}>📎 ${a.name}${a.pending?' (завантаження…)':''}</span><button type="button" class="row-icon-btn danger" title="Видалити" onclick="removeVacAttachment(${i})">${trashIconSvg(14)}</button></div>`).join('') || '<div class="empty-hint">Файлів ще немає.</div>';
 }
+function openVacAttachmentView(idx){ openDocViewer(tempVacAttachments[idx]); }
 function renderVacViewAttachList(vac){
   const el = document.getElementById('vacViewAttachList');
   if(!el) return;
   const atts = (vac && vac.attachments) || [];
-  el.innerHTML = atts.length ? atts.map(a=>`<div class="attach-row">📎 ${a.name}</div>`).join('') : '<div class="empty-hint">Файлів ще немає.</div>';
+  el.innerHTML = atts.length ? atts.map((a,i)=>`<div class="attach-row"><span class="clickable-attach" onclick="openVacViewAttachmentView(${i})">📎 ${a.name}</span></div>`).join('') : '<div class="empty-hint">Файлів ще немає.</div>';
+}
+function openVacViewAttachmentView(idx){
+  const vac = vacancyById(editingVacancyId);
+  openDocViewer(vac && (vac.attachments||[])[idx]);
 }
 function applyVacancyPanelMode(){
   const viewBlock = document.getElementById('vacViewBlock');
@@ -6305,20 +6418,37 @@ function removeCandidateLabel(i){
 function renderCandidateAttachments(c){
   const el = document.getElementById('candAttachList');
   if(!el) return;
-  el.innerHTML = (c.attachments||[]).map((a,i)=>`<div class="attach-row">📎 ${a.name}<button type="button" class="row-icon-btn danger" title="Видалити" onclick="removeCandidateAttachment(${i})">${trashIconSvg(14)}</button></div>`).join('') || '<div class="empty-hint">Вкладень ще немає.</div>';
+  el.innerHTML = (c.attachments||[]).map((a,i)=>`<div class="attach-row"><span class="${a.pending?'':'clickable-attach'}"${a.pending?'':` onclick="openCandidateAttachmentView(${i})"`}>📎 ${a.name}${a.pending?' (завантаження…)':''}</span><button type="button" class="row-icon-btn danger" title="Видалити" onclick="removeCandidateAttachment(${i})">${trashIconSvg(14)}</button></div>`).join('') || '<div class="empty-hint">Вкладень ще немає.</div>';
 }
-function addCandidateAttachment(e){
+function openCandidateAttachmentView(idx){
+  const c = candidateById(editingCandidateId);
+  openDocViewer(c && (c.attachments||[])[idx]);
+}
+async function addCandidateAttachment(e){
   if(editingCandidateId === null) return;
   const file = e.target.files[0];
   if(!file) return;
+  e.target.value = '';
   const c = candidateById(editingCandidateId);
   if(!c) return;
   c.attachments = c.attachments || [];
-  c.attachments.push({name:file.name});
-  e.target.value = '';
+  const placeholder = {name:file.name, pending:true};
+  c.attachments.push(placeholder);
   renderCandidateAttachments(c);
-  renderHrBoard();
-  fbScheduleSave();
+  try{
+    const uploaded = await uploadAttachmentFile(file, `candidates/${c.id}`);
+    Object.assign(placeholder, uploaded);
+    delete placeholder.pending;
+    renderCandidateAttachments(c);
+    renderHrBoard();
+    fbScheduleSave();
+  }catch(err){
+    console.error('Не вдалося завантажити файл кандидата у Storage:', err);
+    const idx = c.attachments.indexOf(placeholder);
+    if(idx>-1) c.attachments.splice(idx,1);
+    renderCandidateAttachments(c);
+    showAlertModal(`Не вдалося завантажити файл "${file.name}" у хмару: ${err && err.message ? err.message : err}`, 'Помилка завантаження');
+  }
 }
 function removeCandidateAttachment(i){
   if(editingCandidateId === null) return;
@@ -6459,19 +6589,33 @@ function removeSpecLangRow(i){
   tempSpecLangRows.splice(i,1);
   renderSpecLangRows();
 }
-function addSpecAttachment(e){
+async function addSpecAttachment(e){
   const file = e.target.files[0];
   if(!file) return;
-  tempSpecAttachments.push({name:file.name});
   e.target.value = '';
+  const placeholder = {name:file.name, pending:true};
+  tempSpecAttachments.push(placeholder);
   renderSpecAttachList();
+  try{
+    const uploaded = await uploadAttachmentFile(file, `specialists/${editingSpecialistId===null?'new':editingSpecialistId}`);
+    Object.assign(placeholder, uploaded);
+    delete placeholder.pending;
+    renderSpecAttachList();
+  }catch(err){
+    console.error('Не вдалося завантажити файл спеціаліста у Storage:', err);
+    const idx = tempSpecAttachments.indexOf(placeholder);
+    if(idx>-1) tempSpecAttachments.splice(idx,1);
+    renderSpecAttachList();
+    showAlertModal(`Не вдалося завантажити файл "${file.name}" у хмару: ${err && err.message ? err.message : err}`, 'Помилка завантаження');
+  }
 }
 function removeSpecAttachment(i){ tempSpecAttachments.splice(i,1); renderSpecAttachList(); }
 function renderSpecAttachList(){
   const el = document.getElementById('specAttachList');
   if(!el) return;
-  el.innerHTML = tempSpecAttachments.map((a,i)=>`<div class="attach-row">📎 ${a.name}<button type="button" class="row-icon-btn danger" title="Видалити" onclick="removeSpecAttachment(${i})">${trashIconSvg(14)}</button></div>`).join('');
+  el.innerHTML = tempSpecAttachments.map((a,i)=>`<div class="attach-row"><span class="${a.pending?'':'clickable-attach'}"${a.pending?'':` onclick="openSpecAttachmentView(${i})"`}>📎 ${a.name}${a.pending?' (завантаження…)':''}</span><button type="button" class="row-icon-btn danger" title="Видалити" onclick="removeSpecAttachment(${i})">${trashIconSvg(14)}</button></div>`).join('');
 }
+function openSpecAttachmentView(idx){ openDocViewer(tempSpecAttachments[idx]); }
 function openSpecialistPanel(id){
   editingSpecialistId = id;
   const deleteBtn = document.getElementById('specDeleteBtn');
@@ -7110,6 +7254,10 @@ const firebaseConfig = {
 };
 let fbDocRef = null;
 let fbDb = null;
+// Firebase Storage — для реального зберігання файлів (нотатки/вакансії/
+// кандидати/спеціалісти), щоб їх можна було відкривати прямо в СРМ, а не
+// лише пам'ятати назву файлу без самого вмісту.
+let fbStorage = null;
 let fbApplyingRemote = false;
 let fbSaveTimer = null;
 let fbColdContactsSaveTimers = {};
@@ -7184,6 +7332,14 @@ function fbInit(){
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     fbDb = db;
+    // Storage ініціалізуємо окремо (try/catch) — якщо в проєкті Firebase
+    // ще не увімкнено Storage, це не повинно ламати підключення Firestore.
+    try{
+      fbStorage = firebase.storage();
+      console.log('[CRM][FB] Firebase Storage підключено');
+    }catch(err){
+      console.error('[CRM][FB] Firebase Storage не ініціалізувався:', err);
+    }
     // КРИТИЧНО: деякі мережі/проксі/розширення браузера блокують саме
     // "стрімінговий" канал (WebChannel), яким Firestore тримає живе
     // з'єднання для onSnapshot — при цьому звичайні REST-запити (GET) далі
