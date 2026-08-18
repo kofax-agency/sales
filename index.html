@@ -61,6 +61,17 @@
 
   .nav-section-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);padding:14px 12px 6px;}
   .nav-section-tag{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;margin:14px 12px 0;padding:12px 0 6px;border-top:1px solid var(--border);background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--accent-1);}
+  /* Дропдаун-заголовки секцій навігації (Sales/Partnership/HR) — клікабельні
+     лише для акаунта СТО (body[data-role="cto"]); для інших ролей (напр.
+     admin), яким теж видно ці заголовки, поведінка лишається статичною. */
+  body[data-role="cto"] .nav-section-tag{display:flex;align-items:center;justify-content:space-between;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .nav-section-chev{flex-shrink:0;opacity:.7;transition:transform .18s ease;-webkit-text-fill-color:var(--text-muted);color:var(--text-muted);display:none;}
+  body[data-role="cto"] .nav-section-chev{display:block;}
+  .nav-section-tag.open .nav-section-chev{transform:rotate(180deg);}
+  .nav-subgroup-wrap{list-style:none;}
+  .nav-subgroup{list-style:none;margin:0;padding:0;}
+  body[data-role="cto"] .nav-subgroup-wrap{display:none;}
+  body[data-role="cto"] .nav-section-tag.open + .nav-subgroup-wrap{display:block;}
   .nav li{margin-bottom:2px;}
   .nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);color:var(--sidebar-text);font-weight:600;font-size:14.5px;text-decoration:none;transition:background .15s,color .15s;}
   .nav a svg{opacity:.85;}
@@ -738,7 +749,8 @@
       <li data-nav="admin" data-roles="admin cto"><a href="#" onclick="showView(event,'admin')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
         Менеджери</a></li>
-      <li class="nav-section-tag" data-roles="admin cto">Sales</li>
+      <li class="nav-section-tag" data-roles="admin cto" data-group="sales" onclick="toggleNavGroup(this)"><span>Sales</span><svg class="nav-section-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></li>
+      <li class="nav-subgroup-wrap"><ul class="nav-subgroup">
       <li data-nav="pipeline" data-roles="manager admin cto"><a href="#" onclick="showView(event,'pipeline')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
         Воронка</a></li>
@@ -760,14 +772,24 @@
       <li data-nav="campaigns" data-roles="manager admin cto"><a href="#" onclick="showView(event,'campaigns')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
         Розсилки</a></li>
-      <li class="nav-section-tag" data-roles="admin cto">Partnership</li>
+      </ul></li>
+      <li class="nav-section-tag" data-roles="admin cto" data-group="partnership" onclick="toggleNavGroup(this)"><span>Partnership</span><svg class="nav-section-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></li>
+      <li class="nav-subgroup-wrap"><ul class="nav-subgroup">
       <li data-nav="partner-pipeline" data-roles="partner admin cto"><a href="#" onclick="showView(event,'partner-pipeline')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
         Воронка партнерств</a></li>
       <li data-nav="partners" data-roles="partner admin cto"><a href="#" onclick="showView(event,'partners')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         База партнерів</a></li>
-      <li class="nav-section-tag" data-roles="admin cto">HR</li>
+      <li class="nav-dup" data-nav="tasks" data-roles="admin cto"><a href="#" onclick="showView(event,'tasks')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Завдання</a></li>
+      <li class="nav-dup" data-nav="reports" data-roles="admin cto"><a href="#" onclick="showView(event,'reports')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
+        Звітність</a></li>
+      </ul></li>
+      <li class="nav-section-tag" data-roles="admin cto" data-group="hr" onclick="toggleNavGroup(this)"><span>HR</span><svg class="nav-section-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></li>
+      <li class="nav-subgroup-wrap"><ul class="nav-subgroup">
       <li data-nav="hr-pipeline" data-roles="hr admin cto"><a href="#" onclick="showView(event,'hr-pipeline')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
         Воронка кандидатів</a></li>
@@ -777,6 +799,7 @@
       <li data-nav="specialists" data-roles="hr admin cto"><a href="#" onclick="showView(event,'specialists')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4 3 9 3s9-1.34 9-3v-6"/></svg>
         База спеціалістів</a></li>
+      </ul></li>
     </ul>
 
     <div class="sidebar-footer">
@@ -2048,7 +2071,7 @@
           <li data-value="manager" class="selected">Менеджер</li>
           <li data-value="admin">Керівник відділу</li>
           <li data-value="hr">HR</li>
-          <li data-value="teamlead">Тім лід</li>
+          <li data-value="teamlead">Team Lead</li>
           <li data-value="partner">Partnership manager</li>
         </ul>
       </div>
@@ -2615,7 +2638,7 @@ function changeOwnPhoto(e){
 }
 function currentActorLabel(){
   const me = currentUserRecord();
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Тім лід', partner:'Partnership manager'};
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
   return me ? `${me.name} (${roleLabels[state.role]})` : roleLabels[state.role];
 }
 // Логує дію в аудит (видно лише CTO/керівнику відділу) + одразу створює
@@ -2688,7 +2711,7 @@ function completeLogin(user, opts){
   state.currentPipelineId = 'default';
 
   document.body.setAttribute('data-role', role);
-  const labels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Тім лід', partner:'Partnership manager'};
+  const labels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
   document.getElementById('userName').textContent = user.name;
   document.getElementById('userRoleLabel').textContent = labels[role];
   document.getElementById('rolePill').textContent = labels[role];
@@ -2731,7 +2754,9 @@ function completeLogin(user, opts){
   // Відновлюємо сторінку, на якій користувач був до оновлення (F5), замість
   // того, щоб завжди кидати на дашборд. 'report-detail' пропускаємо — вона
   // прив'язана до конкретного звіту (state.reportViewId), який не зберігається.
+  initNavGroups();
   const savedView = (location.hash || '').replace('#','');
+  if(savedView) ensureNavGroupExpanded(savedView);
   const navLi = savedView ? document.querySelector('.nav li[data-nav="' + savedView + '"]') : null;
   const canRestore = savedView && savedView !== 'report-detail' && savedView !== 'coldbase-detail' && document.getElementById('view-' + savedView) && (!navLi || navLi.offsetParent !== null || getComputedStyle(navLi).display !== 'none');
   showView(null, canRestore ? savedView : 'dashboard');
@@ -2764,7 +2789,7 @@ function closeAccountSwitchList(){
 function renderAccountSwitchList(){
   const container = document.getElementById('accountSwitchItems');
   if(!container) return;
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Тім лід', partner:'Partnership manager'};
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
   const pool = accountSwitchPool();
   container.innerHTML = pool.map(u => `
     <div class="menu-item" onclick="switchAccount('${u.id}')" style="justify-content:flex-start;gap:10px;align-items:center;height:auto;padding-top:8px;padding-bottom:8px;">
@@ -2791,7 +2816,7 @@ function switchAccount(userId){
   // Якщо обрали саме той акаунт, з якого починали перемикання — це і є
   // повернення "додому": більше не в режимі імперсонації.
   if(user.id === state.originalUserId) state.originalUserId = null;
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Тім лід', partner:'Partnership manager'};
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
   logActivity(`Швидке перемикання акаунта: → ${user.name} (${roleLabels[user.role]})`, {silent:true});
   completeLogin(user, {showReminder:false});
 }
@@ -2884,6 +2909,40 @@ function toggleTheme(){
 applyTheme(localStorage.getItem('kofax-crm-theme') || 'light');
 
 /* =========================================================
+   NAV / VIEВИ — дропдауни секцій (Sales/Partnership/HR)
+   Ця поведінка (згортання/розгортання) стосується лише акаунта СТО —
+   для інших ролей, яким теж видно ці заголовки (напр. admin), секції
+   лишаються завжди розгорнутими, як і раніше.
+   ========================================================= */
+function navGroupStorageKey(group){ return 'kofax-crm-navgroup-' + group; }
+function setNavGroupOpen(group, open){
+  const tag = document.querySelector('.nav-section-tag[data-group="' + group + '"]');
+  if(!tag) return;
+  tag.classList.toggle('open', open);
+  localStorage.setItem(navGroupStorageKey(group), open ? 'open' : 'closed');
+}
+function toggleNavGroup(el){
+  if(state.role !== 'cto') return;
+  const group = el.getAttribute('data-group');
+  setNavGroupOpen(group, !el.classList.contains('open'));
+}
+function initNavGroups(){
+  document.querySelectorAll('.nav-section-tag[data-group]').forEach(function(tag){
+    const group = tag.getAttribute('data-group');
+    const saved = localStorage.getItem(navGroupStorageKey(group));
+    tag.classList.toggle('open', saved === 'open');
+  });
+}
+function ensureNavGroupExpanded(navName){
+  const li = document.querySelector('.nav li[data-nav="' + navName + '"]');
+  if(!li) return;
+  const wrap = li.closest('.nav-subgroup-wrap');
+  if(!wrap) return;
+  const tag = wrap.previousElementSibling;
+  if(tag && tag.classList.contains('nav-section-tag')) setNavGroupOpen(tag.getAttribute('data-group'), true);
+}
+
+/* =========================================================
    NAV / VIEWS
    ========================================================= */
 function showView(e, name){
@@ -2893,8 +2952,8 @@ function showView(e, name){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.nav li').forEach(li => li.classList.remove('active'));
-  const li = document.querySelector('.nav li[data-nav="' + name + '"]');
-  if(li) li.classList.add('active');
+  document.querySelectorAll('.nav li[data-nav="' + name + '"]').forEach(li => li.classList.add('active'));
+  if(state.role === 'cto') ensureNavGroupExpanded(name);
   const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'Контакти', coldbase:'База клієнтів', 'coldbase-detail':'База клієнтів', tasks:'Завдання', reports:'Звітність', analytics:'Аналітика', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт', 'hr-pipeline':'Воронка кандидатів', vacancies:'Вакансії', 'vacancy-detail':'Вакансія', specialists:'База спеціалістів', 'specialist-detail':'Спеціаліст', 'candidate-detail':'Кандидат', partners:'База партнерів', 'partner-pipeline':'Воронка партнерств'};
   document.getElementById('pageTitle').textContent = titles[name];
   // Іконка налаштувань воронки (шестерня) видима лише на сторінці "Воронка"
@@ -6238,7 +6297,7 @@ function renderManagersTable(){
   const tbody = document.getElementById('managersTableBody');
   const visibleRoles = state.role === 'cto' ? ['manager','admin','hr','teamlead','partner'] : ['manager','hr','teamlead','partner'];
   const rows = USERS.filter(u=>visibleRoles.includes(u.role));
-  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO', hr:'HR', teamlead:'Тім лід', partner:'Partnership manager'};
+  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
   tbody.innerHTML = rows.map(m => `
     <tr>
       <td>${nameBadge(m.name, m.role==='admin')}</td><td>${m.login}</td><td>${roleLabels[m.role]}</td>
@@ -6285,7 +6344,7 @@ function openManagerPanel(id){
     if(roleField) setNewUserRoleSelect('manager');
   } else {
     const m = USERS.find(u=>u.id===id);
-    const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'тім ліда', partner:'Partnership manager\'а'};
+    const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager\'а'};
     document.getElementById('managerPanelTitle').textContent = 'Редагувати ' + (roleLabels[m.role] || 'користувача');
     document.getElementById('mgrName').value = m.name;
     document.getElementById('mgrEmail').value = m.login;
@@ -6304,7 +6363,7 @@ function saveManager(){
   const name = document.getElementById('mgrName').value.trim() || 'Новий користувач';
   const email = emailEl.value.trim() || 'new@kofax.agency';
   const pass = document.getElementById('mgrPass').value.trim() || generateRandomPw();
-  const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'тім ліда', partner:'Partnership manager\'а'};
+  const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager\'а'};
   if(state.editingManagerId){
     const m = USERS.find(u=>u.id===state.editingManagerId);
     const oldPassword = m.password;
@@ -6338,7 +6397,7 @@ function saveManager(){
 async function deleteManagerUser(id){
   const m = USERS.find(u=>u.id===id);
   if(!m) return;
-  const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'тім ліда', partner:'Partnership manager\'а'};
+  const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager\'а'};
   const ok = await showConfirmModal({
     title:'Видалити користувача',
     text:`Видалити ${roleLabels[m.role] || 'користувача'} "${m.name}"? Він більше не зможе увійти. Угоди та воронка цієї людини залишаться без змін — видаляти їх потрібно окремо.`,
@@ -7613,7 +7672,7 @@ function renderAccountView(){
   document.getElementById('acctEditActions').style.display = 'none';
   const editBtn = document.getElementById('acctEditBtn');
   if(editBtn){ editBtn.style.display = ''; editBtn.textContent = 'Редагувати'; editBtn.disabled = false; }
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Тім лід', partner:'Partnership manager'};
+  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
   document.getElementById('acctRole').value = roleLabels[state.role];
   updateHeaderAvatars();
   renderHistory();
@@ -7673,7 +7732,7 @@ function saveAccountEdit(){
 // сам CTO бачить усіх, включно з іншими керівниками відділу.
 function renderCredentialsTable(){
   const tbody = document.getElementById('credentialsTableBody');
-  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO', hr:'HR', teamlead:'Тім лід', partner:'Partnership manager'};
+  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
   const rows = state.role === 'admin' ? USERS.filter(u=>u.role!=='cto') : USERS;
   tbody.innerHTML = rows.map(u => `
     <tr>
