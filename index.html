@@ -3116,7 +3116,15 @@ window.addEventListener('resize', closeAllDropdowns);
 window.addEventListener('resize', closeMobileSidebar);
 document.addEventListener('DOMContentLoaded', function(){
   const contentEl = document.querySelector('.content');
-  if(contentEl) contentEl.addEventListener('scroll', closeAllDropdowns, true);
+  if(contentEl) contentEl.addEventListener('scroll', function(e){
+    // Скрол усередині самого відкритого дропдауна (напр. довгий список
+    // чекбоксів "Напрямок" на сторінці "База спеціалістів") НЕ повинен
+    // його закривати — інакше неможливо прогорнути список до пунктів
+    // нижче видимої області. Закриваємо лише коли скролиться сторінка/
+    // контент ПОЗАДУ дропдауна, а не сам дропдаун.
+    if(e.target.closest && e.target.closest('.cselect-menu, .calendar-popover, .dropdown-panel')) return;
+    closeAllDropdowns();
+  }, true);
 });
 
 // generic single-select option click (demo role, pipeline)
