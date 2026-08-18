@@ -239,17 +239,15 @@
      data-roles~="hr" на всіх існуючих елементах, просто додаємо ще один
      data-role, який його розкриває. Жодних змін в HTML-розмітці не треба. */
   body[data-role="teamlead"] [data-roles~="hr"]{display:revert;}
-  /* Partnership manager — перевикористовує ті самі елементи, що й звичайний
-     Sales-менеджер (своя воронка, свої контакти тощо), плюс власний атрибут
-     data-roles~="partner" для суто партнерських елементів (розділ "Партнери"). */
-  body[data-role="partner"] [data-roles~="manager"]{display:revert;}
+  /* Partnership manager бачить ЛИШЕ свої розділи (Головна, Воронка партнерств,
+     База партнерів, Завдання, Звітність) — тому жодного успадкування прав
+     Sales-менеджера тут немає, тільки власний атрибут data-roles~="partner". */
   body[data-role="partner"] [data-roles~="partner"]{display:revert;}
   body[data-role="manager"] li[data-roles~="manager"]{display:list-item;}
   body[data-role="admin"] li[data-roles~="admin"]{display:list-item;}
   body[data-role="cto"] li[data-roles~="cto"]{display:list-item;}
   body[data-role="hr"] li[data-roles~="hr"]{display:list-item;}
   body[data-role="teamlead"] li[data-roles~="hr"]{display:list-item;}
-  body[data-role="partner"] li[data-roles~="manager"]{display:list-item;}
   body[data-role="partner"] li[data-roles~="partner"]{display:list-item;}
   /* `display:revert` above skips ALL author CSS (incl. .field{display:flex})
      and falls back to the tag's bare browser default (div -> block). Since
@@ -262,20 +260,18 @@
   body[data-role="cto"] .field[data-roles~="cto"],
   body[data-role="hr"] .field[data-roles~="hr"],
   body[data-role="teamlead"] .field[data-roles~="hr"],
-  body[data-role="partner"] .field[data-roles~="manager"],
   body[data-role="partner"] .field[data-roles~="partner"]{display:flex;}
   body[data-role="manager"] .pipeline-static-label[data-roles~="manager"],
   body[data-role="admin"] .pipeline-static-label[data-roles~="admin"],
   body[data-role="cto"] .pipeline-static-label[data-roles~="cto"],
   body[data-role="hr"] .pipeline-static-label[data-roles~="hr"],
   body[data-role="teamlead"] .pipeline-static-label[data-roles~="hr"],
-  body[data-role="partner"] .pipeline-static-label[data-roles~="manager"]{display:flex;}
+  body[data-role="partner"] .pipeline-static-label[data-roles~="partner"]{display:flex;}
   body[data-role="manager"] .btn[data-roles~="manager"],
   body[data-role="admin"] .btn[data-roles~="admin"],
   body[data-role="cto"] .btn[data-roles~="cto"],
   body[data-role="hr"] .btn[data-roles~="hr"],
   body[data-role="teamlead"] .btn[data-roles~="hr"],
-  body[data-role="partner"] .btn[data-roles~="manager"],
   body[data-role="partner"] .btn[data-roles~="partner"]{display:inline-flex;}
   body[data-role="admin"] .cselect[data-roles~="admin"],
   body[data-role="cto"] .cselect[data-roles~="cto"],
@@ -752,10 +748,10 @@
       <li data-nav="coldbase" data-roles="manager admin cto"><a href="#" onclick="showView(event,'coldbase')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg>
         База клієнтів</a></li>
-      <li data-nav="tasks" data-roles="manager admin cto"><a href="#" onclick="showView(event,'tasks')">
+      <li data-nav="tasks" data-roles="manager admin cto partner"><a href="#" onclick="showView(event,'tasks')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Завдання</a></li>
-      <li data-nav="reports" data-roles="manager admin cto"><a href="#" onclick="showView(event,'reports')">
+      <li data-nav="reports" data-roles="manager admin cto partner"><a href="#" onclick="showView(event,'reports')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
         Звітність</a></li>
       <li data-nav="analytics" data-roles="manager admin cto"><a href="#" onclick="showView(event,'analytics')">
@@ -765,9 +761,12 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
         Розсилки</a></li>
       <li class="nav-section-tag" data-roles="admin cto">Partnership</li>
+      <li data-nav="partner-pipeline" data-roles="partner admin cto"><a href="#" onclick="showView(event,'partner-pipeline')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
+        Воронка партнерств</a></li>
       <li data-nav="partners" data-roles="partner admin cto"><a href="#" onclick="showView(event,'partners')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Партнери</a></li>
+        База партнерів</a></li>
       <li class="nav-section-tag" data-roles="admin cto">HR</li>
       <li data-nav="hr-pipeline" data-roles="hr admin cto"><a href="#" onclick="showView(event,'hr-pipeline')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
@@ -977,6 +976,36 @@
         </div>
       </section>
 
+      <!-- ============ PARTNER PIPELINE (окрема воронка партнерств) ============ -->
+      <section class="view" id="view-partner-pipeline">
+        <div class="pipeline-toolbar">
+          <div data-roles="partner" class="pipeline-static-label">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
+            Воронка партнерств
+          </div>
+          <div data-roles="admin cto" class="cselect" id="partnerPipelineSelect">
+            <button type="button" class="cselect-trigger" style="border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+              <span class="cselect-label">Воронка партнерств</span>
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <ul class="cselect-menu" id="partnerPipelineSelectMenu" data-select="partnerPipeline"></ul>
+          </div>
+          <button class="btn secondary" style="margin-left:auto;" onclick="togglePartnerStageEditor()" id="partnerStageEditBtn">Редагувати етапи</button>
+          <button class="btn" onclick="openDeal(null)" id="addPartnerDealBtn">+ Нове партнерство</button>
+        </div>
+
+        <div class="board" id="partnerBoard"></div>
+        <div id="partnerNoPipelineHint" class="empty-hint" style="display:none;padding:26px 12px;">Воронка партнерств ще не створена.</div>
+        <div id="partnerStageEditorBoard" style="display:none;"></div>
+        <div id="partnerStageEditorActions" style="display:none;margin-top:14px;gap:10px;" class="row-between">
+          <div></div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn secondary" onclick="cancelPartnerStageEditor()">Скасувати</button>
+            <button class="btn" onclick="savePartnerStageEditor()">Зберегти зміни</button>
+          </div>
+        </div>
+      </section>
+
       <!-- ============ CLIENTS ============ -->
       <section class="view" id="view-clients">
         <div class="filters-bar card">
@@ -1133,7 +1162,7 @@
         </div>
         <div class="row-between" style="margin-bottom:16px;">
           <div class="section-title" style="margin:0;">Звітність</div>
-          <button class="btn" data-roles="admin manager" onclick="openReportCreate()">+ Створити звіт</button>
+          <button class="btn" data-roles="admin manager partner" onclick="openReportCreate()">+ Створити звіт</button>
         </div>
         <div class="filters-bar card" style="margin-bottom:16px;">
           <div class="field">
@@ -2259,6 +2288,67 @@ function onReportFieldInput(el){
   el.value = v;
 }
 // Один рядок форми звіту (лейбл + степер введення).
+// ---- Partnership-версії наборів полів звіту ----
+// Ключі НАВМИСНО ті самі, що й у Sales-звітах (calls/talks/reachLPR/meetings...),
+// щоб уся наявна механіка (автосуми за тиждень, розрахункові %, аналітика)
+// працювала без змін — відрізняються лише підписи під партнерства.
+const PARTNER_DAILY_FIELDS = [
+  {group:'Активність', key:'calls', label:'Звернень до потенційних партнерів'},
+  {group:'Активність', key:'talks', label:'Проведено розмов'},
+  {group:'Активність', key:'reachLPR', label:'Вихід на ЛПР партнера'},
+  {group:'Активність', key:'presLPR', label:'Презентацій партнерства'},
+  {group:'Результати', key:'interestedLPR', label:'Зацікавлені партнери'},
+  {group:'Результати', key:'notInterestedLPR', label:'Не цікаво'},
+  {group:'Результати', key:'hasContractor', label:'Вже є партнер/підрядник'},
+  {group:'Результати', key:'callBackBusyLPR', label:'Передзвонити пізніше'},
+  {group:'Output — головне', key:'meetings', label:'Зустрічей призначено'},
+  {group:'Output — головне', key:'meetingsHeld', label:'Зустрічей відбулось'},
+  {group:'Output — головне', key:'qualifiedBriefs', label:'Укладено партнерств'},
+];
+const PARTNER_MONTHLY_FIELDS = [
+  {key:'calls', label:'Звернень до потенційних партнерів'},
+  {key:'talks', label:'Проведено розмов'},
+  {key:'reachLPR', label:'Вихід на ЛПР партнера'},
+  {key:'presLPR', label:'Презентацій партнерства'},
+  {key:'interestedLPR', label:'Зацікавлені партнери'},
+  {key:'notInterestedLPR', label:'Не цікаво'},
+  {key:'hasContractor', label:'Вже є партнер/підрядник'},
+  {key:'meetings', label:'Назначено зустрічей'},
+  {key:'meetingsHeld', label:'Зустрічей відбулось'},
+  {key:'qualifiedBriefs', label:'Укладено партнерств'},
+];
+const PARTNER_WEEKLY_AUTO_FIELDS = [
+  {key:'calls', label:'Звернень / тиждень'},
+  {key:'talks', label:'Розмов'},
+  {key:'reachLPR', label:'Вихід на ЛПР партнера'},
+  {key:'meetings', label:'Зустрічей призначено'},
+];
+const PARTNER_WEEKLY_MANUAL_FIELDS = [
+  {key:'meetingsHeld', label:'Зустрічей відбулось'},
+  {key:'qualifiedBriefs', label:'Укладено партнерств'},
+];
+const PARTNER_WEEKLY_CALC_FIELDS = [
+  {key:'connectRate', label:'Connect rate', sub:'розмови ÷ звернення', calc:v=>reportPct(v.talks, v.calls)},
+  {key:'reachPct', label:'Вихід на ЛПР %', sub:'ЛПР ÷ розмови', calc:v=>reportPct(v.reachLPR, v.talks)},
+  {key:'lprToMeetingPct', label:'ЛПР → зустріч %', sub:'призначено ÷ ЛПР', calc:v=>reportPct(v.meetings, v.reachLPR)},
+  {key:'showRate', label:'Show rate', sub:'відбулось ÷ призначено', calc:v=>reportPct(v.meetingsHeld, v.meetings)},
+  {key:'partnerRate', label:'Партнерство %', sub:'укладено ÷ зустрічі відбулись', calc:v=>reportPct(v.qualifiedBriefs, v.meetingsHeld)},
+];
+// Який набір полів показувати — залежить від ролі автора звіту. Для вже
+// збереженого звіту орієнтуємось на роль його автора, а не на того, хто
+// зараз дивиться (щоб CTO бачив партнерський звіт партнерськими підписами).
+function isPartnerReportContext(managerId){
+  if(managerId){
+    const author = USERS.find(u=>u.id===managerId);
+    if(author) return author.role === 'partner';
+  }
+  return state.role === 'partner';
+}
+function dailyFieldsFor(managerId){ return isPartnerReportContext(managerId) ? PARTNER_DAILY_FIELDS : DAILY_FIELDS; }
+function monthlyFieldsFor(managerId){ return isPartnerReportContext(managerId) ? PARTNER_MONTHLY_FIELDS : MONTHLY_FIELDS; }
+function weeklyAutoFieldsFor(managerId){ return isPartnerReportContext(managerId) ? PARTNER_WEEKLY_AUTO_FIELDS : WEEKLY_AUTO_FIELDS; }
+function weeklyManualFieldsFor(managerId){ return isPartnerReportContext(managerId) ? PARTNER_WEEKLY_MANUAL_FIELDS : WEEKLY_MANUAL_FIELDS; }
+function weeklyCalcFieldsFor(managerId){ return isPartnerReportContext(managerId) ? PARTNER_WEEKLY_CALC_FIELDS : WEEKLY_CALC_FIELDS; }
 function reportInputRow(key, label, value){
   return `
     <div class="report-field-row">
@@ -2267,23 +2357,23 @@ function reportInputRow(key, label, value){
     </div>`;
 }
 // День — згрупований однокол. список, усі поля вручну.
-function renderDailyFields(prefill){
+function renderDailyFields(prefill, managerId){
   const grid = document.getElementById('reportMetricGrid');
   if(!grid) return;
   grid.className = 'report-field-list';
   let html = '', lastGroup = null;
-  DAILY_FIELDS.forEach(f => {
+  dailyFieldsFor(managerId).forEach(f => {
     if(f.group !== lastGroup){ html += `<div class="report-field-group-title">${f.group}</div>`; lastGroup = f.group; }
     html += reportInputRow(f.key, f.label, prefill ? Number(prefill[f.key]||0) : 0);
   });
   grid.innerHTML = html;
 }
 // Місяць — стара 2-колонкова картка-сітка, без змін.
-function renderMonthlyFields(prefill){
+function renderMonthlyFields(prefill, managerId){
   const grid = document.getElementById('reportMetricGrid');
   if(!grid) return;
   grid.className = 'report-metric-grid';
-  grid.innerHTML = MONTHLY_FIELDS.map(f => {
+  grid.innerHTML = monthlyFieldsFor(managerId).map(f => {
     const val = prefill ? Number(prefill[f.key]||0) : 0;
     return `
     <div class="report-metric-card">
@@ -2308,7 +2398,7 @@ function computeWeeklyAutoSums(managerId, refDate){
     return d >= monday && d <= sunday;
   })());
   const sums = {};
-  WEEKLY_AUTO_FIELDS.forEach(f => { sums[f.key] = dayReports.reduce((s,r)=>s+Number(r[f.key]||0),0); });
+  weeklyAutoFieldsFor(managerId).forEach(f => { sums[f.key] = dayReports.reduce((s,r)=>s+Number(r[f.key]||0),0); });
   return sums;
 }
 // Тиждень — авто-рядки (readonly), розрахункові % (readonly), і лише
@@ -2317,24 +2407,29 @@ function renderWeeklyFields(managerId, prefillRecord){
   const grid = document.getElementById('reportMetricGrid');
   if(!grid) return;
   grid.className = 'report-field-list';
+  const autoFields = weeklyAutoFieldsFor(managerId);
+  const manualFields = weeklyManualFieldsFor(managerId);
+  const calcFields = weeklyCalcFieldsFor(managerId);
   const auto = prefillRecord
-    ? WEEKLY_AUTO_FIELDS.reduce((o,f)=>{ o[f.key] = Number(prefillRecord[f.key]||0); return o; }, {})
+    ? autoFields.reduce((o,f)=>{ o[f.key] = Number(prefillRecord[f.key]||0); return o; }, {})
     : computeWeeklyAutoSums(managerId, new Date());
   state.weeklyAutoSnapshot = auto;
+  state.weeklyManualKeys = manualFields.map(f=>f.key);
+  state.weeklyCalcFields = calcFields;
   const manualVals = {};
-  WEEKLY_MANUAL_FIELDS.forEach(f => { manualVals[f.key] = prefillRecord ? Number(prefillRecord[f.key]||0) : 0; });
+  manualFields.forEach(f => { manualVals[f.key] = prefillRecord ? Number(prefillRecord[f.key]||0) : 0; });
   const calcInput = {...auto, ...manualVals};
 
   let html = '<div class="report-field-group-title">Автоматично за тиждень</div>';
-  WEEKLY_AUTO_FIELDS.forEach(f => {
+  autoFields.forEach(f => {
     html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}</span><span class="report-field-value">${auto[f.key]}</span></div>`;
   });
   html += '<div class="report-field-group-title">Розрахункові показники</div>';
-  WEEKLY_CALC_FIELDS.forEach(f => {
+  calcFields.forEach(f => {
     html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}<span class="report-field-sub">· ${f.sub}</span></span><span class="report-field-value" id="rdcalc_${f.key}">${f.calc(calcInput)}%</span></div>`;
   });
   html += '<div class="report-field-group-title">Вручну</div>';
-  WEEKLY_MANUAL_FIELDS.forEach(f => { html += reportInputRow(f.key, f.label, manualVals[f.key]); });
+  manualFields.forEach(f => { html += reportInputRow(f.key, f.label, manualVals[f.key]); });
   grid.innerHTML = html;
 }
 // Живий перерахунок % при зміні ручних тижневих полів (Зустрічей
@@ -2343,24 +2438,25 @@ function updateWeeklyCalcDisplay(){
   if(!document.getElementById('rdcalc_connectRate')) return; // не тижневий звіт зараз відкритий
   const auto = state.weeklyAutoSnapshot || {};
   const manual = {};
-  WEEKLY_MANUAL_FIELDS.forEach(f => { const el = document.getElementById('rd_'+f.key); manual[f.key] = el ? Number(el.value)||0 : 0; });
+  (state.weeklyManualKeys || WEEKLY_MANUAL_FIELDS.map(f=>f.key)).forEach(key => { const el = document.getElementById('rd_'+key); manual[key] = el ? Number(el.value)||0 : 0; });
   const calcInput = {...auto, ...manual};
-  WEEKLY_CALC_FIELDS.forEach(f => {
+  (state.weeklyCalcFields || WEEKLY_CALC_FIELDS).forEach(f => {
     const el = document.getElementById('rdcalc_'+f.key);
     if(el) el.textContent = f.calc(calcInput) + '%';
   });
 }
 // Побудова грід-форми відповідно до типу звіту (day/week/month).
 function renderReportFieldsForPeriod(period, managerId, prefillRecord){
-  if(period === 'day') renderDailyFields(prefillRecord);
+  if(period === 'day') renderDailyFields(prefillRecord, managerId);
   else if(period === 'week') renderWeeklyFields(managerId, prefillRecord);
-  else renderMonthlyFields(prefillRecord);
+  else renderMonthlyFields(prefillRecord, managerId);
 }
 // Зчитує значення полів форми відповідно до типу звіту.
-function collectReportFormValues(period){
-  if(period === 'day') return Object.fromEntries(DAILY_FIELDS.map(f=>[f.key, Number(document.getElementById('rd_'+f.key).value)||0]));
-  if(period === 'month') return Object.fromEntries(MONTHLY_FIELDS.map(f=>[f.key, Number(document.getElementById('rd_'+f.key).value)||0]));
-  const manual = Object.fromEntries(WEEKLY_MANUAL_FIELDS.map(f=>[f.key, Number(document.getElementById('rd_'+f.key).value)||0]));
+function collectReportFormValues(period, managerId){
+  const readField = f => [f.key, Number((document.getElementById('rd_'+f.key)||{}).value)||0];
+  if(period === 'day') return Object.fromEntries(dailyFieldsFor(managerId).map(readField));
+  if(period === 'month') return Object.fromEntries(monthlyFieldsFor(managerId).map(readField));
+  const manual = Object.fromEntries(weeklyManualFieldsFor(managerId).map(readField));
   return {...(state.weeklyAutoSnapshot||{}), ...manual};
 }
 
@@ -2592,7 +2688,7 @@ function completeLogin(user, opts){
   state.currentPipelineId = 'default';
 
   document.body.setAttribute('data-role', role);
-  const labels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR'};
+  const labels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Тім лід', partner:'Partnership manager'};
   document.getElementById('userName').textContent = user.name;
   document.getElementById('userRoleLabel').textContent = labels[role];
   document.getElementById('rolePill').textContent = labels[role];
@@ -2799,12 +2895,12 @@ function showView(e, name){
   document.querySelectorAll('.nav li').forEach(li => li.classList.remove('active'));
   const li = document.querySelector('.nav li[data-nav="' + name + '"]');
   if(li) li.classList.add('active');
-  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'Контакти', coldbase:'База клієнтів', 'coldbase-detail':'База клієнтів', tasks:'Завдання', reports:'Звітність', analytics:'Аналітика', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт', 'hr-pipeline':'Воронка кандидатів', vacancies:'Вакансії', 'vacancy-detail':'Вакансія', specialists:'База спеціалістів', 'specialist-detail':'Спеціаліст', 'candidate-detail':'Кандидат', partners:'Партнери'};
+  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'Контакти', coldbase:'База клієнтів', 'coldbase-detail':'База клієнтів', tasks:'Завдання', reports:'Звітність', analytics:'Аналітика', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт', 'hr-pipeline':'Воронка кандидатів', vacancies:'Вакансії', 'vacancy-detail':'Вакансія', specialists:'База спеціалістів', 'specialist-detail':'Спеціаліст', 'candidate-detail':'Кандидат', partners:'База партнерів', 'partner-pipeline':'Воронка партнерств'};
   document.getElementById('pageTitle').textContent = titles[name];
   // Іконка налаштувань воронки (шестерня) видима лише на сторінці "Воронка"
   // і лише для керівника відділу/CTO — саме вони можуть редагувати стовпці.
   const settingsBtn = document.getElementById('pipelineSettingsBtn');
-  if(settingsBtn) settingsBtn.classList.toggle('js-hidden', !(name === 'pipeline' && (state.role==='admin'||state.role==='cto'||state.role==='partner')));
+  if(settingsBtn) settingsBtn.classList.toggle('js-hidden', !(name === 'pipeline' && (state.role==='admin'||state.role==='cto')));
   // Та сама шестерня для воронки кандидатів HR — доступна hr/admin/cto.
   const hrSettingsBtn = document.getElementById('hrPipelineSettingsBtn');
   if(hrSettingsBtn) hrSettingsBtn.classList.toggle('js-hidden', !(name === 'hr-pipeline' && (state.role==='hr'||state.role==='teamlead'||state.role==='admin'||state.role==='cto')));
@@ -2821,6 +2917,7 @@ function showView(e, name){
   if(name === 'dashboard' && (state.role === 'hr' || state.role === 'teamlead')) renderHrDashboard();
   if(name === 'dashboard' && state.role === 'partner') renderPartnerDashboard();
   if(name === 'partners') renderPartnersTable();
+  if(name === 'partner-pipeline') renderPartnerBoard();
   // Запам'ятовуємо активну сторінку в хеші URL (без додавання запису в
   // історію), щоб оновлення сторінки (F5) залишало користувача там само,
   // а не кидало на дашборд.
@@ -2945,6 +3042,7 @@ document.addEventListener('click', function(e){
   menu.parentElement.classList.remove('open');
 
   if(selectType === 'boardPipeline'){ state.currentPipelineId = li.dataset.value; renderBoardPipelineOptions(); renderBoard(); }
+  if(selectType === 'partnerPipeline'){ currentPartnerPipelineId = li.dataset.value; renderPartnerBoard(); }
   if(selectType === 'forwardPipeline'){ forwardSelectedPipelineId = li.dataset.value; renderForwardStageOptions(); }
   if(selectType === 'pdPipeline'){ pdSelectedPipelineId = li.dataset.value; }
   if(selectType === 'coldBaseManager'){ setColdBaseDefaultManager(state.coldBaseViewId, li.dataset.value || null); }
@@ -3182,7 +3280,7 @@ function renderDashboardCalls(){
 // перемикачі воронок нижче. Порожній state.pipelineOwnerFilter = усі.
 function pipelineOwnerFilterPool(){
   const adminUsers = USERS.filter(u=>u.role==='admin');
-  const managers = USERS.filter(u=>u.role==='manager' || u.role==='partner');
+  const managers = USERS.filter(u=>u.role==='manager');
   return [...adminUsers, ...managers];
 }
 function renderPipelineOwnerFilterOptions(){
@@ -3265,21 +3363,32 @@ function ensurePipelineIntegrity(){
       changed = true;
     }
   });
-  // Кожен Partnership manager теж повинен мати свою (окрему від Sales)
-  // воронку — зі своїм набором стадій за замовчуванням (він далі сам
-  // редагує стадії собі, як і будь-яку іншу воронку).
+  // Кожен Partnership manager теж повинен мати свою воронку, але вона
+  // ПОВНІСТЮ ОКРЕМА від Sales: помічена kind:'partner' і тому ніколи не
+  // потрапляє ні в перемикач воронок продажів, ні у фільтри Контактів —
+  // живе лише на власній сторінці "Воронка партнерств".
   const partnerTemplateStages = ["Перший контакт","Перемовини","На узгодженні","Партнерство активне","Відмова"];
   const partnerOwners = USERS.filter(u=>u.role==='partner').map(u=>u.id);
   partnerOwners.forEach(ownerId => {
-    if(!PIPELINES.some(p=>p.ownerId===ownerId)){
+    if(!PIPELINES.some(p=>p.ownerId===ownerId && p.kind==='partner')){
       let id;
       do { id = 'pl' + Date.now() + Math.floor(Math.random()*10000); } while(PIPELINES.some(p=>p.id===id));
-      PIPELINES.push({id, name:'Партнерства', ownerId, stages:[...partnerTemplateStages]});
+      PIPELINES.push({id, name:'Воронка партнерств', ownerId, kind:'partner', stages:[...partnerTemplateStages]});
       changed = true;
     }
   });
+  // Легасі: воронки, створені до появи kind, але власник яких — Partnership
+  // manager, теж мають бути позначені як партнерські (інакше вони й далі
+  // світились би у списку воронок продажів).
+  PIPELINES.forEach(p => {
+    if(p.kind !== 'partner' && partnerOwners.includes(p.ownerId)){ p.kind = 'partner'; changed = true; }
+  });
   return changed;
 }
+// Воронки продажів = усе, крім партнерських. Використовується всюди, де
+// раніше просто брали PIPELINES цілком (перемикач воронок, фільтри тощо).
+function salesPipelines(){ return PIPELINES.filter(p=>p.kind!=='partner'); }
+function partnerPipelines(){ return PIPELINES.filter(p=>p.kind==='partner'); }
 
 // Міграція старих даних "База клієнтів": до фіксу id контактів створювались як
 // Number, а всі onclick-обробники в таблиці передають id назад як рядок —
@@ -3308,7 +3417,23 @@ function ensureColdBaseIntegrity(){
 // (адмін/конкретний менеджер) вище. Менеджер завжди сидить у своїй власній
 // воронці, перемикач воронок бачать лише керівник відділу і CTO.
 function currentPipeline(){
-  return PIPELINES.find(p=>p.id===state.currentPipelineId) || PIPELINES[0];
+  // Partnership manager взагалі не має воронки продажів — для нього
+  // "поточна воронка" це завжди його воронка партнерств. Завдяки цьому
+  // картка угоди (openDeal/saveDeal) працює на партнерській дошці без
+  // окремої копії всієї логіки.
+  if(state.role === 'partner'){
+    const pp = partnerPipelines().find(p=>p.ownerId===state.managerId);
+    if(pp) return pp;
+  }
+  // CTO/керівник відділу, стоячи на сторінці "Воронка партнерств", теж мають
+  // отримувати саме партнерську воронку (інакше нова картка впала б у Sales).
+  const partnerView = document.getElementById('view-partner-pipeline');
+  if(partnerView && partnerView.classList.contains('active')){
+    const pp = currentPartnerPipeline();
+    if(pp) return pp;
+  }
+  const sales = salesPipelines();
+  return sales.find(p=>p.id===state.currentPipelineId) || sales[0] || PIPELINES[0];
 }
 function renderBoardPipelineOptions(){
   const menu = document.getElementById('boardPipelineSelectMenu');
@@ -3318,16 +3443,16 @@ function renderBoardPipelineOptions(){
   // CTO бачать список, звужений мульти-фільтром власників праворуч.
   let visiblePipelines;
   if(state.role === 'manager' || state.role === 'partner'){
-    visiblePipelines = PIPELINES.filter(p=>p.ownerId===state.managerId);
+    visiblePipelines = salesPipelines().filter(p=>p.ownerId===state.managerId);
   } else {
     const filter = state.pipelineOwnerFilter;
-    visiblePipelines = filter.length ? PIPELINES.filter(p=>filter.includes(p.ownerId)) : PIPELINES.slice();
+    visiblePipelines = filter.length ? salesPipelines().filter(p=>filter.includes(p.ownerId)) : salesPipelines();
   }
-  if(!visiblePipelines.length) visiblePipelines = PIPELINES.slice();
+  if(!visiblePipelines.length) visiblePipelines = salesPipelines();
   // Якщо після зміни фільтра/власника поточно вибрана воронка більше не
   // входить у видимий список — переходимо на першу видиму.
   if(!visiblePipelines.some(p=>p.id===state.currentPipelineId)){
-    state.currentPipelineId = visiblePipelines.length ? visiblePipelines[0].id : (PIPELINES[0] ? PIPELINES[0].id : null);
+    state.currentPipelineId = visiblePipelines.length ? visiblePipelines[0].id : (salesPipelines()[0] ? salesPipelines()[0].id : null);
   }
   const cp = currentPipeline();
   // Формат "Назва воронки — Власник" — завжди однаковий, і в списку, і в
@@ -3385,6 +3510,11 @@ function savePipeline(){
 
 function renderBoard(){
   const board = document.getElementById('board');
+  // Дошка партнерств оновлюється разом із дошкою продажів — так усі наявні
+  // виклики renderBoard() (збереження угоди, видалення, синхронізація з
+  // хмарою тощо) тримають обидві дошки в актуальному стані без дублювання.
+  if(typeof renderPartnerBoard === 'function') renderPartnerBoard();
+  if(state.role === 'partner' || !board) return;
   const owner = currentPipelineOwner();
   const cp = currentPipeline();
   // Суми угод ($) показуються лише у воронці Керівника відділу (owner==='admin').
@@ -3464,7 +3594,7 @@ function toggleStageEditor(){
   const ownerFilterEl = document.getElementById('pipelineOwnerFilterSelect');
   if(ownerFilterEl) ownerFilterEl.classList.add('js-hidden');
   const delBtn = document.getElementById('deletePipelineBtn');
-  if(delBtn) delBtn.classList.toggle('js-hidden', PIPELINES.filter(p=>p.ownerId===currentPipelineOwner()).length <= 1);
+  if(delBtn) delBtn.classList.toggle('js-hidden', salesPipelines().filter(p=>p.ownerId===currentPipelineOwner()).length <= 1);
   renderStageEditor();
 }
 let editingStages = [];
@@ -3543,7 +3673,7 @@ async function saveStageEditor(){
 }
 async function deletePipelineFromEditor(){
   const owner = currentPipelineOwner();
-  const ownerPipelines = PIPELINES.filter(p=>p.ownerId===owner);
+  const ownerPipelines = salesPipelines().filter(p=>p.ownerId===owner);
   if(ownerPipelines.length <= 1){
     showAlertModal('Неможливо видалити останню воронку цього власника.', 'Дія недоступна');
     return;
@@ -3620,7 +3750,7 @@ function openDeal(id, presetStage){
   state.dealDoneTasksOpen = false;
   setDealPanelTab('info');
   if(id === null){
-    document.getElementById('dealPanelTitle').textContent = 'Нова угода';
+    document.getElementById('dealPanelTitle').textContent = state.role === 'partner' ? 'Нове партнерство' : 'Нова угода';
     ['dealName','dealPhone','dealEmail','dealCompany','dealNiche','dealLink'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('dealValue').value = '';
     // Дата створення встановлюється автоматично при збереженні — тут лише
@@ -3635,7 +3765,7 @@ function openDeal(id, presetStage){
   } else {
     const l = LEADS.find(l=>l.id===id);
     if(!l) return;
-    document.getElementById('dealPanelTitle').textContent = 'Картка ліда — ' + l.name;
+    document.getElementById('dealPanelTitle').textContent = (state.role === 'partner' ? 'Картка партнера — ' : 'Картка ліда — ') + l.name;
     document.getElementById('dealName').value = l.name;
     document.getElementById('dealPhone').value = l.phone;
     document.getElementById('dealEmail').value = l.email;
@@ -4091,7 +4221,7 @@ function openForwardModal(leadId){
   if(!lead) return;
   forwardLeadId = leadId;
   const currentPlId = lead.pipelineId || 'default';
-  const others = PIPELINES.filter(p=>p.id !== currentPlId);
+  const others = salesPipelines().filter(p=>p.id !== currentPlId);
   const targets = others.length ? others : PIPELINES;
   forwardSelectedPipelineId = targets[0].id;
   renderForwardPipelineOptions(targets);
@@ -4170,7 +4300,7 @@ function editFromClientCard(){
 // керівників відділу, якщо вони колись з'являться; менеджер бачить лише себе
 // (хоча для нього це поле й так приховане).
 function managerFilterPool(){
-  const managers = USERS.filter(u=>u.role==='manager' || u.role==='partner');
+  const managers = USERS.filter(u=>u.role==='manager');
   if(state.role === 'cto') return managers.concat(USERS.filter(u=>u.role==='admin'));
   if(state.role === 'admin'){
     const me = currentUserRecord();
@@ -4203,7 +4333,7 @@ function toggleManagerFilter(e, id){
 // Менеджери вище), дозволяє звузити таблицю/експорт до конкретної(их)
 // воронки(ок) замість усієї бази одразу.
 function clientsPipelineFilterPool(){
-  return PIPELINES.slice();
+  return salesPipelines();
 }
 function renderClientsPipelineFilterOptions(){
   const menu = document.getElementById('clientsPipelineMultiMenu');
@@ -4336,11 +4466,11 @@ let pdSelectedPipelineId = null;
 function renderPdPipelineOptions(){
   const menu = document.getElementById('pdPipelineMenu');
   if(!menu) return;
-  if(!pdSelectedPipelineId || !PIPELINES.some(p=>p.id===pdSelectedPipelineId)){
+  if(!pdSelectedPipelineId || !salesPipelines().some(p=>p.id===pdSelectedPipelineId)){
     const cp = currentPipeline();
-    pdSelectedPipelineId = cp ? cp.id : (PIPELINES[0] ? PIPELINES[0].id : null);
+    pdSelectedPipelineId = cp ? cp.id : (salesPipelines()[0] ? salesPipelines()[0].id : null);
   }
-  menu.innerHTML = PIPELINES.map(p => `<li data-value="${p.id}" class="${p.id===pdSelectedPipelineId?'selected':''}">${p.name} — ${pipelineOwnerName(p.ownerId)}</li>`).join('');
+  menu.innerHTML = salesPipelines().map(p => `<li data-value="${p.id}" class="${p.id===pdSelectedPipelineId?'selected':''}">${p.name} — ${pipelineOwnerName(p.ownerId)}</li>`).join('');
   const sel = PIPELINES.find(p=>p.id===pdSelectedPipelineId);
   const label = document.getElementById('pdPipelineLabel');
   if(label) label.textContent = sel ? `${sel.name} — ${pipelineOwnerName(sel.ownerId)}` : '—';
@@ -5037,8 +5167,8 @@ let coldConvertBaseId = null;
 let coldConvertContactId = null;
 let coldConvertSelectedPipelineId = null;
 function coldConvertPipelinePool(){
-  if(state.role === 'manager') return PIPELINES.filter(p=>p.ownerId===state.userId);
-  return PIPELINES.slice();
+  if(state.role === 'manager') return salesPipelines().filter(p=>p.ownerId===state.userId);
+  return salesPipelines();
 }
 function openColdConvertModal(baseId, contactId){
   const base = COLDBASES.find(b=>b.id===baseId);
@@ -5887,21 +6017,25 @@ function setReportFieldsEnabled(enabled){
   document.querySelectorAll('#reportMetricGrid .stepper input').forEach(inp=>inp.disabled = !enabled);
   document.getElementById('rdComment').disabled = !enabled;
 }
-function renderReportSummaryStrip(values, period){
+function renderReportSummaryStrip(values, period, managerId){
   const el = document.getElementById('reportSummaryStrip');
   if(!el) return;
   if(!values){ el.innerHTML = ''; return; }
+  const isPartner = isPartnerReportContext(managerId);
+  const firstLabel = isPartner ? 'звернень' : 'дзвінків';
   if(period === 'week'){
+    const lastLabel = isPartner ? 'укладено партнерств' : 'кваліф. брифів';
     el.innerHTML = `
-      <span class="report-summary-chip">📞 ${values.calls||0} дзвінків</span>
+      <span class="report-summary-chip">📞 ${values.calls||0} ${firstLabel}</span>
       <span class="report-summary-chip">🤝 ${values.meetingsHeld||0} зустрічей відбулось</span>
-      <span class="report-summary-chip">🎯 ${values.qualifiedBriefs||0} кваліф. брифів</span>`;
+      <span class="report-summary-chip">🎯 ${values.qualifiedBriefs||0} ${lastLabel}</span>`;
     return;
   }
+  const hotLabel = isPartner ? 'зацікавлених партнерів' : 'зацікавлених ЛПР';
   el.innerHTML = `
-    <span class="report-summary-chip">📞 ${values.calls||0} дзвінків</span>
+    <span class="report-summary-chip">📞 ${values.calls||0} ${firstLabel}</span>
     <span class="report-summary-chip">🤝 ${values.meetings||0} зустрічей</span>
-    <span class="report-summary-chip">🔥 ${values.interestedLPR||0} зацікавлених ЛПР</span>`;
+    <span class="report-summary-chip">🔥 ${values.interestedLPR||0} ${hotLabel}</span>`;
 }
 function openReportCreate(){
   if(state.role === 'cto') return; // CTO лише переглядає звіти керівника відділу і менеджерів
@@ -5941,7 +6075,7 @@ function openReportView(id){
   renderReportFieldsForPeriod(period, r.managerId, r);
   document.getElementById('rdComment').value = r.comment;
   setReportFieldsEnabled(false);
-  renderReportSummaryStrip(r, period);
+  renderReportSummaryStrip(r, period, r.managerId);
   const me = currentUserRecord();
   const canEdit = me && me.id === r.managerId && state.role !== 'cto';
   document.getElementById('reportEditBtn').style.display = canEdit ? 'inline-flex' : 'none';
@@ -5972,9 +6106,12 @@ function saveReportDetail(){
   const existing = isEdit ? REPORTS.find(r=>r.id===state.reportViewId) : null;
   if(isEdit && !existing) return;
   const period = isEdit ? (existing.period || 'month') : document.querySelector('#reportPeriodSelect .cselect-menu li.selected').dataset.value;
-  const values = collectReportFormValues(period);
-  const comment = document.getElementById('rdComment').value.trim() || defaultReportComment(period, values);
   const me = currentUserRecord();
+  // Набір полів визначає автор звіту: при редагуванні — той, чий це звіт,
+  // при створенні — сам користувач (партнер отримує партнерські поля).
+  const fieldsOwnerId = isEdit ? existing.managerId : (me ? me.id : null);
+  const values = collectReportFormValues(period, fieldsOwnerId);
+  const comment = document.getElementById('rdComment').value.trim() || defaultReportComment(period, values);
 
   if(isEdit){
     Object.assign(existing, values, {comment});
@@ -5997,8 +6134,14 @@ function saveReportDetail(){
 // Дефолтний коментар, якщо менеджер лишив поле коментаря порожнім —
 // різний набір показників для дня/тижня і місяця (в останнього — стара логіка).
 function defaultReportComment(period, values){
-  if(period === 'week') return `${values.calls||0} дзвінків · ${values.meetingsHeld||0} зустрічей відбулось · ${values.qualifiedBriefs||0} кваліф. брифів`;
-  return `${values.calls||0} дзвінків · ${values.meetings||0} зустрічей · ${values.interestedLPR||0} зацікавлених ЛПР`;
+  const isPartner = state.role === 'partner';
+  const first = isPartner ? 'звернень' : 'дзвінків';
+  if(period === 'week'){
+    const last = isPartner ? 'укладено партнерств' : 'кваліф. брифів';
+    return `${values.calls||0} ${first} · ${values.meetingsHeld||0} зустрічей відбулось · ${values.qualifiedBriefs||0} ${last}`;
+  }
+  const hot = isPartner ? 'зацікавлених партнерів' : 'зацікавлених ЛПР';
+  return `${values.calls||0} ${first} · ${values.meetings||0} зустрічей · ${values.interestedLPR||0} ${hot}`;
 }
 
 /* =========================================================
@@ -7123,6 +7266,155 @@ function renderSpecialistsTable(){
 }
 
 /* =========================================================
+   PARTNERSHIP: ВОРОНКА ПАРТНЕРСТВ (окрема сторінка, не входить
+   у воронки продажів — усі воронки тут мають kind:'partner')
+   ========================================================= */
+// Яку саме партнерську воронку зараз відкрито. Partnership manager завжди
+// сидить у своїй; CTO/керівник відділу можуть перемикатись між воронками
+// різних Partnership manager'ів через селектор угорі сторінки.
+let currentPartnerPipelineId = null;
+function currentPartnerPipeline(){
+  const pool = partnerPipelines();
+  if(state.role === 'partner') return pool.find(p=>p.ownerId===state.managerId) || null;
+  return pool.find(p=>p.id===currentPartnerPipelineId) || pool[0] || null;
+}
+function partnerPipelineOwner(){
+  const pp = currentPartnerPipeline();
+  return pp ? pp.ownerId : null;
+}
+function renderPartnerPipelineOptions(){
+  const menu = document.getElementById('partnerPipelineSelectMenu');
+  if(!menu) return;
+  const pool = partnerPipelines();
+  if(!pool.some(p=>p.id===currentPartnerPipelineId)) currentPartnerPipelineId = pool.length ? pool[0].id : null;
+  menu.innerHTML = pool.length
+    ? pool.map(p=>`<li data-value="${p.id}" class="${p.id===currentPartnerPipelineId?'selected':''}">${p.name} — ${pipelineOwnerName(p.ownerId)}</li>`).join('')
+    : '<li style="color:var(--text-muted);">Немає жодної воронки партнерств</li>';
+  const trigger = document.querySelector('#partnerPipelineSelect .cselect-label');
+  const cur = currentPartnerPipeline();
+  if(trigger) trigger.textContent = cur ? `${cur.name} — ${pipelineOwnerName(cur.ownerId)}` : 'Воронка партнерств';
+}
+function renderPartnerBoard(){
+  const board = document.getElementById('partnerBoard');
+  const hint = document.getElementById('partnerNoPipelineHint');
+  if(!board) return;
+  renderPartnerPipelineOptions();
+  // Поки відкритий редактор етапів — дошка навмисно схована; фонове
+  // оновлення з хмари не має її знову показати поверх редактора.
+  const editorEl = document.getElementById('partnerStageEditorBoard');
+  const editorOpen = editorEl && editorEl.style.display !== 'none';
+  const pp = currentPartnerPipeline();
+  if(!pp){
+    if(!editorOpen) board.style.display = 'none';
+    if(hint) hint.style.display = '';
+    return;
+  }
+  if(!editorOpen) board.style.display = '';
+  if(hint) hint.style.display = 'none';
+  board.innerHTML = pp.stages.map(stage => {
+    const cards = LEADS.filter(l => l.stage === stage && l.managerId === pp.ownerId && l.pipelineId === pp.id);
+    const cardsHtml = cards.map(c => `
+      <div class="lead-card" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
+        <div class="lead-title">${c.name}</div>
+        <div class="lead-sub">${c.company||''}</div>
+        <div class="lead-foot"><span class="lead-value">${c.niche||''}</span><span></span></div>
+      </div>`).join('');
+    return `
+      <div class="column" data-stage="${stage}" ondragover="allowDrop(event)" ondragenter="columnDragEnter(event)" ondragleave="columnDragLeave(event)" ondrop="partnerDropCard(event,'${escAttr(stage)}')">
+        <div class="column-head"><div class="column-title">${stage}</div><div class="column-meta">${cards.length} ${cards.length===1?'партнерство':'партнерств'}</div></div>
+        <div class="card-list">${cardsHtml}</div>
+        <button class="add-card-btn" type="button" onclick="openDeal(null,'${escAttr(stage)}')">+ Додати картку</button>
+      </div>`;
+  }).join('');
+}
+function partnerDropCard(e, stage){
+  e.preventDefault();
+  dragEnterDepth = 0;
+  e.currentTarget.classList.remove('drag-over');
+  const lead = LEADS.find(l=>l.id===draggedLeadId);
+  if(lead){ lead.stage = stage; renderPartnerBoard(); fbScheduleSave(); }
+}
+/* ---- редактор етапів воронки партнерств ---- */
+let editingPartnerStages = [];
+let partnerStageDraggedIdx = null;
+function togglePartnerStageEditor(){
+  const pp = currentPartnerPipeline();
+  if(!pp) return;
+  const isOpen = document.getElementById('partnerStageEditorBoard').style.display !== 'none';
+  if(isOpen){ cancelPartnerStageEditor(); return; }
+  document.getElementById('partnerBoard').style.display = 'none';
+  document.getElementById('partnerStageEditorBoard').style.display = '';
+  document.getElementById('partnerStageEditorActions').style.display = 'flex';
+  const sel = document.getElementById('partnerPipelineSelect');
+  if(sel) sel.classList.add('js-hidden');
+  const addBtn = document.getElementById('addPartnerDealBtn');
+  if(addBtn) addBtn.classList.add('js-hidden');
+  editingPartnerStages = [...pp.stages];
+  renderPartnerStageEditor();
+}
+function cancelPartnerStageEditor(){
+  document.getElementById('partnerBoard').style.display = '';
+  document.getElementById('partnerStageEditorBoard').style.display = 'none';
+  document.getElementById('partnerStageEditorActions').style.display = 'none';
+  const sel = document.getElementById('partnerPipelineSelect');
+  if(sel) sel.classList.remove('js-hidden');
+  const addBtn = document.getElementById('addPartnerDealBtn');
+  if(addBtn) addBtn.classList.remove('js-hidden');
+  renderPartnerBoard();
+}
+function renderPartnerStageEditor(){
+  const el = document.getElementById('partnerStageEditorBoard');
+  if(!el) return;
+  el.style.display = 'flex';
+  el.style.gap = '14px';
+  el.style.flexWrap = 'wrap';
+  el.style.alignItems = 'flex-start';
+  el.innerHTML = editingPartnerStages.map((s,i) => `
+    <div class="stage-edit-card" style="min-width:230px;max-width:230px;" data-idx="${i}"
+         draggable="true" ondragstart="partnerStageDragStart(event,${i})" ondragend="stageDragEnd(event)"
+         ondragover="stageDragOver(event)" ondrop="partnerStageDrop(event,${i})">
+      <div class="stage-edit-head">
+        <span class="drag-handle" title="Перетягніть, щоб змінити порядок">⋮⋮</span>
+        <span class="stage-order-badge">${i+1}</span>
+        <input type="text" class="stage-name-input" value="${escAttr(s)}" oninput="editingPartnerStages[${i}]=this.value" placeholder="Назва етапу">
+        <button class="danger-icon-btn" type="button" title="Видалити етап" onclick="removePartnerStageEditorItem(${i})">${trashIconSvg()}</button>
+      </div>
+    </div>`).join('') + `<div class="stage-add-col" onclick="addPartnerStageEditorItem()">+ Додати етап</div>`;
+}
+function addPartnerStageEditorItem(){ editingPartnerStages.push('Новий етап'); renderPartnerStageEditor(); }
+function removePartnerStageEditorItem(i){ editingPartnerStages.splice(i,1); renderPartnerStageEditor(); }
+function partnerStageDragStart(e, i){ partnerStageDraggedIdx = i; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+function partnerStageDrop(e, i){
+  e.preventDefault();
+  if(partnerStageDraggedIdx === null || partnerStageDraggedIdx === i) return;
+  const [moved] = editingPartnerStages.splice(partnerStageDraggedIdx,1);
+  editingPartnerStages.splice(i,0,moved);
+  partnerStageDraggedIdx = null;
+  renderPartnerStageEditor();
+}
+async function savePartnerStageEditor(){
+  const pp = currentPartnerPipeline();
+  if(!pp) return;
+  const stages = editingPartnerStages.map(s=>s.trim()).filter(Boolean);
+  if(!stages.length){ showAlertModal('Має лишитись хоча б один етап.', 'Неможливо зберегти'); return; }
+  const ok = await showConfirmModal({title:'Зберегти зміни етапів', text:'Застосувати зміни до воронки партнерств?', okText:'Зберегти'});
+  if(!ok) return;
+  // Картки, що стояли на видалених/перейменованих етапах, переносимо на
+  // перший етап — інакше вони б "зникли" з дошки (лишились би на етапі,
+  // якого більше немає), як і в редакторі воронки продажів.
+  const oldStages = pp.stages;
+  LEADS.forEach(l => {
+    if(l.pipelineId === pp.id && l.managerId === pp.ownerId && oldStages.includes(l.stage) && !stages.includes(l.stage)){
+      l.stage = stages[0];
+    }
+  });
+  pp.stages = stages;
+  cancelPartnerStageEditor();
+  logActivity('Відредаговано етапи воронки партнерств', {target:{type:'view', name:'partner-pipeline'}, silent:true});
+  fbScheduleSave();
+}
+
+/* =========================================================
    PARTNERSHIP: БАЗА ПАРТНЕРІВ
    ========================================================= */
 let editingPartnerId = null;
@@ -7214,9 +7506,12 @@ async function deletePartner(){
 function convertPartnerToDeal(id){
   const p = partnerById(id);
   if(!p || p.convertedLeadId) return;
-  const ownerId = currentPipelineOwner();
-  const pipeline = PIPELINES.find(pl=>pl.ownerId===ownerId) || PIPELINES[0];
-  if(!pipeline || !pipeline.stages.length){ showAlertModal('Спочатку створіть хоча б один етап у воронці.', 'Немає воронки'); return; }
+  // Завжди беремо саме ПАРТНЕРСЬКУ воронку (для Partnership manager'а — його
+  // власну; для CTO/керівника — ту, що зараз обрана на сторінці воронки
+  // партнерств), щоб картка ніколи не впала у воронку продажів.
+  const pipeline = currentPartnerPipeline();
+  if(!pipeline || !pipeline.stages.length){ showAlertModal('Спочатку створіть хоча б один етап у воронці партнерств.', 'Немає воронки'); return; }
+  const ownerId = pipeline.ownerId;
   const newId = nextLeadId++;
   LEADS.push({
     id:newId, name:p.contactPerson||p.name, phone:p.phone||'', email:p.email||'', company:p.name,
@@ -7225,7 +7520,7 @@ function convertPartnerToDeal(id){
   });
   p.convertedLeadId = newId;
   renderPartnersTable();
-  renderBoard();
+  renderPartnerBoard();
   renderClientsTable();
   logActivity(`Партнера "${p.name}" переведено в угоду воронки партнерств`, {target:{type:'lead', id:newId}});
   fbScheduleSave();
@@ -7278,8 +7573,11 @@ function renderPartnerDashboard(){
   if(!totalEl) return;
   totalEl.textContent = PARTNERS.length;
   document.getElementById('partnerStatActive').textContent = PARTNERS.filter(p=>p.status==='active').length;
-  const ownerId = currentPipelineOwner();
-  document.getElementById('partnerStatDeals').textContent = LEADS.filter(l=>l.managerId===ownerId).length;
+  // Рахуємо угоди саме у воронці партнерств, а не в будь-якій воронці власника.
+  const pp = currentPartnerPipeline();
+  document.getElementById('partnerStatDeals').textContent = pp
+    ? LEADS.filter(l=>l.pipelineId===pp.id && l.managerId===pp.ownerId).length
+    : 0;
 }
 
 /* =========================================================
@@ -7893,8 +8191,8 @@ function fbApplyRemoteData(data){
       }
       seenPipelineIds.add(p.id);
     });
-    if(PIPELINES.length && !PIPELINES.some(p=>p.id===state.currentPipelineId)){
-      state.currentPipelineId = PIPELINES[0].id;
+    if(salesPipelines().length && !salesPipelines().some(p=>p.id===state.currentPipelineId)){
+      state.currentPipelineId = salesPipelines()[0].id;
     }
     // Гарантуємо, що кожна воронка має власника і що в кожного керівника й
     // менеджера є хоча б одна своя воронка (див. ensurePipelineIntegrity()).
@@ -7933,6 +8231,7 @@ function fbApplyRemoteData(data){
       renderHrDashboard();
       renderPartnersTable();
       renderPartnerDashboard();
+      renderPartnerBoard();
       scheduleAllUpcomingMeetings();
       updateHeaderAvatars();
       updateAccountSwitchUI();
