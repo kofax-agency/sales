@@ -272,6 +272,11 @@
   body[data-role="hr"] .field[data-roles~="hr"],
   body[data-role="teamlead"] .field[data-roles~="hr"],
   body[data-role="partner"] .field[data-roles~="partner"]{display:flex;}
+  /* Універсальний рол-гейт для довільних flex-контейнерів (напр. рядок
+     вкладок), які не є .field — той самий принцип display:revert-фікса. */
+  body[data-role="manager"] .role-gate[data-roles~="manager"],
+  body[data-role="admin"] .role-gate[data-roles~="admin"],
+  body[data-role="cto"] .role-gate[data-roles~="cto"]{display:flex;}
   body[data-role="manager"] .pipeline-static-label[data-roles~="manager"],
   body[data-role="admin"] .pipeline-static-label[data-roles~="admin"],
   body[data-role="cto"] .pipeline-static-label[data-roles~="cto"],
@@ -305,6 +310,7 @@
   .cselect-menu li{padding:8px 10px;border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;transition:background .12s;}
   .cselect-menu li:hover{background:var(--surface-2);}
   .cselect-menu li.selected{color:var(--accent-1);font-weight:800;}
+  .cselect.disabled .cselect-trigger{pointer-events:none;opacity:.6;}
   .cselect-menu .menu-footer{border-top:1px solid var(--border);margin-top:4px;padding-top:6px;}
 
   /* calendar */
@@ -1187,6 +1193,13 @@
           <div class="section-title" style="margin:0;">Звітність</div>
           <button class="btn" data-roles="admin manager partner" onclick="openReportCreate()">+ Створити звіт</button>
         </div>
+        <div class="filters-bar card role-gate" data-roles="manager admin cto" style="margin-bottom:16px;">
+          <div style="display:flex;gap:8px;">
+            <button class="btn secondary tasks-tab-btn active" id="reportsPeriodTabDayBtn" onclick="setReportsPeriodTab('day')">День</button>
+            <button class="btn secondary tasks-tab-btn" id="reportsPeriodTabWeekBtn" onclick="setReportsPeriodTab('week')">Тиждень</button>
+            <button class="btn secondary tasks-tab-btn" id="reportsPeriodTabMonthBtn" onclick="setReportsPeriodTab('month')">Місяць</button>
+          </div>
+        </div>
         <div class="filters-bar card" style="margin-bottom:16px;">
           <div class="field">
             <label>Період</label>
@@ -1212,11 +1225,21 @@
               <ul class="cselect-menu" id="reportManagerMultiMenu"></ul>
             </div>
           </div>
+          <div class="field" data-roles="manager admin cto">
+            <label>Ніша</label>
+            <div class="cselect" id="reportNicheMultiSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;min-width:160px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="reportNicheMultiLabel">Усі ніші</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="reportNicheMultiMenu"></ul>
+            </div>
+          </div>
           <button class="btn" onclick="renderReportsTable()">Застосувати фільтр</button>
         </div>
         <div class="card" style="padding:8px 4px;">
           <div class="table-scroll"><table>
-            <thead><tr><th>Дата</th><th data-roles="admin cto">Менеджер</th><th>Ніша</th><th>Звіт</th><th data-roles="cto" style="width:44px;"></th></tr></thead>
+            <thead id="reportsTableHead"><tr><th>Дата</th><th data-roles="admin cto">Менеджер</th><th>Ніша</th><th>Звіт</th><th data-roles="cto" style="width:44px;"></th></tr></thead>
             <tbody id="reportsTableBody"></tbody>
           </table></div>
         </div>
@@ -1276,7 +1299,13 @@
           </div>
           <div class="field" id="rdNicheRow" style="max-width:320px;margin-top:14px;">
             <label>Ніша</label>
-            <input type="text" id="rdNiche" placeholder="Напр. IT, Ecommerce, Медицина...">
+            <div class="cselect" id="rdNicheSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;width:100%;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="rdNicheLabel">Оберіть нішу</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="rdNicheMenu"></ul>
+            </div>
           </div>
           <div class="report-metric-grid" id="reportMetricGrid"><!-- вставляється через JS: renderReportFieldRows() --></div>
           <div class="field" style="margin-top:18px;"><label>Коментар</label><textarea id="rdComment" style="min-height:64px;" placeholder="Короткий підсумок дня (необов'язково)"></textarea></div>
@@ -2253,6 +2282,9 @@ const CANDIDATE_LABEL_COLORS = ['#2F4EF3','#0EA85C','#B5179E','#E5484D','#E8A33D
 // (наприклад "Sales", "Marketing", "Development"...), використовується як
 // теги на картках спеціалістів і як фільтр у "Базі спеціалістів".
 let SPEC_DIRECTIONS = ['Sales','Marketing','Development','Design','HR','Finance','Support'];
+// Ніші звітів SALES-відділу — зростаючий список, який поповнюється прямо з
+// дропдауна у формі звіту (той самий патерн, що й SPEC_DIRECTIONS вище).
+let REPORT_NICHES = [];
 
 // Довідник мов — стартовий набір (укр/рос/англ), HR може дописувати свої.
 let SPEC_LANGUAGES = ['Українська','Російська','Англійська'];
@@ -2291,49 +2323,43 @@ const DAILY_FIELDS = [
   {group:'Output — головне', key:'meetingsNoShow', label:'Не з\'явились (no-show)'},
 ];
 
-// Місяць (Sales) — тепер формується АВТОМАТИЧНО: суми по всіх тижневих
-// звітах менеджера за календарний місяць (той самий принцип, що й тиждень
-// рахує з днів). Ручного введення більше немає для sales-звітів.
+// Тиждень і місяць (Sales) — ПОВНІСТЮ автоматичні, рахуються з щоденних
+// звітів менеджера (тиждень — Пн-Нд; місяць — календарний місяць). Ручного
+// введення й окремого "створення" тижневого/місячного звіту більше немає —
+// усі показники вже присутні в щоденному звіті ("Кваліфікованих брифів"
+// прибрано з sales-звітів як непотрібний показник).
+function reportPct(num, den){ return den ? Math.round(Number(num||0)/Number(den||0)*100) : 0; }
+const WEEKLY_AUTO_FIELDS = [
+  {key:'calls', label:'Дзвінків / тиждень'},
+  {key:'talks', label:'Розмов'},
+  {key:'reachLPR', label:'Вихід на ЛПР'},
+  {key:'meetings', label:'Зустрічей призначено'},
+  {key:'meetingsHeld', label:'Зустрічей відбулось'},
+];
+// Ручних полів для sales-тижня більше немає (усе рахується з днів).
+const WEEKLY_MANUAL_FIELDS = [];
+const WEEKLY_CALC_FIELDS = [
+  {key:'connectRate', label:'Connect rate', sub:'розмови ÷ дзвінки', calc:v=>reportPct(v.talks, v.calls)},
+  {key:'reachPct', label:'Вихід на ЛПР %', sub:'ЛПР ÷ розмови', calc:v=>reportPct(v.reachLPR, v.talks)},
+  {key:'lprToMeetingPct', label:'ЛПР → зустріч %', sub:'призначено ÷ ЛПР', calc:v=>reportPct(v.meetings, v.reachLPR)},
+  {key:'showRate', label:'Show rate', sub:'відбулось ÷ призначено', calc:v=>reportPct(v.meetingsHeld, v.meetings)},
+];
 const MONTHLY_AUTO_FIELDS = [
   {key:'calls', label:'Дзвінків / місяць'},
   {key:'talks', label:'Розмов'},
   {key:'reachLPR', label:'Вихід на ЛПР'},
   {key:'meetings', label:'Зустрічей призначено'},
   {key:'meetingsHeld', label:'Зустрічей відбулось'},
-  {key:'qualifiedBriefs', label:'Кваліфікованих брифів'},
 ];
 const MONTHLY_CALC_FIELDS = [
   {key:'connectRate', label:'Connect rate', sub:'розмови ÷ дзвінки', calc:v=>reportPct(v.talks, v.calls)},
   {key:'reachPct', label:'Вихід на ЛПР %', sub:'ЛПР ÷ розмови', calc:v=>reportPct(v.reachLPR, v.talks)},
   {key:'lprToMeetingPct', label:'ЛПР → зустріч %', sub:'призначено ÷ ЛПР', calc:v=>reportPct(v.meetings, v.reachLPR)},
   {key:'showRate', label:'Show rate', sub:'відбулось ÷ призначено', calc:v=>reportPct(v.meetingsHeld, v.meetings)},
-  {key:'briefsToTalksPct', label:'Брифи ÷ Розмови %', sub:'кваліф. брифи ÷ розмови', calc:v=>reportPct(v.qualifiedBriefs, v.talks)},
 ];
 // Партнерство лишається на старій ручній структурі місячного звіту —
 // це запит стосувався лише звітів SALES-відділу.
 const MONTHLY_FIELDS = MONTHLY_AUTO_FIELDS;
-
-// Тиждень — більшість показників рахується АВТОМАТИЧНО (сума щоденних
-// звітів менеджера за календарний тиждень Пн-Нд); вручну вводяться лише
-// "Зустрічей відбулось" і "Кваліфікованих брифів". Решта — розраховані %.
-const WEEKLY_AUTO_FIELDS = [
-  {key:'calls', label:'Дзвінків / тиждень'},
-  {key:'talks', label:'Розмов'},
-  {key:'reachLPR', label:'Вихід на ЛПР'},
-  {key:'meetings', label:'Зустрічей призначено'},
-];
-const WEEKLY_MANUAL_FIELDS = [
-  {key:'meetingsHeld', label:'Зустрічей відбулось'},
-  {key:'qualifiedBriefs', label:'Кваліфікованих брифів'},
-];
-function reportPct(num, den){ return den ? Math.round(Number(num||0)/Number(den||0)*100) : 0; }
-const WEEKLY_CALC_FIELDS = [
-  {key:'connectRate', label:'Connect rate', sub:'розмови ÷ дзвінки', calc:v=>reportPct(v.talks, v.calls)},
-  {key:'reachPct', label:'Вихід на ЛПР %', sub:'ЛПР ÷ розмови', calc:v=>reportPct(v.reachLPR, v.talks)},
-  {key:'lprToMeetingPct', label:'ЛПР → зустріч %', sub:'призначено ÷ ЛПР', calc:v=>reportPct(v.meetings, v.reachLPR)},
-  {key:'showRate', label:'Show rate', sub:'відбулось ÷ призначено', calc:v=>reportPct(v.meetingsHeld, v.meetings)},
-  {key:'qualityPct', label:'Якість %', sub:'кваліфіковані ÷ відбулось', calc:v=>reportPct(v.qualifiedBriefs, v.meetingsHeld)},
-];
 // Показники для аналітики — об'єднаний список ключів з усіх трьох типів
 // звітів (день/місяць мають майже той самий набір; тиждень виключається
 // із сум нижче, щоб не подвоювати вже пораховані щоденні дані).
@@ -2459,22 +2485,22 @@ function monthRangeContaining(dateObj){
   const end = new Date(dateObj.getFullYear(), dateObj.getMonth()+1, 0, 23,59,59,999);
   return {start, end};
 }
-// Автосума ТИЖНЕВИХ звітів менеджера за календарний місяць, що містить
-// refDate — саме так тепер формується місячний звіт Sales-відділу.
+// Автосума ЩОДЕННИХ звітів менеджера за календарний місяць, що містить
+// refDate — саме так тепер формується місячний звіт Sales-відділу (окремих
+// тижневих/місячних звітів більше не створюють — усе рахується з днів).
 function computeMonthlyAutoSums(managerId, refDate){
   const {start, end} = monthRangeContaining(refDate || new Date());
-  const weekReports = REPORTS.filter(r => r.managerId === managerId && r.period === 'week' && (() => {
+  const dayReports = REPORTS.filter(r => r.managerId === managerId && r.period === 'day' && (() => {
     const d = parseUkDate(r.date);
     return d && d >= start && d <= end;
   })());
   const sums = {};
-  MONTHLY_AUTO_FIELDS.forEach(f => { sums[f.key] = weekReports.reduce((s,r)=>s+Number(r[f.key]||0),0); });
+  MONTHLY_AUTO_FIELDS.forEach(f => { sums[f.key] = dayReports.reduce((s,r)=>s+Number(r[f.key]||0),0); });
   return sums;
 }
-// Місяць (Sales) — авто-рядки (readonly, сума тижневих звітів місяця) +
-// розрахункові %, включно з новим "Брифи ÷ Розмови %". Partnership і далі
-// використовує стару ручну сітку (renderMonthlyFieldsManual) — цей запит
-// стосувався лише звітів SALES-відділу.
+// Місяць (Sales) — авто-рядки (readonly, сума щоденних звітів місяця) +
+// розрахункові %. Partnership і далі використовує стару ручну сітку
+// (renderMonthlyFieldsManual) — цей запит стосувався лише SALES-відділу.
 function renderMonthlyFields(prefill, managerId){
   if(isPartnerReportContext(managerId)){ renderMonthlyFieldsManual(prefill, managerId); return; }
   const grid = document.getElementById('reportMetricGrid');
@@ -2484,7 +2510,7 @@ function renderMonthlyFields(prefill, managerId){
     ? MONTHLY_AUTO_FIELDS.reduce((o,f)=>{ o[f.key] = Number(prefill[f.key]||0); return o; }, {})
     : computeMonthlyAutoSums(managerId, new Date());
   state.monthlyAutoSnapshot = auto;
-  let html = '<div class="report-field-group-title">Автоматично за місяць (сума тижневих звітів)</div>';
+  let html = '<div class="report-field-group-title">Автоматично за місяць (сума щоденних звітів)</div>';
   MONTHLY_AUTO_FIELDS.forEach(f => {
     html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}</span><span class="report-field-value">${auto[f.key]}</span></div>`;
   });
@@ -2540,12 +2566,14 @@ function renderWeeklyFields(managerId, prefillRecord){
   calcFields.forEach(f => {
     html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}<span class="report-field-sub">· ${f.sub}</span></span><span class="report-field-value" id="rdcalc_${f.key}">${f.calc(calcInput)}%</span></div>`;
   });
-  html += '<div class="report-field-group-title">Вручну</div>';
-  manualFields.forEach(f => { html += reportInputRow(f.key, f.label, manualVals[f.key]); });
+  if(manualFields.length){
+    html += '<div class="report-field-group-title">Вручну</div>';
+    manualFields.forEach(f => { html += reportInputRow(f.key, f.label, manualVals[f.key]); });
+  }
   grid.innerHTML = html;
 }
-// Живий перерахунок % при зміні ручних тижневих полів (Зустрічей
-// відбулось / Кваліфікованих брифів) — викликається з oninput/степера.
+// Живий перерахунок % при зміні ручних тижневих полів (лишається для
+// Partnership, де ручні поля ще є) — викликається з oninput/степера.
 function updateWeeklyCalcDisplay(){
   if(!document.getElementById('rdcalc_connectRate')) return; // не тижневий звіт зараз відкритий
   const auto = state.weeklyAutoSnapshot || {};
@@ -2562,6 +2590,45 @@ function renderReportFieldsForPeriod(period, managerId, prefillRecord){
   if(period === 'day') renderDailyFields(prefillRecord, managerId);
   else if(period === 'week') renderWeeklyFields(managerId, prefillRecord);
   else renderMonthlyFields(prefillRecord, managerId);
+}
+// Групування ЩОДЕННИХ звітів Sales-відділу у тижневі/місячні агрегати —
+// саме так тепер "формуються" тижневий і місячний звіти: без окремого
+// створення, без збереження, живий перерахунок з днів на льоту.
+function groupDayReportsByWeek(dayReports){
+  const groups = {};
+  dayReports.forEach(r => {
+    const d = parseUkDate(r.date);
+    if(!d) return;
+    const {monday, sunday} = weekRangeContaining(d);
+    const key = r.managerId + '|' + monday.getTime();
+    if(!groups[key]) groups[key] = {managerId:r.managerId, period:'week', rangeStart:monday, rangeEnd:sunday, niches:[], count:0};
+    const g = groups[key];
+    g.count++;
+    if(r.niche && !g.niches.includes(r.niche)) g.niches.push(r.niche);
+    WEEKLY_AUTO_FIELDS.forEach(f => { g[f.key] = (g[f.key]||0) + Number(r[f.key]||0); });
+  });
+  return Object.values(groups).sort((a,b)=>b.rangeStart-a.rangeStart);
+}
+function groupDayReportsByMonth(dayReports){
+  const groups = {};
+  dayReports.forEach(r => {
+    const d = parseUkDate(r.date);
+    if(!d) return;
+    const rangeStart = new Date(d.getFullYear(), d.getMonth(), 1);
+    const rangeEnd = new Date(d.getFullYear(), d.getMonth()+1, 0);
+    const key = r.managerId + '|' + d.getFullYear() + '-' + d.getMonth();
+    if(!groups[key]) groups[key] = {managerId:r.managerId, period:'month', rangeStart, rangeEnd, niches:[], count:0};
+    const g = groups[key];
+    g.count++;
+    if(r.niche && !g.niches.includes(r.niche)) g.niches.push(r.niche);
+    MONTHLY_AUTO_FIELDS.forEach(f => { g[f.key] = (g[f.key]||0) + Number(r[f.key]||0); });
+  });
+  return Object.values(groups).sort((a,b)=>b.rangeStart-a.rangeStart);
+}
+const RD_MONTH_NAMES = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+function fmtRangeLabel(g){
+  if(g.period === 'week') return fmtDate(g.rangeStart) + ' – ' + fmtDate(g.rangeEnd);
+  return RD_MONTH_NAMES[g.rangeStart.getMonth()] + ' ' + g.rangeStart.getFullYear();
 }
 // Зчитує значення полів форми відповідно до типу звіту.
 function collectReportFormValues(period, managerId){
@@ -2627,7 +2694,11 @@ const state = {
   reportDateRange: {start:null, end:null},
   reportCalendarMonth: new Date(2026,6,1),
   reportManagerFilter: [],
+  reportNicheFilter: [],
+  reportsPeriodTab: 'day',
+  reportAggregateGroups: [],
   analyticsTab: 'day',
+  rdNicheValue: '',
   weeklyAutoSnapshot: {},
   hrVacancyId: null,
 };
@@ -2823,6 +2894,7 @@ function completeLogin(user, opts){
   renderClientsPipelineFilterOptions();
   renderTaskManagerMultiOptions();
   renderReportManagerMultiOptions();
+  renderReportNicheFilterOptions();
   renderBoard();
   renderClientsTable();
   renderTasksTable(); renderPartnerTasksTable();
@@ -6167,7 +6239,38 @@ function applyReportRange(){
   closeAllDropdowns();
   renderReportsTable(); renderPartnerReportsTable();
 }
+// Вкладки День/Тиждень/Місяць на сторінці "Звітність" — стосуються лише
+// SALES (partner і далі має свій незмінний плаский список).
+function setReportsPeriodTab(tab){
+  state.reportsPeriodTab = tab;
+  document.getElementById('reportsPeriodTabDayBtn').classList.toggle('active', tab==='day');
+  document.getElementById('reportsPeriodTabWeekBtn').classList.toggle('active', tab==='week');
+  document.getElementById('reportsPeriodTabMonthBtn').classList.toggle('active', tab==='month');
+  renderReportsTable();
+}
+function renderReportNicheFilterOptions(){
+  const menu = document.getElementById('reportNicheMultiMenu');
+  if(!menu) return;
+  menu.innerHTML = REPORT_NICHES.map(n => `
+    <li data-value="${n}" onclick="toggleReportNicheFilter(event,'${n}')">
+      <label class="chk" onclick="event.stopPropagation()"><input type="checkbox" ${state.reportNicheFilter.includes(n)?'checked':''} onchange="toggleReportNicheFilter(event,'${n}')"><span></span></label> ${n}
+    </li>`).join('');
+}
+function toggleReportNicheFilter(e, n){
+  e.stopPropagation();
+  const idx = state.reportNicheFilter.indexOf(n);
+  if(idx === -1) state.reportNicheFilter.push(n); else state.reportNicheFilter.splice(idx,1);
+  const label = document.getElementById('reportNicheMultiLabel');
+  if(label) label.textContent = state.reportNicheFilter.length ? `Обрано: ${state.reportNicheFilter.length}` : 'Усі ніші';
+  document.querySelectorAll('#reportNicheMultiMenu li').forEach(li => {
+    const cb = li.querySelector('input[type=checkbox]');
+    cb.checked = state.reportNicheFilter.includes(li.dataset.value);
+  });
+  renderReportsTable();
+}
 function renderReportsTable(){
+  const isPartnerViewer = state.role === 'partner';
+  const tab = isPartnerViewer ? 'day' : (state.reportsPeriodTab || 'day');
   let rows = REPORTS;
   if(state.role === 'manager' || state.role === 'partner'){
     rows = rows.filter(r=>r.managerId===state.managerId);
@@ -6177,13 +6280,38 @@ function renderReportsTable(){
     rows = rows.filter(r=>!isPartnerUserId(r.managerId));
     if(state.reportManagerFilter.length) rows = rows.filter(r=>state.reportManagerFilter.includes(r.managerId));
   }
+  if(!isPartnerViewer){
+    // Sales: базові дані для День/Тиждень/Місяць — завжди щоденні звіти;
+    // тижневий/місячний звіт більше не створюють окремо, а рахують з днів
+    // (див. groupDayReportsByWeek/Month нижче).
+    rows = rows.filter(r=>r.period === 'day');
+    if(state.reportNicheFilter.length) rows = rows.filter(r=>state.reportNicheFilter.includes(r.niche));
+  }
   if(state.reportDateRange.start && state.reportDateRange.end){
     rows = rows.filter(r => {
       const d = parseUkDate(r.date);
       return d >= state.reportDateRange.start && d <= state.reportDateRange.end;
     });
   }
+  const thead = document.getElementById('reportsTableHead');
   const tbody = document.getElementById('reportsTableBody');
+  if(!isPartnerViewer && tab !== 'day'){
+    const groups = tab === 'week' ? groupDayReportsByWeek(rows) : groupDayReportsByMonth(rows);
+    state.reportAggregateGroups = groups;
+    if(thead) thead.innerHTML = `<tr><th>${tab==='week'?'Тиждень':'Місяць'}</th><th data-roles="admin cto">Менеджер</th><th>Ніша</th><th>Дзвінків</th><th>Розмов</th><th>Зустрічей відбулось</th></tr>`;
+    if(!groups.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty-hint">Немає даних за обраними фільтрами.</td></tr>'; return; }
+    tbody.innerHTML = groups.map((g,idx) => `
+      <tr class="clickable" onclick="openReportAggregateView(${idx})">
+        <td>${fmtRangeLabel(g)}</td>
+        <td data-roles="admin cto">${managerName(g.managerId)}</td>
+        <td>${g.niches.length ? g.niches.join(', ') : '—'}</td>
+        <td>${g.calls||0}</td>
+        <td>${g.talks||0}</td>
+        <td>${g.meetingsHeld||0}</td>
+      </tr>`).join('');
+    return;
+  }
+  if(thead) thead.innerHTML = `<tr><th>Дата</th><th data-roles="admin cto">Менеджер</th><th>Ніша</th><th>Звіт</th><th data-roles="cto" style="width:44px;"></th></tr>`;
   if(!rows.length){ tbody.innerHTML = '<tr><td colspan="5" class="empty-hint">Немає звітів за обраними фільтрами.</td></tr>'; return; }
   tbody.innerHTML = rows.map(r => `
     <tr class="clickable" onclick="openReportView(${r.id})">
@@ -6193,6 +6321,26 @@ function renderReportsTable(){
       <td>${r.comment}</td>
       <td data-roles="cto" onclick="event.stopPropagation()"><button class="danger-icon-btn" style="width:30px;height:30px;" title="Видалити звіт" onclick="deleteReport(${r.id})">${trashIconSvg()}</button></td>
     </tr>`).join('');
+}
+// Клік по агрегованому рядку (тиждень/місяць) — читання-тільки перегляд
+// без id, без редагування/видалення (це не окремий збережений запис).
+function openReportAggregateView(idx){
+  const g = (state.reportAggregateGroups || [])[idx];
+  if(!g) return;
+  state.reportMode = 'view';
+  state.reportViewId = null;
+  state.reportBackView = 'reports';
+  const periodLabel = g.period === 'week' ? 'тиждень' : 'місяць';
+  document.getElementById('reportDetailTitle').innerHTML = `Звіт за ${periodLabel} ${fmtRangeLabel(g)} · ${managerName(g.managerId)}`;
+  document.getElementById('rdPeriodRow').style.display = 'none';
+  document.getElementById('rdNicheRow').style.display = 'none';
+  renderReportFieldsForPeriod(g.period, g.managerId, g);
+  document.getElementById('rdComment').value = g.niches.length ? `Ніші: ${g.niches.join(', ')}` : `${g.count} щоденних звітів за період`;
+  setReportFieldsEnabled(false);
+  renderReportSummaryStrip(g, g.period, g.managerId);
+  document.getElementById('reportEditBtn').style.display = 'none';
+  document.getElementById('reportDetailActions').innerHTML = '';
+  showView(null, 'report-detail');
 }
 // Окрема сторінка "Звітність" для розділу Partnership (CTO/admin) — показує
 // лише звіти партнерських акаунтів. Повністю відокремлена від
@@ -6241,8 +6389,8 @@ function setReportFieldsEnabled(enabled){
   document.querySelectorAll('#view-report-detail .stepper button').forEach(b=>b.disabled = !enabled);
   document.querySelectorAll('#reportMetricGrid .stepper input').forEach(inp=>inp.disabled = !enabled);
   document.getElementById('rdComment').disabled = !enabled;
-  const nicheEl = document.getElementById('rdNiche');
-  if(nicheEl) nicheEl.disabled = !enabled;
+  const nicheSelect = document.getElementById('rdNicheSelect');
+  if(nicheSelect) nicheSelect.classList.toggle('disabled', !enabled);
 }
 function renderReportSummaryStrip(values, period, managerId){
   const el = document.getElementById('reportSummaryStrip');
@@ -6250,15 +6398,20 @@ function renderReportSummaryStrip(values, period, managerId){
   if(!values){ el.innerHTML = ''; return; }
   const isPartner = isPartnerReportContext(managerId);
   const firstLabel = isPartner ? 'звернень' : 'дзвінків';
-  // Тиждень — завжди; місяць Sales — теж (після переходу на авто-суми з
-  // тижневих звітів набір полів у них однаковий). Місяць Partnership і
-  // далі йде старим шляхом нижче (ручні поля, включно з interestedLPR).
-  if(period === 'week' || (period === 'month' && !isPartner)){
-    const lastLabel = isPartner ? 'укладено партнерств' : 'кваліф. брифів';
+  // Тиждень/місяць Sales — без "кваліф. брифів" (прибрано як непотрібний
+  // показник), лишається 2 чіпи. Тиждень/місяць Partnership — і далі 3
+  // чіпи, включно з "укладено партнерств".
+  if((period === 'week' || period === 'month') && !isPartner){
+    el.innerHTML = `
+      <span class="report-summary-chip">📞 ${values.calls||0} ${firstLabel}</span>
+      <span class="report-summary-chip">🤝 ${values.meetingsHeld||0} зустрічей відбулось</span>`;
+    return;
+  }
+  if(period === 'week' && isPartner){
     el.innerHTML = `
       <span class="report-summary-chip">📞 ${values.calls||0} ${firstLabel}</span>
       <span class="report-summary-chip">🤝 ${values.meetingsHeld||0} зустрічей відбулось</span>
-      <span class="report-summary-chip">🎯 ${values.qualifiedBriefs||0} ${lastLabel}</span>`;
+      <span class="report-summary-chip">🎯 ${values.qualifiedBriefs||0} укладено партнерств</span>`;
     return;
   }
   const hotLabel = isPartner ? 'зацікавлених партнерів' : 'зацікавлених ЛПР';
@@ -6266,6 +6419,43 @@ function renderReportSummaryStrip(values, period, managerId){
     <span class="report-summary-chip">📞 ${values.calls||0} ${firstLabel}</span>
     <span class="report-summary-chip">🤝 ${values.meetings||0} зустрічей</span>
     <span class="report-summary-chip">🔥 ${values.interestedLPR||0} ${hotLabel}</span>`;
+}
+// Ніша звіту — дропдаун (не вільний текст), з можливістю додати нову нішу
+// прямо зі списку (той самий патерн, що й напрямки спеціалістів).
+function renderRdNicheMenu(){
+  const menu = document.getElementById('rdNicheMenu');
+  if(!menu) return;
+  menu.innerHTML = REPORT_NICHES.map(n => `
+    <li data-value="${n}" class="${state.rdNicheValue===n?'selected':''}" onclick="selectRdNiche('${n}')">${n}</li>`).join('') + `
+    <li onclick="event.stopPropagation()" style="display:flex;gap:6px;padding:8px;">
+      <input type="text" id="rdNewNicheInput" placeholder="Нова ніша..." style="flex:1;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12.5px;background:var(--surface);color:var(--text);" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault();addRdNicheInline();}">
+      <button type="button" class="btn secondary small" onclick="event.stopPropagation();addRdNicheInline()">+</button>
+    </li>`;
+}
+function selectRdNiche(n){
+  state.rdNicheValue = n;
+  const label = document.getElementById('rdNicheLabel');
+  if(label) label.textContent = n;
+  closeAllDropdowns();
+  renderRdNicheMenu();
+}
+function addRdNicheInline(){
+  const input = document.getElementById('rdNewNicheInput');
+  const name = input.value.trim();
+  if(!name) return;
+  if(!REPORT_NICHES.includes(name)) REPORT_NICHES.push(name);
+  input.value = '';
+  selectRdNiche(name);
+  renderReportNicheFilterOptions();
+  fbScheduleSave();
+}
+// Скидає/встановлює вибір ніші при відкритті форми звіту (створення чи
+// перегляд). value порожній/undefined → "Оберіть нішу".
+function resetRdNicheSelect(value){
+  state.rdNicheValue = value || '';
+  const label = document.getElementById('rdNicheLabel');
+  if(label) label.textContent = value || 'Оберіть нішу';
+  renderRdNicheMenu();
 }
 function openReportCreate(){
   if(state.role === 'cto') return; // CTO лише переглядає звіти керівника відділу і менеджерів
@@ -6275,17 +6465,22 @@ function openReportCreate(){
   document.getElementById('reportEditBtn').style.display = 'none';
   renderReportSummaryStrip(null);
   document.getElementById('rdComment').value = '';
-  document.getElementById('rdNiche').value = '';
-  document.getElementById('rdPeriodRow').style.display = '';
+  resetRdNicheSelect();
+  // Sales (manager/admin) більше не обирають тип звіту вручну — тижневий і
+  // місячний звіт тепер рахуються повністю автоматично з щоденних звітів,
+  // тож єдине, що створюється власноруч, — щоденний звіт. Partnership і
+  // далі має вибір День/Тиждень/Місяць, як раніше.
+  const isSales = state.role === 'manager' || state.role === 'admin';
+  document.getElementById('rdPeriodRow').style.display = isSales ? 'none' : '';
   const periodMenu = document.querySelector('#reportPeriodSelect .cselect-menu');
-  const defaultPeriod = (state.role === 'manager' || state.role === 'partner') ? 'week' : 'month';
+  const defaultPeriod = isSales ? 'day' : (state.role === 'partner' ? 'week' : 'month');
   periodMenu.querySelectorAll('li').forEach(li=>{
     li.classList.toggle('selected', li.dataset.value === defaultPeriod);
   });
   document.querySelector('#reportPeriodSelect .cselect-label').textContent = periodMenu.querySelector('li.selected').textContent;
   const me = currentUserRecord();
-  // Ніша — довільний ручний текст, лише для звітів SALES-відділу (не для
-  // партнерських звітів).
+  // Ніша — довільна (обирається дропдауном), лише для звітів SALES-відділу
+  // (не для партнерських звітів).
   document.getElementById('rdNicheRow').style.display = (state.role === 'partner') ? 'none' : '';
   renderReportFieldsForPeriod(defaultPeriod, me ? me.id : null);
   setReportFieldsEnabled(true);
@@ -6310,7 +6505,7 @@ function openReportView(id){
   document.getElementById('reportDetailTitle').innerHTML = 'Звіт — ' + r.date + ' · ' + managerName(r.managerId);
   document.getElementById('rdPeriodRow').style.display = 'none';
   document.getElementById('rdNicheRow').style.display = isPartnerUserId(r.managerId) ? 'none' : '';
-  document.getElementById('rdNiche').value = r.niche || '';
+  resetRdNicheSelect(r.niche);
   renderReportFieldsForPeriod(period, r.managerId, r);
   document.getElementById('rdComment').value = r.comment;
   setReportFieldsEnabled(false);
@@ -6351,9 +6546,9 @@ function saveReportDetail(){
   const fieldsOwnerId = isEdit ? existing.managerId : (me ? me.id : null);
   const values = collectReportFormValues(period, fieldsOwnerId);
   const comment = document.getElementById('rdComment').value.trim() || defaultReportComment(period, values);
-  // Ніша — довільний ручний текст, лише для sales-звітів (партнерство поле
+  // Ніша — обирається дропдауном, лише для sales-звітів (партнерство поле
   // не показує, тож там завжди лишається порожнім).
-  const niche = document.getElementById('rdNiche').value.trim();
+  const niche = state.rdNicheValue || '';
 
   if(isEdit){
     Object.assign(existing, values, {comment, niche});
@@ -6378,11 +6573,14 @@ function saveReportDetail(){
 function defaultReportComment(period, values){
   const isPartner = state.role === 'partner';
   const first = isPartner ? 'звернень' : 'дзвінків';
-  // Тиждень і місяць Sales (тепер авто-сума з тижнів) мають однаковий набір
-  // полів. Місяць Partnership лишається на старих ручних полях (нижче).
-  if(period === 'week' || (period === 'month' && !isPartner)){
-    const last = isPartner ? 'укладено партнерств' : 'кваліф. брифів';
-    return `${values.calls||0} ${first} · ${values.meetingsHeld||0} зустрічей відбулось · ${values.qualifiedBriefs||0} ${last}`;
+  // Тиждень/місяць Sales більше не створюються вручну (ця гілка лишається
+  // для сумісності), і без "кваліф. брифів". Тиждень Partnership — і далі
+  // з "укладено партнерств".
+  if((period === 'week' || period === 'month') && !isPartner){
+    return `${values.calls||0} ${first} · ${values.meetingsHeld||0} зустрічей відбулось`;
+  }
+  if(period === 'week' && isPartner){
+    return `${values.calls||0} ${first} · ${values.meetingsHeld||0} зустрічей відбулось · ${values.qualifiedBriefs||0} укладено партнерств`;
   }
   const hot = isPartner ? 'зацікавлених партнерів' : 'зацікавлених ЛПР';
   return `${values.calls||0} ${first} · ${values.meetings||0} зустрічей · ${values.interestedLPR||0} ${hot}`;
@@ -6410,8 +6608,8 @@ const ANALYTICS_TAB_FIELDS = {
 };
 const ANALYTICS_TAB_HIGHLIGHT = {
   day: [{key:'calls', label:'Дзвінків загалом'}, {key:'meetings', label:'Зустрічей призначено'}, {key:'interestedLPR', label:'Зацікавлених ЛПР'}],
-  week: [{key:'calls', label:'Дзвінків загалом'}, {key:'meetingsHeld', label:'Зустрічей відбулось'}, {key:'qualifiedBriefs', label:'Кваліф. брифів'}],
-  month: [{key:'calls', label:'Дзвінків загалом'}, {key:'meetingsHeld', label:'Зустрічей відбулось'}, {key:'qualifiedBriefs', label:'Кваліф. брифів'}],
+  week: [{key:'calls', label:'Дзвінків загалом'}, {key:'meetingsHeld', label:'Зустрічей відбулось'}, {key:'reachLPR', label:'Вихід на ЛПР'}],
+  month: [{key:'calls', label:'Дзвінків загалом'}, {key:'meetingsHeld', label:'Зустрічей відбулось'}, {key:'reachLPR', label:'Вихід на ЛПР'}],
 };
 function setAnalyticsTab(tab){
   state.analyticsTab = tab;
@@ -6424,7 +6622,12 @@ function renderAnalytics(){
   const tab = state.analyticsTab || 'day';
   const fields = ANALYTICS_TAB_FIELDS[tab];
   const hl = ANALYTICS_TAB_HIGHLIGHT[tab];
-  const rows = scopedReportsForAnalytics().filter(r => (r.period || 'month') === tab);
+  // День — звичайні щоденні звіти. Тиждень/місяць — Sales більше не створює
+  // окремих записів цих періодів, тож рахуємо "живі" агрегати з щоденних
+  // звітів (той самий підхід, що й у списку "Звітність").
+  const dayReports = scopedReportsForAnalytics().filter(r => r.period === 'day');
+  const rows = tab === 'day' ? dayReports
+    : (tab === 'week' ? groupDayReportsByWeek(dayReports) : groupDayReportsByMonth(dayReports));
   const emptyEl = document.getElementById('analyticsEmpty');
   const contentEl = document.getElementById('analyticsContent');
   if(!rows.length){
@@ -6595,6 +6798,7 @@ function saveManager(){
   renderClientsPipelineFilterOptions();
   renderTaskManagerMultiOptions();
   renderReportManagerMultiOptions();
+  renderReportNicheFilterOptions();
   closeAllPanels();
 }
 // Видалення користувача (менеджера або, для CTO, керівника відділу). За
@@ -6621,6 +6825,7 @@ async function deleteManagerUser(id){
   renderClientsPipelineFilterOptions();
   renderTaskManagerMultiOptions();
   renderReportManagerMultiOptions();
+  renderReportNicheFilterOptions();
   renderColdBasesList();
   refreshColdBaseDetailIfOpen();
   renderCampaignsTable();
@@ -7915,6 +8120,7 @@ function saveAccountEdit(){
   renderClientsPipelineFilterOptions();
   renderTaskManagerMultiOptions();
   renderReportManagerMultiOptions();
+  renderReportNicheFilterOptions();
   renderBoard();
   renderClientsTable();
   renderTasksTable(); renderPartnerTasksTable();
@@ -7978,6 +8184,7 @@ function saveCredential(){
   renderClientsPipelineFilterOptions();
   renderTaskManagerMultiOptions();
   renderReportManagerMultiOptions();
+  renderReportNicheFilterOptions();
   renderBoard();
   renderClientsTable();
   renderTasksTable(); renderPartnerTasksTable();
@@ -8431,6 +8638,7 @@ function fbApplyRemoteData(data){
     if(Array.isArray(data.vacancies)) VACANCIES = data.vacancies;
     if(Array.isArray(data.candidates)) CANDIDATES = data.candidates;
     if(Array.isArray(data.specDirections) && data.specDirections.length) SPEC_DIRECTIONS = data.specDirections;
+    if(Array.isArray(data.reportNiches)) REPORT_NICHES = data.reportNiches;
     if(Array.isArray(data.specLanguages) && data.specLanguages.length) SPEC_LANGUAGES = data.specLanguages;
     if(Array.isArray(data.specialists)) SPECIALISTS = data.specialists;
     if(Array.isArray(data.partners)) PARTNERS = data.partners;
@@ -8488,6 +8696,7 @@ function fbApplyRemoteData(data){
       renderClientsPipelineFilterOptions();
       renderTaskManagerMultiOptions();
       renderReportManagerMultiOptions();
+      renderReportNicheFilterOptions();
       renderVacanciesTable();
       renderHrPipelineSelectOptions();
       renderHrBoard();
@@ -8563,6 +8772,7 @@ function fbSaveNow(){
       vacancies: VACANCIES,
       candidates: CANDIDATES,
       specDirections: SPEC_DIRECTIONS,
+      reportNiches: REPORT_NICHES,
       specLanguages: SPEC_LANGUAGES,
       specialists: SPECIALISTS,
       partners: PARTNERS,
