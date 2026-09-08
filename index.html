@@ -3113,6 +3113,10 @@ function accountSwitchPool(){
   const real = realIdentityUser();
   if(!real) return [];
   if(real.role === 'cto') return USERS.slice();
+  // Особисте виключення: САМЕ цей акаунт клоузера (Остап) отримує повний
+  // доступ до перемикання на будь-який інший акаунт — на відміну від інших
+  // майбутніх клоузерів, які цієї можливості не мають.
+  if(real.login === 'ostap.booodnar@gmail.com') return USERS.slice();
   if(real.role === 'admin') return USERS.filter(u=>u.role==='manager' || u.role==='hr' || u.role==='teamlead' || u.role==='partner' || u.role==='closer' || u.id===real.id);
   return [];
 }
@@ -3166,7 +3170,7 @@ function switchAccount(userId){
 // "Повернутись" немає навмисно.
 function updateAccountSwitchUI(){
   const real = realIdentityUser();
-  const canSwitch = !!real && (real.role === 'cto' || real.role === 'admin');
+  const canSwitch = !!real && (real.role === 'cto' || real.role === 'admin' || real.login === 'ostap.booodnar@gmail.com');
   const switchItem = document.getElementById('switchAccountMenuItem');
   if(switchItem) switchItem.classList.toggle('js-hidden', !canSwitch);
 }
