@@ -254,12 +254,17 @@
      База партнерів, Завдання, Звітність) — тому жодного успадкування прав
      Sales-менеджера тут немає, тільки власний атрибут data-roles~="partner". */
   body[data-role="partner"] [data-roles~="partner"]{display:revert;}
+  /* Клоузер — так само повністю ізольована роль зі своєю власною воронкою,
+     базою і звітністю: жодного успадкування прав Sales-менеджера, лише
+     власний атрибут data-roles~="closer". */
+  body[data-role="closer"] [data-roles~="closer"]{display:revert;}
   body[data-role="manager"] li[data-roles~="manager"]{display:list-item;}
   body[data-role="admin"] li[data-roles~="admin"]{display:list-item;}
   body[data-role="cto"] li[data-roles~="cto"]{display:list-item;}
   body[data-role="hr"] li[data-roles~="hr"]{display:list-item;}
   body[data-role="teamlead"] li[data-roles~="hr"]{display:list-item;}
   body[data-role="partner"] li[data-roles~="partner"]{display:list-item;}
+  body[data-role="closer"] li[data-roles~="closer"]{display:list-item;}
   /* `display:revert` above skips ALL author CSS (incl. .field{display:flex})
      and falls back to the tag's bare browser default (div -> block). Since
      .cselect inside is inline-block, a block .field no longer forces it onto
@@ -271,24 +276,28 @@
   body[data-role="cto"] .field[data-roles~="cto"],
   body[data-role="hr"] .field[data-roles~="hr"],
   body[data-role="teamlead"] .field[data-roles~="hr"],
-  body[data-role="partner"] .field[data-roles~="partner"]{display:flex;}
+  body[data-role="partner"] .field[data-roles~="partner"],
+  body[data-role="closer"] .field[data-roles~="closer"]{display:flex;}
   /* Універсальний рол-гейт для довільних flex-контейнерів (напр. рядок
      вкладок), які не є .field — той самий принцип display:revert-фікса. */
   body[data-role="manager"] .role-gate[data-roles~="manager"],
   body[data-role="admin"] .role-gate[data-roles~="admin"],
-  body[data-role="cto"] .role-gate[data-roles~="cto"]{display:flex;}
+  body[data-role="cto"] .role-gate[data-roles~="cto"],
+  body[data-role="closer"] .role-gate[data-roles~="closer"]{display:flex;}
   body[data-role="manager"] .pipeline-static-label[data-roles~="manager"],
   body[data-role="admin"] .pipeline-static-label[data-roles~="admin"],
   body[data-role="cto"] .pipeline-static-label[data-roles~="cto"],
   body[data-role="hr"] .pipeline-static-label[data-roles~="hr"],
   body[data-role="teamlead"] .pipeline-static-label[data-roles~="hr"],
-  body[data-role="partner"] .pipeline-static-label[data-roles~="partner"]{display:flex;}
+  body[data-role="partner"] .pipeline-static-label[data-roles~="partner"],
+  body[data-role="closer"] .pipeline-static-label[data-roles~="closer"]{display:flex;}
   body[data-role="manager"] .btn[data-roles~="manager"],
   body[data-role="admin"] .btn[data-roles~="admin"],
   body[data-role="cto"] .btn[data-roles~="cto"],
   body[data-role="hr"] .btn[data-roles~="hr"],
   body[data-role="teamlead"] .btn[data-roles~="hr"],
-  body[data-role="partner"] .btn[data-roles~="partner"]{display:inline-flex;}
+  body[data-role="partner"] .btn[data-roles~="partner"],
+  body[data-role="closer"] .btn[data-roles~="closer"]{display:inline-flex;}
   body[data-role="admin"] .cselect[data-roles~="admin"],
   body[data-role="cto"] .cselect[data-roles~="cto"],
   body[data-role="hr"] .cselect[data-roles~="hr"],
@@ -794,6 +803,21 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
         Звітність</a></li>
       </ul></li>
+      <li class="nav-section-tag" data-roles="admin cto" data-group="closer" onclick="toggleNavGroup(this)"><span>Closer</span><svg class="nav-section-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></li>
+      <li class="nav-subgroup-wrap"><ul class="nav-subgroup">
+      <li data-nav="closer-pipeline" data-roles="closer admin cto"><a href="#" onclick="showView(event,'closer-pipeline')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
+        Воронка</a></li>
+      <li data-nav="closer-clients" data-roles="closer admin cto"><a href="#" onclick="showView(event,'closer-clients')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Клієнти</a></li>
+      <li data-nav="closer-tasks" data-roles="closer admin cto"><a href="#" onclick="showView(event,'closer-tasks')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Завдання</a></li>
+      <li data-nav="closer-reports" data-roles="closer admin cto"><a href="#" onclick="showView(event,'closer-reports')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
+        Звітність</a></li>
+      </ul></li>
       <li class="nav-section-tag" data-roles="admin cto" data-group="hr" onclick="toggleNavGroup(this)"><span>HR</span><svg class="nav-section-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></li>
       <li class="nav-subgroup-wrap"><ul class="nav-subgroup">
       <li data-nav="hr-pipeline" data-roles="hr admin cto"><a href="#" onclick="showView(event,'hr-pipeline')">
@@ -810,10 +834,10 @@
 
     <div class="sidebar-footer">
       <div class="user-card" onclick="showView(null,'account')">
-        <div class="avatar" id="userAvatar">CT</div>
+        <div class="avatar" id="userAvatar">ВА</div>
         <div class="user-meta">
-          <div class="user-name" id="userName">Остап</div>
-          <div class="user-role" id="userRoleLabel">CTO</div>
+          <div class="user-name" id="userName">Вадим</div>
+          <div class="user-role" id="userRoleLabel">СЕО</div>
         </div>
       </div>
     </div>
@@ -877,8 +901,8 @@
 
         <div class="account-wrap">
           <div class="account-trigger" onclick="toggleDropdown('accountMenu', this)">
-            <div class="avatar" id="userAvatar2" style="width:26px;height:26px;font-size:11px;">CT</div>
-            <span class="role-pill" id="rolePill">CTO</span>
+            <div class="avatar" id="userAvatar2" style="width:26px;height:26px;font-size:11px;">ВА</div>
+            <span class="role-pill" id="rolePill">СЕО</span>
           </div>
           <div class="dropdown-panel" id="accountMenu" style="width:320px;">
             <div class="menu-list" id="accountMenuMain">
@@ -1270,6 +1294,84 @@
           <div class="table-scroll"><table>
             <thead><tr><th>Дата</th><th>Менеджер</th><th>Звіт</th><th data-roles="cto" style="width:44px;"></th></tr></thead>
             <tbody id="partnerReportsTableBody"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ CLOSER PIPELINE (окрема воронка клоузера) ============ -->
+      <section class="view" id="view-closer-pipeline">
+        <div class="pipeline-toolbar">
+          <div data-roles="closer" class="pipeline-static-label">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="4" height="16"/><rect x="10" y="4" width="4" height="10"/><rect x="17" y="4" width="4" height="13"/></svg>
+            Воронка клоузера
+          </div>
+          <div data-roles="admin cto" class="cselect" id="closerPipelineSelect">
+            <button type="button" class="cselect-trigger" style="border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+              <span class="cselect-label">Воронка клоузера</span>
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <ul class="cselect-menu" id="closerPipelineSelectMenu" data-select="closerPipeline"></ul>
+          </div>
+          <button class="btn secondary" style="margin-left:auto;" onclick="toggleCloserStageEditor()" id="closerStageEditBtn">Редагувати етапи</button>
+          <button class="btn" onclick="openDeal(null)" id="addCloserDealBtn">+ Новий лід</button>
+        </div>
+
+        <div class="board" id="closerBoard"></div>
+        <div id="closerNoPipelineHint" class="empty-hint" style="display:none;padding:26px 12px;">Воронка клоузера ще не створена.</div>
+        <div id="closerStageEditorBoard" style="display:none;"></div>
+        <div id="closerStageEditorActions" style="display:none;margin-top:14px;gap:10px;" class="row-between">
+          <div></div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn secondary" onclick="cancelCloserStageEditor()">Скасувати</button>
+            <button class="btn" onclick="saveCloserStageEditor()">Зберегти зміни</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CLOSER CLIENTS (клієнти клоузера) ============ -->
+      <section class="view" id="view-closer-clients">
+        <div class="row-between" style="margin-bottom:16px;">
+          <div class="section-title" style="margin:0;">Клієнти клоузера</div>
+        </div>
+        <div class="card" style="padding:8px 4px;">
+          <div class="table-scroll"><table>
+            <thead><tr><th>Ім'я</th><th>Компанія / Ніша</th><th data-roles="admin cto">Клоузер</th><th>Хто передав</th><th>Етап</th><th>Кваліфікація</th><th>Дата брифу</th></tr></thead>
+            <tbody id="closerClientsTableBody"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ CLOSER TASKS (окрема сторінка) ============ -->
+      <section class="view" id="view-closer-tasks">
+        <div class="filters-bar card">
+          <div style="display:flex;gap:8px;margin-left:auto;">
+            <button class="btn secondary tasks-tab-btn active" id="closerTasksTabActiveBtn" onclick="setCloserTasksTab('active')">Активні</button>
+            <button class="btn secondary tasks-tab-btn" id="closerTasksTabDoneBtn" onclick="setCloserTasksTab('done')">Архів виконаних</button>
+          </div>
+        </div>
+        <div class="card" style="padding:8px 4px;margin-top:16px;">
+          <div class="table-scroll"><table>
+            <thead><tr><th style="width:40px;"></th><th>Завдання</th><th>Лід</th><th data-roles="admin cto">Клоузер</th><th>Дедлайн</th><th>Статус</th><th>Дії</th></tr></thead>
+            <tbody id="closerTasksTableBody"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ============ CLOSER REPORTS (повністю автоматична звітність) ============ -->
+      <section class="view" id="view-closer-reports">
+        <div class="row-between" style="margin-bottom:16px;">
+          <div class="section-title" style="margin:0;">Звітність клоузера</div>
+        </div>
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <div class="report-summary-strip" id="closerReportSummary"></div>
+        </div>
+        <div class="card" style="padding:8px 4px;">
+          <div class="row-between" style="padding:14px 14px 0;">
+            <div class="section-title" style="margin:0;font-size:14px;">По менеджерах холодної бази</div>
+          </div>
+          <div class="table-scroll"><table>
+            <thead><tr><th>Менеджер</th><th>Передано лідів</th><th>Кваліфіковано ✅</th><th>Не кваліфіковано ❌</th><th>Очікують результату</th><th>% кваліфікації</th></tr></thead>
+            <tbody id="closerReportsByManagerBody"></tbody>
           </table></div>
         </div>
       </section>
@@ -1811,6 +1913,31 @@
   </div>
 </div>
 
+<!-- ============ ПЕРЕСЛАТИ КЛОУЗЕРУ (дублює картку в його воронку) ============ -->
+<div class="modal-overlay" id="forwardCloserOverlay" onclick="closeForwardCloserModal()"></div>
+<div class="confirm-modal" id="forwardCloserModal">
+  <div class="confirm-modal-title">Переслати клоузеру</div>
+  <div class="confirm-modal-text" style="margin-bottom:16px;">Лід з'явиться у воронці клоузера на етапі "Призначено бриф". Оригінальна картка лишиться у вас — прийде лише результат брифу.</div>
+  <div class="field" style="margin-bottom:14px;">
+    <label>Клоузер</label>
+    <div class="cselect" id="forwardCloserSelect">
+      <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+        <span class="cselect-label">—</span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <ul class="cselect-menu" id="forwardCloserMenu" data-select="forwardCloser"></ul>
+    </div>
+  </div>
+  <div class="field">
+    <label>Дата і час брифу</label>
+    <input type="datetime-local" id="forwardCloserBriefDue">
+  </div>
+  <div class="confirm-modal-actions">
+    <button class="btn secondary" onclick="closeForwardCloserModal()">Скасувати</button>
+    <button class="btn" onclick="confirmForwardToCloser()">Переслати</button>
+  </div>
+</div>
+
 <!-- ================= "БАЗА КЛІЄНТІВ" → ПЕРЕНЕСТИ В ВОРОНКУ (модалка) ================= -->
 <div class="modal-overlay" id="coldConvertOverlay" onclick="closeColdConvertModal()"></div>
 <div class="confirm-modal" id="coldConvertModal">
@@ -1889,6 +2016,47 @@
           </div>
         </div>
         <div class="field" data-roles="admin cto" style="max-width:220px;"><label>Сума угоди ($)</label><input id="dealValue" type="text" inputmode="numeric" placeholder="0" oninput="formatMoneyLive(this)"></div>
+      </div>
+      <!-- Sales-лід: кнопка передачі клоузеру + статус/результат, коли вже передано -->
+      <div class="panel-section" id="dealForwardCloserSection" style="display:none;">
+        <div class="section-title" style="font-size:13px;">Клоузер</div>
+        <button type="button" class="btn secondary" id="dealForwardCloserBtn" onclick="openForwardCloserModal()">↪ Переслати клоузеру</button>
+        <div id="dealForwardCloserStatus" style="margin-top:10px;font-size:13px;color:var(--text-muted);display:none;"></div>
+        <div id="dealBriefResultBadge" style="margin-top:10px;"></div>
+      </div>
+      <!-- Картка у воронці КЛОУЗЕРА: бриф + власні поля клоузера -->
+      <div class="panel-section" id="dealCloserSection" style="display:none;">
+        <div class="section-title" style="font-size:13px;">Бриф</div>
+        <div class="field-row" style="margin-bottom:12px;">
+          <div class="field">
+            <label>Дата і час брифу</label>
+            <div id="dealBriefDateTime" style="padding:9px 12px;font-size:13px;color:var(--text-muted);font-weight:600;"></div>
+          </div>
+          <div class="field">
+            <label>Хто передав</label>
+            <div id="dealOriginManager" style="padding:9px 12px;font-size:13px;color:var(--text-muted);font-weight:600;"></div>
+          </div>
+        </div>
+        <div class="field" style="max-width:260px;margin-bottom:12px;">
+          <label>Результат брифу</label>
+          <div class="cselect" id="dealQualifiedSelect">
+            <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+              <span class="cselect-label" id="dealQualifiedLabel">Ще не визначено</span>
+              <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <ul class="cselect-menu" data-select="dealQualified">
+              <li data-value="">Ще не визначено</li>
+              <li data-value="yes">✅ Кваліфікований</li>
+              <li data-value="no">❌ Не кваліфікований</li>
+            </ul>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:12px;"><label>Пояснення (побачить менеджер холодної бази)</label><textarea id="dealQualifiedExplanation" style="min-height:60px;"></textarea></div>
+        <div class="section-title" style="font-size:13px;">Комерційна пропозиція</div>
+        <div class="field-row">
+          <div class="field"><label>Орієнтовна ціна КП ($)</label><input id="dealKpPrice" type="text" inputmode="numeric" placeholder="0" oninput="formatMoneyLive(this)"></div>
+          <div class="field"><label>Дата і час КП</label><input id="dealKpDateTime" type="datetime-local"></div>
+        </div>
       </div>
     </div>
     <div class="panel-tab-pane js-hidden" data-tab-pane="notes">
@@ -2142,6 +2310,7 @@
           <li data-value="hr">HR</li>
           <li data-value="teamlead">Team Lead</li>
           <li data-value="partner">Partnership manager</li>
+          <li data-value="closer">Closer</li>
         </ul>
       </div>
     </div>
@@ -2218,7 +2387,8 @@ let PIPELINES = [
 ];
 
 let USERS = [
-  {id:'ostap', name:'Остап', role:'cto', login:'ostap.booodnar@gmail.com', password:'Adm!n2026Xz'},
+  {id:'ostap', name:'Остап', role:'closer', login:'ostap.booodnar@gmail.com', password:'Adm!n2026Xz'},
+  {id:'vadym', name:'Вадим', role:'cto', login:'holova.vadym@kofax.agency', password:'Ceo!2026Vad'},
   {id:'artem', name:'Богдан', role:'admin', login:'bogdan@kofax.agency', password:'Adm!8vQ2r'},
   {id:'oksana', name:'Володимир', role:'manager', login:'volodymyr@kofax.agency', password:'Kf8xLm21'},
 ];
@@ -2691,6 +2861,7 @@ const state = {
   taskManagerFilter: [],
   tasksTab: 'active',
   partnerTasksTab: 'active',
+  closerTasksTab: 'active',
   reportDateRange: {start:null, end:null},
   reportCalendarMonth: new Date(2026,6,1),
   reportManagerFilter: [],
@@ -2805,7 +2976,7 @@ function changeOwnPhoto(e){
 }
 function currentActorLabel(){
   const me = currentUserRecord();
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
+  const roleLabels = {cto:'СЕО', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager', closer:'Closer'};
   return me ? `${me.name} (${roleLabels[state.role]})` : roleLabels[state.role];
 }
 // Логує дію в аудит (видно лише CTO/керівнику відділу) + одразу створює
@@ -2873,12 +3044,12 @@ function completeLogin(user, opts){
   const role = user.role;
   state.role = role;
   state.userId = user.id;
-  state.managerId = (role === 'manager' || role === 'partner') ? user.id : null;
+  state.managerId = (role === 'manager' || role === 'partner' || role === 'closer') ? user.id : null;
   state.pipelineOwnerFilter = [];
   state.currentPipelineId = 'default';
 
   document.body.setAttribute('data-role', role);
-  const labels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
+  const labels = {cto:'СЕО', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager', closer:'Closer'};
   document.getElementById('userName').textContent = user.name;
   document.getElementById('userRoleLabel').textContent = labels[role];
   document.getElementById('rolePill').textContent = labels[role];
@@ -2942,7 +3113,7 @@ function accountSwitchPool(){
   const real = realIdentityUser();
   if(!real) return [];
   if(real.role === 'cto') return USERS.slice();
-  if(real.role === 'admin') return USERS.filter(u=>u.role==='manager' || u.role==='hr' || u.role==='teamlead' || u.role==='partner' || u.id===real.id);
+  if(real.role === 'admin') return USERS.filter(u=>u.role==='manager' || u.role==='hr' || u.role==='teamlead' || u.role==='partner' || u.role==='closer' || u.id===real.id);
   return [];
 }
 function openAccountSwitchList(){
@@ -2957,7 +3128,7 @@ function closeAccountSwitchList(){
 function renderAccountSwitchList(){
   const container = document.getElementById('accountSwitchItems');
   if(!container) return;
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
+  const roleLabels = {cto:'СЕО', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager', closer:'Closer'};
   const pool = accountSwitchPool();
   container.innerHTML = pool.map(u => `
     <div class="menu-item" onclick="switchAccount('${u.id}')" style="justify-content:flex-start;gap:10px;align-items:center;height:auto;padding-top:8px;padding-bottom:8px;">
@@ -2984,7 +3155,7 @@ function switchAccount(userId){
   // Якщо обрали саме той акаунт, з якого починали перемикання — це і є
   // повернення "додому": більше не в режимі імперсонації.
   if(user.id === state.originalUserId) state.originalUserId = null;
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
+  const roleLabels = {cto:'СЕО', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager', closer:'Closer'};
   logActivity(`Швидке перемикання акаунта: → ${user.name} (${roleLabels[user.role]})`, {silent:true});
   completeLogin(user, {showReminder:false});
 }
@@ -3122,7 +3293,7 @@ function showView(e, name){
   document.querySelectorAll('.nav li').forEach(li => li.classList.remove('active'));
   document.querySelectorAll('.nav li[data-nav="' + name + '"]').forEach(li => li.classList.add('active'));
   if(state.role === 'cto') ensureNavGroupExpanded(name);
-  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'Контакти', coldbase:'База клієнтів', 'coldbase-detail':'База клієнтів', tasks:'Завдання', reports:'Звітність', analytics:'Аналітика', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт', 'hr-pipeline':'Воронка кандидатів', vacancies:'Вакансії', 'vacancy-detail':'Вакансія', specialists:'База спеціалістів', 'specialist-detail':'Спеціаліст', 'candidate-detail':'Кандидат', partners:'База партнерів', 'partner-pipeline':'Воронка партнерств', 'partner-tasks':'Завдання партнерств', 'partner-reports':'Звітність партнерств'};
+  const titles = {dashboard:'Головна', pipeline:'Воронка продажів', clients:'Контакти', coldbase:'База клієнтів', 'coldbase-detail':'База клієнтів', tasks:'Завдання', reports:'Звітність', analytics:'Аналітика', campaigns:'Розсилки', admin:'Менеджери', account:'Особистий кабінет', 'report-detail':'Звіт', 'hr-pipeline':'Воронка кандидатів', vacancies:'Вакансії', 'vacancy-detail':'Вакансія', specialists:'База спеціалістів', 'specialist-detail':'Спеціаліст', 'candidate-detail':'Кандидат', partners:'База партнерів', 'partner-pipeline':'Воронка партнерств', 'partner-tasks':'Завдання партнерств', 'partner-reports':'Звітність партнерств', 'closer-pipeline':'Воронка клоузера', 'closer-clients':'Клієнти клоузера', 'closer-tasks':'Завдання клоузера', 'closer-reports':'Звітність клоузера'};
   document.getElementById('pageTitle').textContent = titles[name];
   // Іконка налаштувань воронки (шестерня) видима лише на сторінці "Воронка"
   // і лише для керівника відділу/CTO — саме вони можуть редагувати стовпці.
@@ -3147,6 +3318,10 @@ function showView(e, name){
   if(name === 'dashboard' && state.role === 'partner') renderPartnerDashboard();
   if(name === 'partners') renderPartnersTable();
   if(name === 'partner-pipeline') renderPartnerBoard();
+  if(name === 'closer-pipeline') renderCloserBoard();
+  if(name === 'closer-clients') renderCloserClientsTable();
+  if(name === 'closer-tasks') renderCloserTasksTable();
+  if(name === 'closer-reports') renderCloserReports();
   // Запам'ятовуємо активну сторінку в хеші URL (без додавання запису в
   // історію), щоб оновлення сторінки (F5) залишало користувача там само,
   // а не кидало на дашборд.
@@ -3280,7 +3455,10 @@ document.addEventListener('click', function(e){
 
   if(selectType === 'boardPipeline'){ state.currentPipelineId = li.dataset.value; renderBoardPipelineOptions(); renderBoard(); }
   if(selectType === 'partnerPipeline'){ currentPartnerPipelineId = li.dataset.value; renderPartnerBoard(); }
+  if(selectType === 'closerPipeline'){ currentCloserPipelineId = li.dataset.value; renderCloserBoard(); }
   if(selectType === 'forwardPipeline'){ forwardSelectedPipelineId = li.dataset.value; renderForwardStageOptions(); }
+  if(selectType === 'forwardCloser'){ forwardCloserSelectedId = li.dataset.value; }
+  if(selectType === 'dealQualified'){ state.dealQualifiedValue = li.dataset.value; }
   if(selectType === 'pdPipeline'){ pdSelectedPipelineId = li.dataset.value; }
   if(selectType === 'coldBaseManager'){ setColdBaseDefaultManager(state.coldBaseViewId, li.dataset.value || null); }
   if(selectType === 'coldStatusFilter'){ coldDetailStatusFilter = li.dataset.value || ''; renderColdBaseDetail(); }
@@ -3368,7 +3546,7 @@ function onSearchInput(val){
   const q = (val||'').trim().toLowerCase();
   if(!q){ box.classList.remove('open'); box.innerHTML=''; return; }
   let pool = LEADS;
-  if(state.role === 'manager' || state.role === 'partner') pool = pool.filter(l=>l.managerId===state.managerId);
+  if(state.role === 'manager' || state.role === 'partner' || state.role === 'closer') pool = pool.filter(l=>l.managerId===state.managerId);
   const matches = pool.filter(l => l.name.toLowerCase().includes(q) || l.company.toLowerCase().includes(q)).slice(0,6);
   if(!matches.length){ box.innerHTML = '<div class="search-empty">Нічого не знайдено</div>'; box.classList.add('open'); return; }
   box.innerHTML = matches.map(l => `
@@ -3408,7 +3586,7 @@ function renderDashboardTasks(){
   // Виконані завдання одразу зникають з активного списку і потрапляють в
   // архів на сторінці "Завдання".
   let list = TASKS.filter(t=>!t.done);
-  if(state.role === 'manager' || state.role === 'partner') list = list.filter(t=>t.managerId===state.managerId);
+  if(state.role === 'manager' || state.role === 'partner' || state.role === 'closer') list = list.filter(t=>t.managerId===state.managerId);
   list = list.slice(0,6);
   if(!list.length){ el.innerHTML = '<div class="empty-hint">Немає активних завдань.</div>'; return; }
   el.innerHTML = list.map(t => {
@@ -3467,7 +3645,7 @@ async function toggleTaskDone(idx, checked){
 // тож щойно СРМ порожня, вони коректно показують 0.
 function renderDashboardStats(){
   let leads = LEADS;
-  if(state.role === 'manager' || state.role === 'partner') leads = leads.filter(l=>l.managerId===state.managerId);
+  if(state.role === 'manager' || state.role === 'partner' || state.role === 'closer') leads = leads.filter(l=>l.managerId===state.managerId);
   const activeLeadsEl = document.getElementById('statActiveLeads');
   if(activeLeadsEl) activeLeadsEl.textContent = leads.length;
 
@@ -3480,12 +3658,12 @@ function renderDashboardStats(){
   }
 
   let calls = CALLS.map(c => ({...c, lead: LEADS.find(l=>l.id===c.leadId)})).filter(c=>c.lead);
-  if(state.role === 'manager' || state.role === 'partner') calls = calls.filter(c=>c.lead.managerId===state.managerId);
+  if(state.role === 'manager' || state.role === 'partner' || state.role === 'closer') calls = calls.filter(c=>c.lead.managerId===state.managerId);
   const callsTodayEl = document.getElementById('statCallsToday');
   if(callsTodayEl) callsTodayEl.textContent = calls.length;
 
   let tasks = TASKS.filter(t=>!t.done);
-  if(state.role === 'manager' || state.role === 'partner') tasks = tasks.filter(t=>t.managerId===state.managerId);
+  if(state.role === 'manager' || state.role === 'partner' || state.role === 'closer') tasks = tasks.filter(t=>t.managerId===state.managerId);
   const overdueCount = tasks.filter(t=>{
     const d = parseTaskDueDate(t.due);
     return d && d < new Date(new Date().toDateString());
@@ -3500,7 +3678,7 @@ function renderDashboardCalls(){
   const el = document.getElementById('dashboardCalls');
   if(!el) return;
   let list = CALLS.map(c => ({...c, lead: LEADS.find(l=>l.id===c.leadId)})).filter(c=>c.lead);
-  if(state.role === 'manager' || state.role === 'partner') list = list.filter(c=>c.lead.managerId===state.managerId);
+  if(state.role === 'manager' || state.role === 'partner' || state.role === 'closer') list = list.filter(c=>c.lead.managerId===state.managerId);
   list.sort((a,b)=>(parseFullDateTime(a.due)||0)-(parseFullDateTime(b.due)||0));
   if(!list.length){ el.innerHTML = '<div class="empty-hint">Немає запланованих зустрічей.</div>'; return; }
   el.innerHTML = list.map(c => `
@@ -3559,7 +3737,7 @@ function togglePipelineOwnerFilter(e, value){
 // керівника/CTO це власник ПОТОЧНО ВИБРАНОЇ воронки (немає більше окремого
 // перемикача "Менеджер" — власника визначає сама вибрана воронка).
 function currentPipelineOwner(){
-  if(state.role === 'manager' || state.role === 'partner') return state.managerId;
+  if(state.role === 'manager' || state.role === 'partner' || state.role === 'closer') return state.managerId;
   const cp = currentPipeline();
   return cp ? cp.ownerId : 'admin';
 }
@@ -3620,12 +3798,30 @@ function ensurePipelineIntegrity(){
   PIPELINES.forEach(p => {
     if(p.kind !== 'partner' && partnerOwners.includes(p.ownerId)){ p.kind = 'partner'; changed = true; }
   });
+  // Кожен Клоузер теж повинен мати свою воронку — так само ПОВНІСТЮ ОКРЕМУ
+  // від Sales і Partnership: помічена kind:'closer', живе лише на власній
+  // сторінці "Воронка" в розділі Closer.
+  const closerTemplateStages = ["Призначено бриф","Призначено КП","Очікування рішення","Пауза","Успішно закрито","Мінус після брифу","Мінус після КП"];
+  const closerOwners = USERS.filter(u=>u.role==='closer').map(u=>u.id);
+  closerOwners.forEach(ownerId => {
+    if(!PIPELINES.some(p=>p.ownerId===ownerId && p.kind==='closer')){
+      let id;
+      do { id = 'pl' + Date.now() + Math.floor(Math.random()*10000); } while(PIPELINES.some(p=>p.id===id));
+      PIPELINES.push({id, name:'Воронка клоузера', ownerId, kind:'closer', stages:[...closerTemplateStages]});
+      changed = true;
+    }
+  });
+  PIPELINES.forEach(p => {
+    if(p.kind !== 'closer' && closerOwners.includes(p.ownerId)){ p.kind = 'closer'; changed = true; }
+  });
   return changed;
 }
-// Воронки продажів = усе, крім партнерських. Використовується всюди, де
-// раніше просто брали PIPELINES цілком (перемикач воронок, фільтри тощо).
-function salesPipelines(){ return PIPELINES.filter(p=>p.kind!=='partner'); }
+// Воронки продажів = усе, крім партнерських і клоузерських. Використовується
+// всюди, де раніше просто брали PIPELINES цілком (перемикач воронок, фільтри тощо).
+function salesPipelines(){ return PIPELINES.filter(p=>p.kind!=='partner' && p.kind!=='closer'); }
 function partnerPipelines(){ return PIPELINES.filter(p=>p.kind==='partner'); }
+function closerPipelines(){ return PIPELINES.filter(p=>p.kind==='closer'); }
+function isCloserUserId(id){ const u = USERS.find(x=>x.id===id); return !!u && u.role === 'closer'; }
 
 // Міграція старих даних "База клієнтів": до фіксу id контактів створювались як
 // Number, а всі onclick-обробники в таблиці передають id назад як рядок —
@@ -3633,6 +3829,26 @@ function partnerPipelines(){ return PIPELINES.filter(p=>p.kind==='partner'); }
 // не працювали для баз, імпортованих до фіксу. Приводимо id бази і кожного
 // контакту до String(), якщо вони чомусь не рядок. Повертає true, якщо щось
 // було виправлено (і тому варто зберегти стан у Firebase).
+// Разова міграція посад СЕО/Клоузер: акаунт, яким користувався Остап
+// (ostap.booodnar@gmail.com, роль 'cto'), стає акаунтом Клоузера — той
+// самий логін і пароль, лише роль міняється. Посаду СЕО отримує Вадим —
+// новий акаунт з окремим логіном. Ідемпотентно: якщо міграція вже
+// відбулась (у хмарі), нічого не робить. Це стосується ЖИВИХ даних у
+// Firestore, а не лише локального seed-масиву USERS вище — інакше зміна
+// коду не вплинула б на вже наявну базу користувачів на сервері.
+function ensureCeoCloserAccounts(){
+  let changed = false;
+  const ostap = USERS.find(u => u.login === 'ostap.booodnar@gmail.com');
+  if(ostap && ostap.role !== 'closer'){
+    ostap.role = 'closer';
+    changed = true;
+  }
+  if(!USERS.some(u => u.login === 'holova.vadym@kofax.agency')){
+    USERS.push({id:'vadym', name:'Вадим', role:'cto', login:'holova.vadym@kofax.agency', password:'Ceo!2026Vad'});
+    changed = true;
+  }
+  return changed;
+}
 function ensureColdBaseIntegrity(){
   let changed = false;
   COLDBASES.forEach(b => {
@@ -3662,12 +3878,23 @@ function currentPipeline(){
     const pp = partnerPipelines().find(p=>p.ownerId===state.managerId);
     if(pp) return pp;
   }
+  // Клоузер так само не має воронки продажів — його "поточна воронка"
+  // завжди власна воронка клоузера (той самий трюк, що й для partner вище).
+  if(state.role === 'closer'){
+    const cp = closerPipelines().find(p=>p.ownerId===state.managerId);
+    if(cp) return cp;
+  }
   // CTO/керівник відділу, стоячи на сторінці "Воронка партнерств", теж мають
   // отримувати саме партнерську воронку (інакше нова картка впала б у Sales).
   const partnerView = document.getElementById('view-partner-pipeline');
   if(partnerView && partnerView.classList.contains('active')){
     const pp = currentPartnerPipeline();
     if(pp) return pp;
+  }
+  const closerView = document.getElementById('view-closer-pipeline');
+  if(closerView && closerView.classList.contains('active')){
+    const cp = currentCloserPipeline();
+    if(cp) return cp;
   }
   const sales = salesPipelines();
   return sales.find(p=>p.id===state.currentPipelineId) || sales[0] || PIPELINES[0];
@@ -3751,7 +3978,8 @@ function renderBoard(){
   // виклики renderBoard() (збереження угоди, видалення, синхронізація з
   // хмарою тощо) тримають обидві дошки в актуальному стані без дублювання.
   if(typeof renderPartnerBoard === 'function') renderPartnerBoard();
-  if(state.role === 'partner' || !board) return;
+  if(typeof renderCloserBoard === 'function') renderCloserBoard();
+  if(state.role === 'partner' || state.role === 'closer' || !board) return;
   const owner = currentPipelineOwner();
   const cp = currentPipeline();
   // Суми угод ($) показуються лише у воронці Керівника відділу (owner==='admin').
@@ -3773,6 +4001,7 @@ function renderBoard(){
           ${showValue ? `<span class="lead-value">$${Number(c.value||0).toLocaleString('en-US')}</span>` : '<span></span>'}
           ${c.flag === 'red' ? '<span class="status-icon red">●</span>' : ''}
           ${c.flag === 'yellow' ? '<span class="status-icon yellow">⚠</span>' : ''}
+          ${c.closerId ? (c.briefQualified === true ? '<span class="status-icon" title="Клоузер: кваліфіковано">✅</span>' : c.briefQualified === false ? '<span class="status-icon" title="Клоузер: не кваліфіковано">❌</span>' : '<span class="status-icon" title="Передано клоузеру, очікує результату">🕑</span>') : ''}
           ${(state.role==='admin'||state.role==='cto') ? `<button type="button" class="card-forward-btn" title="Переслати до іншої воронки" onclick="event.stopPropagation(); openForwardModal(${c.id})">↪</button>` : ''}
         </div>
       </div>`).join('');
@@ -3999,10 +4228,11 @@ function openDeal(id, presetStage){
     document.getElementById('dealAttachList').innerHTML = '<div class="empty-hint">Документів ще немає.</div>';
     updateDealPanelTabCounts(null);
     panel.dataset.presetStage = presetStage || currentPipeline().stages[0];
+    updateDealPanelCloserSections(null);
   } else {
     const l = LEADS.find(l=>l.id===id);
     if(!l) return;
-    document.getElementById('dealPanelTitle').textContent = (state.role === 'partner' ? 'Картка партнера — ' : 'Картка ліда — ') + l.name;
+    document.getElementById('dealPanelTitle').textContent = (state.role === 'partner' ? 'Картка партнера — ' : isCloserUserId(l.managerId) ? 'Картка ліда — ' : 'Картка ліда — ') + l.name;
     document.getElementById('dealName').value = l.name;
     document.getElementById('dealPhone').value = l.phone;
     document.getElementById('dealEmail').value = l.email;
@@ -4015,6 +4245,7 @@ function openDeal(id, presetStage){
     renderDealTasks(l);
     renderDealMeetings(l);
     renderDealAttachments(l);
+    updateDealPanelCloserSections(l);
   }
   document.getElementById('dealDeleteBtn').style.display = (id === null) ? 'none' : 'inline-flex';
   ['dealName','dealPhone','dealEmail','dealCompany','dealNiche'].forEach(f => setFieldError(document.getElementById(f), null));
@@ -4417,10 +4648,43 @@ function saveDeal(){
     const patch = {name, phone, email, company, niche, link};
     if(state.role === 'admin' || state.role === 'cto') patch.value = value;
     Object.assign(l, patch);
+    // Картка у воронці КЛОУЗЕРА — додатково зберігаємо результат брифу й
+    // приватні поля КП, і якщо результат (кваліфіковано/пояснення) змінився,
+    // синхронізуємо ЛИШЕ ці два значення назад в оригінальну картку
+    // менеджера холодної бази (решта полів клоузера лишається приватною).
+    if(isCloserUserId(l.managerId)){
+      const qv = state.dealQualifiedValue;
+      const qualified = qv === 'yes' ? true : qv === 'no' ? false : null;
+      const explanationEl = document.getElementById('dealQualifiedExplanation');
+      const explanation = explanationEl ? explanationEl.value.trim() : '';
+      const kpPriceEl = document.getElementById('dealKpPrice');
+      const kpPrice = kpPriceEl ? parseMoneyValue(kpPriceEl) : 0;
+      const kpDateTimeEl = document.getElementById('dealKpDateTime');
+      const kpDateTime = kpDateTimeEl ? kpDateTimeEl.value : '';
+      const resultChanged = l.qualified !== qualified || l.qualifiedExplanation !== explanation;
+      l.qualified = qualified;
+      l.qualifiedExplanation = explanation;
+      l.kpPrice = kpPrice;
+      l.kpDateTime = kpDateTime;
+      if(resultChanged && l.originDealId != null){
+        const origin = LEADS.find(o=>o.id===l.originDealId);
+        if(origin){
+          origin.briefQualified = qualified;
+          origin.briefExplanation = explanation;
+          origin.briefResultAt = new Date().toLocaleDateString('uk-UA');
+          if(qualified !== null){
+            NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `${qualified ? '✅ Кваліфіковано' : '❌ Не кваліфіковано'}: лід "${origin.name}" після брифу`, time:'зараз', read:false, target:{type:'lead', id:origin.id}, ownerId: origin.managerId});
+          }
+          logActivity(`Позначено бриф з лідом "${origin.name}" як ${qualified===true?'кваліфікований':qualified===false?'некваліфікований':'невизначений'}`, {target:{type:'lead', id:l.id}, silent:true});
+        }
+      }
+    }
     logActivity(`Відредаговано угоду "${name}"`, {target:{type:'lead', id:l.id}});
   }
   renderBoard();
   renderClientsTable();
+  renderCloserClientsTable();
+  renderCloserReports();
   renderDashboardStats();
   closeAllPanels();
 }
@@ -4505,6 +4769,144 @@ function confirmForwardDeal(){
   renderBoard();
   renderClientsTable();
   logActivity(`Угоду "${lead.name}" перенесено з воронки "${fromPipeline?fromPipeline.name:'?'} (${fromPipeline?pipelineOwnerName(fromPipeline.ownerId):'?'})" до "${targetPipeline.name} (${pipelineOwnerName(targetPipeline.ownerId)})" (${targetStage})`, {target:{type:'lead', id:lead.id}, silent:true});
+}
+
+/* =========================================================
+   ПЕРЕСЛАТИ КЛОУЗЕРУ — дублює лід у воронку клоузера (не переносить, як
+   openForwardModal вище, а СТВОРЮЄ копію: оригінальна картка лишається у
+   менеджера холодної бази, клоузеру видно лише свою копію). Ручна дія —
+   ніколи не спрацьовує автоматично при зміні етапу.
+   ========================================================= */
+let forwardCloserLeadId = null;
+let forwardCloserSelectedId = null;
+// "10.09.2026 14:30" з нативного <input type="datetime-local"> ("2026-09-10T14:30").
+function fmtDateTimeLocal(raw){
+  if(!raw) return '';
+  const [datePart, timePart] = raw.split('T');
+  const parts = (datePart||'').split('-');
+  if(parts.length !== 3) return raw;
+  const [y,mo,d] = parts;
+  return `${d}.${mo}.${y}${timePart ? ' ' + timePart : ''}`;
+}
+function openForwardCloserModal(){
+  const leadId = state.currentDealId;
+  const lead = LEADS.find(l=>l.id===leadId);
+  if(!lead) return;
+  // Захист від повторної пересилки того самого ліда — кнопка й так
+  // ховається, коли lead.closerId вже встановлено, але перевіряємо ще раз
+  // тут на випадок застарілого стану панелі.
+  if(lead.closerId){ showAlertModal('Цей лід вже передано клоузеру раніше.', 'Вже передано'); return; }
+  const closers = USERS.filter(u=>u.role==='closer');
+  if(!closers.length){ showAlertModal('Ще немає жодного акаунту клоузера. Створіть його на сторінці "Менеджери".', 'Немає клоузерів'); return; }
+  forwardCloserLeadId = leadId;
+  forwardCloserSelectedId = closers[0].id;
+  renderForwardCloserOptions(closers);
+  const dueEl = document.getElementById('forwardCloserBriefDue');
+  if(dueEl) dueEl.value = '';
+  document.getElementById('forwardCloserOverlay').classList.add('open');
+  document.getElementById('forwardCloserModal').classList.add('open');
+}
+function renderForwardCloserOptions(list){
+  const menu = document.getElementById('forwardCloserMenu');
+  if(!menu) return;
+  menu.innerHTML = list.map(u=>`<li data-value="${u.id}" class="${u.id===forwardCloserSelectedId?'selected':''}">${u.name}</li>`).join('');
+  const trigger = document.querySelector('#forwardCloserSelect .cselect-label');
+  const sel = list.find(u=>u.id===forwardCloserSelectedId);
+  if(trigger) trigger.textContent = sel ? sel.name : '—';
+}
+function closeForwardCloserModal(){
+  document.getElementById('forwardCloserOverlay').classList.remove('open');
+  document.getElementById('forwardCloserModal').classList.remove('open');
+  forwardCloserLeadId = null;
+}
+function confirmForwardToCloser(){
+  const lead = LEADS.find(l=>l.id===forwardCloserLeadId);
+  if(!lead) return;
+  if(lead.closerId){ closeForwardCloserModal(); showAlertModal('Цей лід вже передано клоузеру раніше.', 'Вже передано'); return; }
+  const closer = USERS.find(u=>u.id===forwardCloserSelectedId && u.role==='closer');
+  if(!closer){ showAlertModal('Оберіть клоузера.', 'Не обрано клоузера'); return; }
+  const dueRaw = document.getElementById('forwardCloserBriefDue').value;
+  if(!dueRaw){ showAlertModal('Вкажіть дату і час брифу.', 'Не вказано дату'); return; }
+  const briefDateTime = fmtDateTimeLocal(dueRaw);
+  const cp = closerPipelines().find(p=>p.ownerId===closer.id);
+  if(!cp){ showAlertModal('У цього клоузера ще немає воронки. Спробуйте ще раз за хвилину.', 'Помилка'); return; }
+  const me = currentUserRecord();
+  const newId = nextLeadId++;
+  LEADS.push({
+    id:newId, name:lead.name, phone:lead.phone, email:lead.email, company:lead.company, niche:lead.niche, link:lead.link,
+    stage: cp.stages[0], value:0, pipelineId: cp.id, managerId: closer.id,
+    createdAt: new Date().toLocaleDateString('uk-UA'), notes:[], tasks:[], attachments:[],
+    originDealId: lead.id, originManagerId: me ? me.id : lead.managerId, briefDateTime,
+    qualified: null, qualifiedExplanation: '', kpPrice: 0, kpDateTime: '',
+  });
+  lead.closerId = closer.id;
+  lead.closerLeadId = newId;
+  lead.briefDateTime = briefDateTime;
+  closeForwardCloserModal();
+  if(state.currentDealId === lead.id) updateDealPanelCloserSections(lead);
+  renderBoard();
+  renderClientsTable();
+  NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `📤 Лід "${lead.name}" передано вам на бриф ${briefDateTime}`, time:'зараз', read:false, target:{type:'lead', id:newId}, ownerId: closer.id});
+  logActivity(`Передано лід "${lead.name}" клоузеру ${closer.name} (бриф ${briefDateTime})`, {target:{type:'lead', id:lead.id}});
+  fbScheduleSave();
+}
+// Показує/ховає й заповнює блоки "Клоузер"(на Sales-картці) і "Бриф"(на
+// картці у воронці клоузера) — обидва не є .field, тому керуються напряму
+// через style.display, а не через data-roles (залежить від КОНКРЕТНОЇ
+// картки, а не лише від ролі перегляду).
+function updateDealPanelCloserSections(l){
+  const fwdSection = document.getElementById('dealForwardCloserSection');
+  const closerSection = document.getElementById('dealCloserSection');
+  if(!fwdSection || !closerSection) return;
+  if(!l){ fwdSection.style.display = 'none'; closerSection.style.display = 'none'; return; }
+  const isCloserCard = isCloserUserId(l.managerId);
+  const isSalesCard = !isCloserCard && !isPartnerUserId(l.managerId);
+  const canForward = isSalesCard && (state.role === 'manager' || state.role === 'admin' || state.role === 'cto');
+  fwdSection.style.display = canForward ? '' : 'none';
+  if(canForward){
+    const btn = document.getElementById('dealForwardCloserBtn');
+    const status = document.getElementById('dealForwardCloserStatus');
+    const badge = document.getElementById('dealBriefResultBadge');
+    if(l.closerId){
+      btn.style.display = 'none';
+      const closerUser = USERS.find(u=>u.id===l.closerId);
+      status.style.display = '';
+      status.textContent = `Передано клоузеру: ${closerUser ? closerUser.name : '—'}${l.briefDateTime ? ' · бриф ' + l.briefDateTime : ''}`;
+      if(l.briefQualified === true){
+        badge.innerHTML = `<span class="badge" style="color:var(--success);background:#1FAE6A1A;">✅ Кваліфікований</span>${l.briefExplanation ? `<div style="margin-top:6px;font-size:13px;color:var(--text-muted);">${l.briefExplanation}</div>` : ''}`;
+      } else if(l.briefQualified === false){
+        badge.innerHTML = `<span class="badge" style="color:var(--danger);background:#E5484D1A;">❌ Не кваліфікований</span>${l.briefExplanation ? `<div style="margin-top:6px;font-size:13px;color:var(--text-muted);">${l.briefExplanation}</div>` : ''}`;
+      } else {
+        badge.innerHTML = `<span class="badge warn">Очікує результату брифу</span>`;
+      }
+    } else {
+      btn.style.display = '';
+      status.style.display = 'none';
+      badge.innerHTML = '';
+    }
+  }
+  closerSection.style.display = isCloserCard ? '' : 'none';
+  if(isCloserCard){
+    document.getElementById('dealBriefDateTime').textContent = l.briefDateTime || '—';
+    document.getElementById('dealOriginManager').textContent = l.originManagerId ? managerName(l.originManagerId) : 'Додано вручну';
+    resetDealQualifiedSelect(l.qualified);
+    document.getElementById('dealQualifiedExplanation').value = l.qualifiedExplanation || '';
+    document.getElementById('dealKpPrice').value = l.kpPrice ? Number(l.kpPrice).toLocaleString('en-US') : '';
+    document.getElementById('dealKpDateTime').value = l.kpDateTime || '';
+  }
+}
+function resetDealQualifiedSelect(value){
+  const label = document.getElementById('dealQualifiedLabel');
+  const text = value === true ? '✅ Кваліфікований' : value === false ? '❌ Не кваліфікований' : 'Ще не визначено';
+  if(label) label.textContent = text;
+  const menu = document.querySelector('#dealQualifiedSelect .cselect-menu');
+  if(menu){
+    menu.querySelectorAll('li').forEach(li=>{
+      const v = li.dataset.value === 'yes' ? true : li.dataset.value === 'no' ? false : null;
+      li.classList.toggle('selected', v === (value === undefined ? null : value));
+    });
+  }
+  state.dealQualifiedValue = value === true ? 'yes' : value === false ? 'no' : '';
 }
 
 /* =========================================================
@@ -4604,8 +5006,11 @@ function renderClientsTable(){
   let rows = LEADS;
   if(state.role === 'manager' || state.role === 'partner'){
     rows = rows.filter(l=>l.managerId===state.managerId);
-  } else if(state.clientManagerFilter.length){
-    rows = rows.filter(l=>state.clientManagerFilter.includes(l.managerId));
+  } else {
+    // Ця сторінка (Sales) НЕ показує партнерські й клоузерські ліди — для
+    // них є окремі сторінки в розділах Partnership і Closer.
+    rows = rows.filter(l=>!isPartnerUserId(l.managerId) && !isCloserUserId(l.managerId));
+    if(state.clientManagerFilter.length) rows = rows.filter(l=>state.clientManagerFilter.includes(l.managerId));
   }
   if(state.role !== 'manager' && state.role !== 'partner' && state.clientPipelineFilter.length){
     rows = rows.filter(l=>state.clientPipelineFilter.includes(l.pipelineId||'default'));
@@ -5635,8 +6040,9 @@ function exportClientsCSV(){
   let leads = LEADS;
   if(state.role === 'manager' || state.role === 'partner'){
     leads = leads.filter(l=>l.managerId===state.managerId);
-  } else if(state.clientManagerFilter.length){
-    leads = leads.filter(l=>state.clientManagerFilter.includes(l.managerId));
+  } else {
+    leads = leads.filter(l=>!isPartnerUserId(l.managerId) && !isCloserUserId(l.managerId));
+    if(state.clientManagerFilter.length) leads = leads.filter(l=>state.clientManagerFilter.includes(l.managerId));
   }
   if(state.role !== 'manager' && state.role !== 'partner' && state.clientPipelineFilter.length){
     leads = leads.filter(l=>state.clientPipelineFilter.includes(l.pipelineId||'default'));
@@ -5670,6 +6076,8 @@ function renderCampaignsTable(){
   let rows = LEADS;
   if(state.role === 'manager' || state.role === 'partner'){
     rows = rows.filter(l=>l.managerId===state.managerId);
+  } else {
+    rows = rows.filter(l=>!isPartnerUserId(l.managerId) && !isCloserUserId(l.managerId));
   }
   const grid = document.getElementById('campaignsGrid');
   if(!grid) return;
@@ -6073,9 +6481,9 @@ function renderTasksTable(){
   if(state.role === 'manager' || state.role === 'partner'){
     rows = rows.filter(t=>t.managerId===state.managerId);
   } else {
-    // Ця сторінка (Sales) НЕ показує партнерські завдання — для них є
-    // окрема сторінка "Завдання" в розділі Partnership.
-    rows = rows.filter(t=>!isPartnerUserId(t.managerId));
+    // Ця сторінка (Sales) НЕ показує партнерські й клоузерські завдання —
+    // для них є окремі сторінки "Завдання" в розділах Partnership і Closer.
+    rows = rows.filter(t=>!isPartnerUserId(t.managerId) && !isCloserUserId(t.managerId));
     if(state.taskManagerFilter.length) rows = rows.filter(t=>state.taskManagerFilter.includes(t.managerId));
   }
   if(state.taskDateRange.start && state.taskDateRange.end){
@@ -6705,9 +7113,9 @@ function renderAnalytics(){
 // бачить і редагує тут лише менеджерів (не інших керівників/CTO).
 function renderManagersTable(){
   const tbody = document.getElementById('managersTableBody');
-  const visibleRoles = state.role === 'cto' ? ['manager','admin','hr','teamlead','partner'] : ['manager','hr','teamlead','partner'];
+  const visibleRoles = state.role === 'cto' ? ['manager','admin','hr','teamlead','partner','closer'] : ['manager','hr','teamlead','partner','closer'];
   const rows = USERS.filter(u=>visibleRoles.includes(u.role));
-  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
+  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'СЕО', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager', closer:'Closer'};
   tbody.innerHTML = rows.map(m => `
     <tr>
       <td>${nameBadge(m.name, m.role==='admin')}</td><td>${m.login}</td><td>${roleLabels[m.role]}</td>
@@ -6754,7 +7162,7 @@ function openManagerPanel(id){
     if(roleField) setNewUserRoleSelect('manager');
   } else {
     const m = USERS.find(u=>u.id===id);
-    const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager\'а'};
+    const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager\'а', closer:'Клоузера'};
     document.getElementById('managerPanelTitle').textContent = 'Редагувати ' + (roleLabels[m.role] || 'користувача');
     document.getElementById('mgrName').value = m.name;
     document.getElementById('mgrEmail').value = m.login;
@@ -6773,7 +7181,7 @@ function saveManager(){
   const name = document.getElementById('mgrName').value.trim() || 'Новий користувач';
   const email = emailEl.value.trim() || 'new@kofax.agency';
   const pass = document.getElementById('mgrPass').value.trim() || generateRandomPw();
-  const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager\'а'};
+  const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager\'а', closer:'Клоузера'};
   if(state.editingManagerId){
     const m = USERS.find(u=>u.id===state.editingManagerId);
     const oldPassword = m.password;
@@ -6785,7 +7193,7 @@ function saveManager(){
       const selected = document.querySelector('#newUserRoleSelect .cselect-menu li.selected');
       role = selected ? selected.dataset.value : 'manager';
     }
-    const idPrefix = role==='admin' ? 'a' : role==='hr' ? 'h' : role==='teamlead' ? 't' : role==='partner' ? 'p' : 'm';
+    const idPrefix = role==='admin' ? 'a' : role==='hr' ? 'h' : role==='teamlead' ? 't' : role==='partner' ? 'p' : role==='closer' ? 'cl' : 'm';
     USERS.push({id:idPrefix+Date.now(), name, role, login:email, password:pass});
     logActivity(`Створено ${roleLabels[role]} ${name} (${email})`, {target:{type:'view', name:'admin'}});
   }
@@ -6808,7 +7216,7 @@ function saveManager(){
 async function deleteManagerUser(id){
   const m = USERS.find(u=>u.id===id);
   if(!m) return;
-  const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager\'а'};
+  const roleLabels = {manager:'менеджера', admin:'керівника відділу', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager\'а', closer:'Клоузера'};
   const ok = await showConfirmModal({
     title:'Видалити користувача',
     text:`Видалити ${roleLabels[m.role] || 'користувача'} "${m.name}"? Він більше не зможе увійти. Угоди та воронка цієї людини залишаться без змін — видаляти їх потрібно окремо.`,
@@ -8052,6 +8460,259 @@ function renderPartnerDashboard(){
 }
 
 /* =========================================================
+   CLOSER: ВОРОНКА (повністю окрема від Sales і Partnership)
+   ========================================================= */
+let currentCloserPipelineId = null;
+function currentCloserPipeline(){
+  const pool = closerPipelines();
+  if(state.role === 'closer') return pool.find(p=>p.ownerId===state.managerId) || null;
+  return pool.find(p=>p.id===currentCloserPipelineId) || pool[0] || null;
+}
+function renderCloserPipelineOptions(){
+  const menu = document.getElementById('closerPipelineSelectMenu');
+  if(!menu) return;
+  const pool = closerPipelines();
+  if(!pool.some(p=>p.id===currentCloserPipelineId)) currentCloserPipelineId = pool.length ? pool[0].id : null;
+  menu.innerHTML = pool.length
+    ? pool.map(p=>`<li data-value="${p.id}" class="${p.id===currentCloserPipelineId?'selected':''}">${p.name} — ${pipelineOwnerName(p.ownerId)}</li>`).join('')
+    : '<li style="color:var(--text-muted);">Немає жодної воронки клоузера</li>';
+  const trigger = document.querySelector('#closerPipelineSelect .cselect-label');
+  const cur = currentCloserPipeline();
+  if(trigger) trigger.textContent = cur ? `${cur.name} — ${pipelineOwnerName(cur.ownerId)}` : 'Воронка клоузера';
+}
+// Невеличкий бейдж кваліфікації прямо на картці ліда у воронці — щоб було
+// видно результат брифу, не відкриваючи картку.
+function closerQualBadge(l){
+  if(l.qualified === true) return '<span class="status-icon" title="Кваліфікований">✅</span>';
+  if(l.qualified === false) return '<span class="status-icon" title="Не кваліфікований">❌</span>';
+  return '';
+}
+function renderCloserBoard(){
+  const board = document.getElementById('closerBoard');
+  const hint = document.getElementById('closerNoPipelineHint');
+  if(!board) return;
+  renderCloserPipelineOptions();
+  const editorEl = document.getElementById('closerStageEditorBoard');
+  const editorOpen = editorEl && editorEl.style.display !== 'none';
+  const cp = currentCloserPipeline();
+  if(!cp){
+    if(!editorOpen) board.style.display = 'none';
+    if(hint) hint.style.display = '';
+    return;
+  }
+  if(!editorOpen) board.style.display = '';
+  if(hint) hint.style.display = 'none';
+  board.innerHTML = cp.stages.map(stage => {
+    const cards = LEADS.filter(l => l.stage === stage && l.managerId === cp.ownerId && l.pipelineId === cp.id);
+    const cardsHtml = cards.map(c => `
+      <div class="lead-card" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
+        <div class="lead-title">${c.name}</div>
+        <div class="lead-sub">${c.company||''}</div>
+        <div class="lead-foot"><span class="lead-value">${c.briefDateTime ? '🕑 '+c.briefDateTime : ''}</span>${closerQualBadge(c)}</div>
+      </div>`).join('');
+    return `
+      <div class="column" data-stage="${stage}" ondragover="allowDrop(event)" ondragenter="columnDragEnter(event)" ondragleave="columnDragLeave(event)" ondrop="closerDropCard(event,'${escAttr(stage)}')">
+        <div class="column-head"><div class="column-title">${stage}</div><div class="column-meta">${cards.length} ${cards.length===1?'лід':'ліди'}</div></div>
+        <div class="card-list">${cardsHtml}</div>
+        <button class="add-card-btn" type="button" onclick="openDeal(null,'${escAttr(stage)}')">+ Додати картку</button>
+      </div>`;
+  }).join('');
+}
+function closerDropCard(e, stage){
+  e.preventDefault();
+  dragEnterDepth = 0;
+  e.currentTarget.classList.remove('drag-over');
+  const lead = LEADS.find(l=>l.id===draggedLeadId);
+  if(lead){ lead.stage = stage; renderCloserBoard(); fbScheduleSave(); }
+}
+/* ---- редактор етапів воронки клоузера (та сама логіка, що й у партнерств) ---- */
+let editingCloserStages = [];
+let closerStageDraggedIdx = null;
+function toggleCloserStageEditor(){
+  const cp = currentCloserPipeline();
+  if(!cp) return;
+  const isOpen = document.getElementById('closerStageEditorBoard').style.display !== 'none';
+  if(isOpen){ cancelCloserStageEditor(); return; }
+  document.getElementById('closerBoard').style.display = 'none';
+  document.getElementById('closerStageEditorBoard').style.display = '';
+  document.getElementById('closerStageEditorActions').style.display = 'flex';
+  const sel = document.getElementById('closerPipelineSelect');
+  if(sel) sel.classList.add('js-hidden');
+  const addBtn = document.getElementById('addCloserDealBtn');
+  if(addBtn) addBtn.classList.add('js-hidden');
+  editingCloserStages = [...cp.stages];
+  renderCloserStageEditor();
+}
+function cancelCloserStageEditor(){
+  document.getElementById('closerBoard').style.display = '';
+  document.getElementById('closerStageEditorBoard').style.display = 'none';
+  document.getElementById('closerStageEditorActions').style.display = 'none';
+  const sel = document.getElementById('closerPipelineSelect');
+  if(sel) sel.classList.remove('js-hidden');
+  const addBtn = document.getElementById('addCloserDealBtn');
+  if(addBtn) addBtn.classList.remove('js-hidden');
+  renderCloserBoard();
+}
+function renderCloserStageEditor(){
+  const el = document.getElementById('closerStageEditorBoard');
+  if(!el) return;
+  el.style.display = 'flex';
+  el.style.gap = '14px';
+  el.style.flexWrap = 'wrap';
+  el.style.alignItems = 'flex-start';
+  el.innerHTML = editingCloserStages.map((s,i) => `
+    <div class="stage-edit-card" style="min-width:230px;max-width:230px;" data-idx="${i}"
+         draggable="true" ondragstart="closerStageDragStart(event,${i})" ondragend="stageDragEnd(event)"
+         ondragover="stageDragOver(event)" ondrop="closerStageDrop(event,${i})">
+      <div class="stage-edit-head">
+        <span class="drag-handle" title="Перетягніть, щоб змінити порядок">⋮⋮</span>
+        <span class="stage-order-badge">${i+1}</span>
+        <input type="text" class="stage-name-input" value="${escAttr(s)}" oninput="editingCloserStages[${i}]=this.value" placeholder="Назва етапу">
+        <button class="danger-icon-btn" type="button" title="Видалити етап" onclick="removeCloserStageEditorItem(${i})">${trashIconSvg()}</button>
+      </div>
+    </div>`).join('') + `<div class="stage-add-col" onclick="addCloserStageEditorItem()">+ Додати етап</div>`;
+}
+function addCloserStageEditorItem(){ editingCloserStages.push('Новий етап'); renderCloserStageEditor(); }
+function removeCloserStageEditorItem(i){ editingCloserStages.splice(i,1); renderCloserStageEditor(); }
+function closerStageDragStart(e, i){ closerStageDraggedIdx = i; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+function closerStageDrop(e, i){
+  e.preventDefault();
+  if(closerStageDraggedIdx === null || closerStageDraggedIdx === i) return;
+  const [moved] = editingCloserStages.splice(closerStageDraggedIdx,1);
+  editingCloserStages.splice(i,0,moved);
+  closerStageDraggedIdx = null;
+  renderCloserStageEditor();
+}
+async function saveCloserStageEditor(){
+  const cp = currentCloserPipeline();
+  if(!cp) return;
+  const stages = editingCloserStages.map(s=>s.trim()).filter(Boolean);
+  if(!stages.length){ showAlertModal('Має лишитись хоча б один етап.', 'Неможливо зберегти'); return; }
+  const ok = await showConfirmModal({title:'Зберегти зміни етапів', text:'Застосувати зміни до воронки клоузера?', okText:'Зберегти'});
+  if(!ok) return;
+  const oldStages = cp.stages;
+  LEADS.forEach(l => {
+    if(l.pipelineId === cp.id && l.managerId === cp.ownerId && oldStages.includes(l.stage) && !stages.includes(l.stage)){
+      l.stage = stages[0];
+    }
+  });
+  cp.stages = stages;
+  cancelCloserStageEditor();
+  logActivity('Відредаговано етапи воронки клоузера', {target:{type:'view', name:'closer-pipeline'}, silent:true});
+  fbScheduleSave();
+}
+
+/* =========================================================
+   CLOSER: КЛІЄНТИ (плаский список власних лідів клоузера)
+   ========================================================= */
+function renderCloserClientsTable(){
+  const tbody = document.getElementById('closerClientsTableBody');
+  if(!tbody) return;
+  let rows = LEADS.filter(l => isCloserUserId(l.managerId));
+  if(state.role === 'closer') rows = rows.filter(l=>l.managerId===state.managerId);
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">Клієнтів ще немає.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(l => {
+    const qual = l.qualified === true ? '<span class="badge" style="color:var(--success);background:#1FAE6A1A;">Кваліфікований</span>'
+      : l.qualified === false ? '<span class="badge" style="color:var(--danger);background:#E5484D1A;">Не кваліфікований</span>'
+      : '<span class="badge warn">Очікує</span>';
+    return `
+    <tr class="clickable" onclick="openDeal(${l.id})">
+      <td class="link-name">${l.name}</td>
+      <td>${l.company || l.niche || '—'}</td>
+      <td data-roles="admin cto">${managerName(l.managerId)}</td>
+      <td>${l.originManagerId ? managerName(l.originManagerId) : '—'}</td>
+      <td>${l.stage}</td>
+      <td>${qual}</td>
+      <td>${l.briefDateTime || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* =========================================================
+   CLOSER: ЗАВДАННЯ (окрема сторінка, той самий патерн, що й у Partnership)
+   ========================================================= */
+function renderCloserTasksTable(){
+  const tbody = document.getElementById('closerTasksTableBody');
+  if(!tbody) return;
+  let rows = TASKS.filter(t => state.closerTasksTab === 'done' ? t.done : !t.done);
+  rows = rows.filter(t=>isCloserUserId(t.managerId));
+  if(state.role === 'closer') rows = rows.filter(t=>t.managerId===state.managerId);
+  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="7" class="empty-hint">${state.closerTasksTab==='done' ? 'Архів виконаних завдань порожній.' : 'Активних завдань немає.'}</td></tr>`; return; }
+  tbody.innerHTML = rows.map(t => {
+    const idx = TASKS.indexOf(t);
+    return `
+    <tr class="clickable" onclick="openClientCard(${t.leadId})">
+      <td onclick="event.stopPropagation()"><label class="chk" title="${t.done ? 'Повернути в активні' : 'Позначити виконаним'}"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTaskDone(${idx},this.checked)"><span></span></label></td>
+      <td>${t.title}</td>
+      <td class="link-name">${t.leadName}</td>
+      <td data-roles="admin cto">${managerName(t.managerId)}</td>
+      <td>${dtChip(t.due)}</td>
+      <td>${t.done ? '<span class="badge" style="color:var(--success);background:#1FAE6A1A;">Виконано</span>' : '<span class="badge warn">Активне</span>'}</td>
+      <td onclick="event.stopPropagation()">
+        <button type="button" class="danger-icon-btn" title="Видалити завдання" onclick="deleteTask(${idx})">${trashIconSvg()}</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function setCloserTasksTab(tab){
+  state.closerTasksTab = tab;
+  document.getElementById('closerTasksTabActiveBtn').classList.toggle('active', tab==='active');
+  document.getElementById('closerTasksTabDoneBtn').classList.toggle('active', tab==='done');
+  renderCloserTasksTable();
+}
+
+/* =========================================================
+   CLOSER: ЗВІТНІСТЬ (повністю автоматична, без ручного створення) —
+   рахується напряму з лідів у воронці(ах) клоузера(ів): загальні підсумки
+   і розбивка по менеджерах холодної бази, які передали лідів.
+   ========================================================= */
+function closerReportRows(){
+  let rows = LEADS.filter(l => isCloserUserId(l.managerId));
+  if(state.role === 'closer') rows = rows.filter(l=>l.managerId===state.managerId);
+  return rows;
+}
+function renderCloserReports(){
+  const summaryEl = document.getElementById('closerReportSummary');
+  const tbody = document.getElementById('closerReportsByManagerBody');
+  if(!summaryEl || !tbody) return;
+  const rows = closerReportRows();
+  const total = rows.length;
+  const qualified = rows.filter(l=>l.qualified===true).length;
+  const unqualified = rows.filter(l=>l.qualified===false).length;
+  const pending = total - qualified - unqualified;
+  const qualRate = (qualified+unqualified) ? Math.round(qualified/(qualified+unqualified)*100) : 0;
+  summaryEl.innerHTML = `
+    <span class="report-summary-chip">📥 ${total} лідів отримано</span>
+    <span class="report-summary-chip">✅ ${qualified} кваліфіковано</span>
+    <span class="report-summary-chip">❌ ${unqualified} не кваліфіковано</span>
+    <span class="report-summary-chip">⏳ ${pending} очікують результату</span>
+    <span class="report-summary-chip">🎯 ${qualRate}% якість</span>`;
+  const byManager = {};
+  rows.forEach(l => {
+    const key = l.originManagerId || '__none__';
+    if(!byManager[key]) byManager[key] = {total:0, qualified:0, unqualified:0};
+    byManager[key].total++;
+    if(l.qualified === true) byManager[key].qualified++;
+    else if(l.qualified === false) byManager[key].unqualified++;
+  });
+  const entries = Object.entries(byManager).sort((a,b)=>b[1].total-a[1].total);
+  if(!entries.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty-hint">Ще немає переданих лідів.</td></tr>'; return; }
+  tbody.innerHTML = entries.map(([key, s]) => {
+    const name = key === '__none__' ? 'Без джерела (додано вручну)' : managerName(key);
+    const pend = s.total - s.qualified - s.unqualified;
+    const rate = (s.qualified+s.unqualified) ? Math.round(s.qualified/(s.qualified+s.unqualified)*100) : 0;
+    return `<tr>
+      <td>${name}</td>
+      <td>${s.total}</td>
+      <td>${s.qualified}</td>
+      <td>${s.unqualified}</td>
+      <td>${pend}</td>
+      <td>${rate}%</td>
+    </tr>`;
+  }).join('');
+}
+
+/* =========================================================
    HR: ГОЛОВНА (дашборд, адаптований під HR)
    ========================================================= */
 function renderHrDashboard(){
@@ -8084,7 +8745,7 @@ function renderAccountView(){
   document.getElementById('acctEditActions').style.display = 'none';
   const editBtn = document.getElementById('acctEditBtn');
   if(editBtn){ editBtn.style.display = ''; editBtn.textContent = 'Редагувати'; editBtn.disabled = false; }
-  const roleLabels = {cto:'CTO', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
+  const roleLabels = {cto:'СЕО', admin:'Керівник відділу', manager:'Менеджер', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager', closer:'Closer'};
   document.getElementById('acctRole').value = roleLabels[state.role];
   updateHeaderAvatars();
   renderHistory();
@@ -8145,7 +8806,7 @@ function saveAccountEdit(){
 // сам CTO бачить усіх, включно з іншими керівниками відділу.
 function renderCredentialsTable(){
   const tbody = document.getElementById('credentialsTableBody');
-  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'CTO', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager'};
+  const roleLabels = {manager:'Менеджер', admin:'Керівник відділу', cto:'СЕО', hr:'HR', teamlead:'Team Lead', partner:'Partnership manager', closer:'Closer'};
   const rows = state.role === 'admin' ? USERS.filter(u=>u.role!=='cto') : USERS;
   tbody.innerHTML = rows.map(u => `
     <tr>
@@ -8674,12 +9335,16 @@ function fbApplyRemoteData(data){
     // Мігруємо застарілі числові id в базах клієнтів (див. ensureColdBaseIntegrity()) —
     // інакше "Дії"/чекбокс мовчки не працюють для баз, імпортованих до фіксу.
     if(ensureColdBaseIntegrity()) needsRepairSave = true;
+    // Одноразова міграція посад СЕО (Вадим)/Клоузер (Остап) — див.
+    // ensureCeoCloserAccounts(). Спрацює один раз і збереже результат.
+    if(ensureCeoCloserAccounts()) needsRepairSave = true;
 
     if(state.userId){
       renderBoard();
       renderClientsTable();
-      renderTasksTable(); renderPartnerTasksTable();
-      renderReportsTable(); renderPartnerReportsTable();
+      renderCloserClientsTable();
+      renderTasksTable(); renderPartnerTasksTable(); renderCloserTasksTable();
+      renderReportsTable(); renderPartnerReportsTable(); renderCloserReports();
       renderCampaignsTable();
       renderManagersTable();
       renderCredentialsTable();
