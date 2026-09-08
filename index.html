@@ -199,6 +199,8 @@
   .lead-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;cursor:grab;box-shadow:var(--shadow);position:relative;transition:box-shadow .15s,transform .15s,border-color .15s;}
   .lead-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(16,24,64,.14);border-color:var(--accent-1);}
   .lead-card:active{cursor:grabbing;}
+  .lead-card.brief-overdue{border-color:var(--danger);}
+  .lead-card.brief-overdue .lead-value{color:var(--danger);font-weight:700;}
   .lead-title{font-weight:700;margin-bottom:2px;}
   .lead-sub{color:var(--text-muted);font-size:12px;}
   .lead-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;}
@@ -948,7 +950,7 @@
         <div data-roles="manager admin cto">
           <div class="grid-3" style="margin-bottom:16px;">
             <div class="card stat-card"><div class="stat-label">Активні ліди</div><div class="stat-value" id="statActiveLeads">0</div></div>
-            <div class="card stat-card"><div class="stat-label">Угоди в роботі</div><div class="stat-value" id="statDealsCount">0</div><div class="stat-sub" data-roles="admin cto" id="statDealsSum">на суму $0</div></div>
+            <div class="card stat-card"><div class="stat-label">Угоди в роботі</div><div class="stat-value" id="statDealsCount">0</div><div class="stat-sub" data-roles="admin cto" id="statDealsSum">на суму $0</div><div class="stat-sub" data-roles="manager" id="statManagerBonus" style="color:var(--success);font-weight:700;">💰 Бонус $0</div></div>
             <div class="card stat-card"><div class="stat-label">Заплановані зустрічі</div><div class="stat-value" id="statCallsToday">0</div><div class="stat-sub" id="statCallsOverdue" style="color:var(--text-muted);">прострочених немає</div></div>
           </div>
           <div class="grid-3">
@@ -1357,12 +1359,28 @@
         </div>
       </section>
 
-      <!-- ============ CLOSER REPORTS (повністю автоматична звітність) ============ -->
+      <!-- ============ CLOSER REPORTS (щоденні звіти вручну + авто тиждень/місяць,
+           той самий принцип, що й у Sales) ============ -->
       <section class="view" id="view-closer-reports">
         <div class="row-between" style="margin-bottom:16px;">
           <div class="section-title" style="margin:0;">Звітність клоузера</div>
+          <button class="btn" data-roles="closer" onclick="openReportCreate()">+ Створити звіт</button>
+        </div>
+        <div class="filters-bar card" data-roles="closer admin cto">
+          <div style="display:flex;gap:8px;">
+            <button class="btn secondary tasks-tab-btn active" id="closerReportsPeriodTabDayBtn" onclick="setCloserReportsPeriodTab('day')">День</button>
+            <button class="btn secondary tasks-tab-btn" id="closerReportsPeriodTabWeekBtn" onclick="setCloserReportsPeriodTab('week')">Тиждень</button>
+            <button class="btn secondary tasks-tab-btn" id="closerReportsPeriodTabMonthBtn" onclick="setCloserReportsPeriodTab('month')">Місяць</button>
+          </div>
+        </div>
+        <div class="card" style="padding:8px 4px;margin-bottom:16px;">
+          <div class="table-scroll"><table>
+            <thead id="closerDailyReportsTableHead"><tr><th>Дата</th><th data-roles="admin cto">Клоузер</th><th>Звіт</th><th style="width:44px;"></th></tr></thead>
+            <tbody id="closerDailyReportsTableBody"></tbody>
+          </table></div>
         </div>
         <div class="card" style="padding:20px;margin-bottom:16px;">
+          <div class="section-title" style="font-size:14px;margin-bottom:10px;">Загальна аналітика (автоматично з CRM)</div>
           <div class="report-summary-strip" id="closerReportSummary"></div>
         </div>
         <div class="card" style="padding:8px 4px;">
@@ -1370,7 +1388,7 @@
             <div class="section-title" style="margin:0;font-size:14px;">По менеджерах холодної бази</div>
           </div>
           <div class="table-scroll"><table>
-            <thead><tr><th>Менеджер</th><th>Передано лідів</th><th>Кваліфіковано ✅</th><th>Не кваліфіковано ❌</th><th>Очікують результату</th><th>% кваліфікації</th></tr></thead>
+            <thead><tr><th>Менеджер</th><th>Передано лідів</th><th>Кваліфіковано ✅</th><th>Не кваліфіковано ❌</th><th>Очікують результату</th><th>% кваліфікації</th><th>Бонус ($)</th></tr></thead>
             <tbody id="closerReportsByManagerBody"></tbody>
           </table></div>
         </div>
@@ -2046,7 +2064,23 @@
         <div class="field-row" style="margin-bottom:12px;">
           <div class="field">
             <label>Дата і час брифу</label>
-            <div id="dealBriefDateTime" style="padding:9px 12px;font-size:13px;color:var(--text-muted);font-weight:600;"></div>
+            <div class="cselect" id="dealBriefDueSelect">
+              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="dealBriefDueLabel">—</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              </button>
+              <div class="calendar-popover">
+                <div class="cal-head"><button type="button" onclick="dealBriefCalNav(-1)">‹</button><span id="dealBriefCalMonthLabel"></span><button type="button" onclick="dealBriefCalNav(1)">›</button></div>
+                <div class="cal-grid" id="dealBriefCalGrid"></div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;">
+                  <div class="stepper"><button type="button" onclick="stepDealBriefTime('h',-1)">−</button><input id="dealBriefHour" type="text" value="09" readonly><button type="button" onclick="stepDealBriefTime('h',1)">+</button></div>
+                  <span style="font-weight:800;">:</span>
+                  <div class="stepper"><button type="button" onclick="stepDealBriefTime('m',-1)">−</button><input id="dealBriefMinute" type="text" value="00" readonly><button type="button" onclick="stepDealBriefTime('m',1)">+</button></div>
+                </div>
+                <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearDealBriefDate()">Скинути</button><button class="btn small" type="button" onclick="applyDealBriefDate()">Застосувати</button></div>
+              </div>
+            </div>
+            <input type="hidden" id="dealBriefDateTimeInput">
           </div>
           <div class="field">
             <label>Хто передав</label>
@@ -2071,7 +2105,26 @@
         <div class="section-title" style="font-size:13px;">Комерційна пропозиція</div>
         <div class="field-row">
           <div class="field"><label>Орієнтовна ціна КП ($)</label><input id="dealKpPrice" type="text" inputmode="numeric" placeholder="0" oninput="formatMoneyLive(this)"></div>
-          <div class="field"><label>Дата і час КП</label><input id="dealKpDateTime" type="datetime-local"></div>
+          <div class="field">
+            <label>Дата і час КП</label>
+            <div class="cselect" id="dealKpDueSelect">
+              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="dealKpDueLabel">Оберіть дату</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              </button>
+              <div class="calendar-popover">
+                <div class="cal-head"><button type="button" onclick="dealKpCalNav(-1)">‹</button><span id="dealKpCalMonthLabel"></span><button type="button" onclick="dealKpCalNav(1)">›</button></div>
+                <div class="cal-grid" id="dealKpCalGrid"></div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;">
+                  <div class="stepper"><button type="button" onclick="stepDealKpTime('h',-1)">−</button><input id="dealKpHour" type="text" value="09" readonly><button type="button" onclick="stepDealKpTime('h',1)">+</button></div>
+                  <span style="font-weight:800;">:</span>
+                  <div class="stepper"><button type="button" onclick="stepDealKpTime('m',-1)">−</button><input id="dealKpMinute" type="text" value="00" readonly><button type="button" onclick="stepDealKpTime('m',1)">+</button></div>
+                </div>
+                <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearDealKpDate()">Скинути</button><button class="btn small" type="button" onclick="applyDealKpDate()">Застосувати</button></div>
+              </div>
+            </div>
+            <input type="hidden" id="dealKpDateTime">
+          </div>
         </div>
       </div>
     </div>
@@ -2616,21 +2669,63 @@ const PARTNER_WEEKLY_CALC_FIELDS = [
   {key:'showRate', label:'Show rate', sub:'відбулось ÷ призначено', calc:v=>reportPct(v.meetingsHeld, v.meetings)},
   {key:'partnerRate', label:'Партнерство %', sub:'укладено ÷ зустрічі відбулись', calc:v=>reportPct(v.qualifiedBriefs, v.meetingsHeld)},
 ];
+// ---- Closer-версії наборів полів звіту ----
+// Щоденний звіт клоузер заповнює вручну (кількість проведених брифів,
+// результат, скільки з них дійшло до КП і скільки КП закрилось продажем) —
+// решта (тиждень/місяць) рахується повністю автоматично сумою днів, той
+// самий принцип, що й у Sales.
+const CLOSER_DAILY_FIELDS = [
+  {group:'Бриф', key:'briefsHeld', label:'Проведено брифів'},
+  {group:'Бриф', key:'qualified', label:'Кваліфіковано'},
+  {group:'Бриф', key:'unqualified', label:'Не кваліфіковано'},
+  {group:'Комерційна пропозиція', key:'kpAssigned', label:'Призначено КП'},
+  {group:'Комерційна пропозиція', key:'kpHeld', label:'Проведено КП'},
+  {group:'Продажі', key:'sales', label:'Закрито угод (продажів)'},
+];
+const CLOSER_MONTHLY_FIELDS = [
+  {key:'briefsHeld', label:'Проведено брифів'},
+  {key:'qualified', label:'Кваліфіковано'},
+  {key:'unqualified', label:'Не кваліфіковано'},
+  {key:'kpAssigned', label:'Призначено КП'},
+  {key:'kpHeld', label:'Проведено КП'},
+  {key:'sales', label:'Закрито угод (продажів)'},
+];
+const CLOSER_WEEKLY_AUTO_FIELDS = CLOSER_MONTHLY_FIELDS.map(f=>({...f}));
+const CLOSER_WEEKLY_MANUAL_FIELDS = [];
+const CLOSER_WEEKLY_CALC_FIELDS = [
+  {key:'qualRate', label:'% кваліфікації', sub:'кваліфіковано ÷ (кваліфіковано + не кваліф.)', calc:v=>reportPct(v.qualified, (v.qualified||0)+(v.unqualified||0))},
+  {key:'briefToKpPct', label:'Бриф → КП %', sub:'призначено КП ÷ кваліфіковано', calc:v=>reportPct(v.kpAssigned, v.qualified)},
+  {key:'kpToSalePct', label:'КП → Продаж %', sub:'продажів ÷ проведено КП', calc:v=>reportPct(v.sales, v.kpHeld)},
+];
 // Який набір полів показувати — залежить від ролі автора звіту. Для вже
 // збереженого звіту орієнтуємось на роль його автора, а не на того, хто
-// зараз дивиться (щоб CTO бачив партнерський звіт партнерськими підписами).
-function isPartnerReportContext(managerId){
+// зараз дивиться (щоб CTO бачив партнерський/клоузерський звіт правильними
+// підписами). reportContextFor повертає 'sales' / 'partner' / 'closer'.
+function reportContextFor(managerId){
   if(managerId){
     const author = USERS.find(u=>u.id===managerId);
-    if(author) return author.role === 'partner';
+    if(author){
+      if(author.role === 'partner') return 'partner';
+      if(author.role === 'closer') return 'closer';
+      return 'sales';
+    }
   }
-  return state.role === 'partner';
+  if(state.role === 'partner') return 'partner';
+  if(state.role === 'closer') return 'closer';
+  return 'sales';
 }
-function dailyFieldsFor(managerId){ return isPartnerReportContext(managerId) ? PARTNER_DAILY_FIELDS : DAILY_FIELDS; }
-function monthlyFieldsFor(managerId){ return isPartnerReportContext(managerId) ? PARTNER_MONTHLY_FIELDS : MONTHLY_FIELDS; }
-function weeklyAutoFieldsFor(managerId){ return isPartnerReportContext(managerId) ? PARTNER_WEEKLY_AUTO_FIELDS : WEEKLY_AUTO_FIELDS; }
-function weeklyManualFieldsFor(managerId){ return isPartnerReportContext(managerId) ? PARTNER_WEEKLY_MANUAL_FIELDS : WEEKLY_MANUAL_FIELDS; }
-function weeklyCalcFieldsFor(managerId){ return isPartnerReportContext(managerId) ? PARTNER_WEEKLY_CALC_FIELDS : WEEKLY_CALC_FIELDS; }
+function isPartnerReportContext(managerId){ return reportContextFor(managerId) === 'partner'; }
+function isCloserReportContext(managerId){ return reportContextFor(managerId) === 'closer'; }
+function dailyFieldsFor(managerId){ const c = reportContextFor(managerId); return c==='partner' ? PARTNER_DAILY_FIELDS : c==='closer' ? CLOSER_DAILY_FIELDS : DAILY_FIELDS; }
+function monthlyFieldsFor(managerId){ const c = reportContextFor(managerId); return c==='partner' ? PARTNER_MONTHLY_FIELDS : c==='closer' ? CLOSER_MONTHLY_FIELDS : MONTHLY_FIELDS; }
+function weeklyAutoFieldsFor(managerId){ const c = reportContextFor(managerId); return c==='partner' ? PARTNER_WEEKLY_AUTO_FIELDS : c==='closer' ? CLOSER_WEEKLY_AUTO_FIELDS : WEEKLY_AUTO_FIELDS; }
+function weeklyManualFieldsFor(managerId){ const c = reportContextFor(managerId); return c==='partner' ? PARTNER_WEEKLY_MANUAL_FIELDS : c==='closer' ? CLOSER_WEEKLY_MANUAL_FIELDS : WEEKLY_MANUAL_FIELDS; }
+function weeklyCalcFieldsFor(managerId){ const c = reportContextFor(managerId); return c==='partner' ? PARTNER_WEEKLY_CALC_FIELDS : c==='closer' ? CLOSER_WEEKLY_CALC_FIELDS : WEEKLY_CALC_FIELDS; }
+// Місячні авто-поля/розрахункові % (Sales і Closer рахують місяць повністю
+// автоматично сумою днів; Partnership — і далі вручну, туди ці функції не
+// доходять, бо renderMonthlyFields для партнерства виходить раніше).
+function monthlyAutoFieldsFor(managerId){ return isCloserReportContext(managerId) ? CLOSER_MONTHLY_FIELDS : MONTHLY_AUTO_FIELDS; }
+function monthlyCalcFieldsFor(managerId){ return isCloserReportContext(managerId) ? CLOSER_WEEKLY_CALC_FIELDS : MONTHLY_CALC_FIELDS; }
 function reportInputRow(key, label, value){
   return `
     <div class="report-field-row">
@@ -2681,27 +2776,29 @@ function computeMonthlyAutoSums(managerId, refDate){
     return d && d >= start && d <= end;
   })());
   const sums = {};
-  MONTHLY_AUTO_FIELDS.forEach(f => { sums[f.key] = dayReports.reduce((s,r)=>s+Number(r[f.key]||0),0); });
+  monthlyAutoFieldsFor(managerId).forEach(f => { sums[f.key] = dayReports.reduce((s,r)=>s+Number(r[f.key]||0),0); });
   return sums;
 }
-// Місяць (Sales) — авто-рядки (readonly, сума щоденних звітів місяця) +
-// розрахункові %. Partnership і далі використовує стару ручну сітку
-// (renderMonthlyFieldsManual) — цей запит стосувався лише SALES-відділу.
+// Місяць (Sales, Closer) — авто-рядки (readonly, сума щоденних звітів
+// місяця) + розрахункові %. Partnership і далі використовує стару ручну
+// сітку (renderMonthlyFieldsManual).
 function renderMonthlyFields(prefill, managerId){
   if(isPartnerReportContext(managerId)){ renderMonthlyFieldsManual(prefill, managerId); return; }
   const grid = document.getElementById('reportMetricGrid');
   if(!grid) return;
   grid.className = 'report-field-list';
+  const autoFields = monthlyAutoFieldsFor(managerId);
+  const calcFields = monthlyCalcFieldsFor(managerId);
   const auto = prefill
-    ? MONTHLY_AUTO_FIELDS.reduce((o,f)=>{ o[f.key] = Number(prefill[f.key]||0); return o; }, {})
+    ? autoFields.reduce((o,f)=>{ o[f.key] = Number(prefill[f.key]||0); return o; }, {})
     : computeMonthlyAutoSums(managerId, new Date());
   state.monthlyAutoSnapshot = auto;
   let html = '<div class="report-field-group-title">Автоматично за місяць (сума щоденних звітів)</div>';
-  MONTHLY_AUTO_FIELDS.forEach(f => {
+  autoFields.forEach(f => {
     html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}</span><span class="report-field-value">${auto[f.key]}</span></div>`;
   });
   html += '<div class="report-field-group-title">Розрахункові показники</div>';
-  MONTHLY_CALC_FIELDS.forEach(f => {
+  calcFields.forEach(f => {
     html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}<span class="report-field-sub">· ${f.sub}</span></span><span class="report-field-value">${f.calc(auto)}%</span></div>`;
   });
   grid.innerHTML = html;
@@ -2791,7 +2888,7 @@ function groupDayReportsByWeek(dayReports){
     const g = groups[key];
     g.count++;
     if(r.niche && !g.niches.includes(r.niche)) g.niches.push(r.niche);
-    WEEKLY_AUTO_FIELDS.forEach(f => { g[f.key] = (g[f.key]||0) + Number(r[f.key]||0); });
+    weeklyAutoFieldsFor(r.managerId).forEach(f => { g[f.key] = (g[f.key]||0) + Number(r[f.key]||0); });
   });
   return Object.values(groups).sort((a,b)=>b.rangeStart-a.rangeStart);
 }
@@ -2807,7 +2904,7 @@ function groupDayReportsByMonth(dayReports){
     const g = groups[key];
     g.count++;
     if(r.niche && !g.niches.includes(r.niche)) g.niches.push(r.niche);
-    MONTHLY_AUTO_FIELDS.forEach(f => { g[f.key] = (g[f.key]||0) + Number(r[f.key]||0); });
+    monthlyAutoFieldsFor(r.managerId).forEach(f => { g[f.key] = (g[f.key]||0) + Number(r[f.key]||0); });
   });
   return Object.values(groups).sort((a,b)=>b.rangeStart-a.rangeStart);
 }
@@ -2858,6 +2955,10 @@ const state = {
   meetingPickedDate: null,
   forwardCloserCalendarMonth: new Date(2026,6,1),
   forwardCloserPickedDate: null,
+  dealBriefCalendarMonth: new Date(2026,6,1),
+  dealBriefPickedDate: null,
+  dealKpCalendarMonth: new Date(2026,6,1),
+  dealKpPickedDate: null,
   dealPanelTab: 'info',
   editingDealTaskIdx: null,
   editingDealMeetingId: null,
@@ -2885,6 +2986,7 @@ const state = {
   reportManagerFilter: [],
   reportNicheFilter: [],
   reportsPeriodTab: 'day',
+  closerReportsPeriodTab: 'day',
   reportAggregateGroups: [],
   analyticsTab: 'day',
   rdNicheValue: '',
@@ -3695,6 +3797,14 @@ function renderDashboardStats(){
     overdueEl.textContent = overdueCount ? `${overdueCount} прострочено` : 'прострочених немає';
     overdueEl.style.color = overdueCount ? 'var(--warning)' : 'var(--text-muted)';
   }
+
+  // Бонус $10 менеджеру холодної бази за кожного лідa, якого клоузер визнав
+  // кваліфікованим (l.originManagerId === сам менеджер, l.qualified === true).
+  const bonusEl = document.getElementById('statManagerBonus');
+  if(bonusEl && state.role === 'manager'){
+    const qualifiedCount = LEADS.filter(l => isCloserUserId(l.managerId) && l.originManagerId === state.managerId && l.qualified === true).length;
+    bonusEl.textContent = `💰 Бонус $${(qualifiedCount*10).toLocaleString('en-US')} (${qualifiedCount} кваліфік.)`;
+  }
 }
 function renderDashboardCalls(){
   const el = document.getElementById('dashboardCalls');
@@ -3844,6 +3954,20 @@ function salesPipelines(){ return PIPELINES.filter(p=>p.kind!=='partner' && p.ki
 function partnerPipelines(){ return PIPELINES.filter(p=>p.kind==='partner'); }
 function closerPipelines(){ return PIPELINES.filter(p=>p.kind==='closer'); }
 function isCloserUserId(id){ const u = USERS.find(x=>x.id===id); return !!u && u.role === 'closer'; }
+// Ширша дедуплікація при пересиланні клоузеру: крім прапорця lead.closerId
+// (захист від повторного пересилання ТІЄЇ САМОЇ картки), перевіряємо, чи вже
+// немає у воронці клоузера ІНШОГО ліда з тим самим телефоном/email — це
+// ловить ситуацію, коли той самий клієнт потрапив у CRM з двох різних карток
+// (напр. інший менеджер холодної бази додав того ж контакта вручну).
+function normalizeContactValue(v){ return (v||'').toString().toLowerCase().replace(/[^a-z0-9а-яіїєґ]/gi,''); }
+function findExistingCloserLeadByContact(phone, email, excludeLeadId){
+  const p = normalizeContactValue(phone);
+  const e = normalizeContactValue(email);
+  if(!p && !e) return null;
+  return LEADS.find(l => isCloserUserId(l.managerId) && l.id !== excludeLeadId && (
+    (p && normalizeContactValue(l.phone) === p) || (e && normalizeContactValue(l.email) === e)
+  )) || null;
+}
 
 // Міграція старих даних "База клієнтів": до фіксу id контактів створювались як
 // Number, а всі onclick-обробники в таблиці передають id назад як рядок —
@@ -4683,21 +4807,34 @@ function saveDeal(){
       const kpPrice = kpPriceEl ? parseMoneyValue(kpPriceEl) : 0;
       const kpDateTimeEl = document.getElementById('dealKpDateTime');
       const kpDateTime = kpDateTimeEl ? kpDateTimeEl.value : '';
+      const briefDateTimeEl = document.getElementById('dealBriefDateTimeInput');
+      const briefDateTime = briefDateTimeEl ? briefDateTimeEl.value : l.briefDateTime;
       const resultChanged = l.qualified !== qualified || l.qualifiedExplanation !== explanation;
+      const briefMoved = briefDateTime && l.briefDateTime && briefDateTime !== l.briefDateTime;
       l.qualified = qualified;
       l.qualifiedExplanation = explanation;
       l.kpPrice = kpPrice;
       l.kpDateTime = kpDateTime;
-      if(resultChanged && l.originDealId != null){
+      l.briefDateTime = briefDateTime;
+      if(l.originDealId != null){
         const origin = LEADS.find(o=>o.id===l.originDealId);
         if(origin){
-          origin.briefQualified = qualified;
-          origin.briefExplanation = explanation;
-          origin.briefResultAt = new Date().toLocaleDateString('uk-UA');
-          if(qualified !== null){
-            NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `${qualified ? '✅ Кваліфіковано' : '❌ Не кваліфіковано'}: лід "${origin.name}" після брифу`, time:'зараз', read:false, target:{type:'lead', id:origin.id}, ownerId: origin.managerId});
+          if(resultChanged){
+            origin.briefQualified = qualified;
+            origin.briefExplanation = explanation;
+            origin.briefResultAt = new Date().toLocaleDateString('uk-UA');
+            if(qualified !== null){
+              NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `${qualified ? '✅ Кваліфіковано' : '❌ Не кваліфіковано'}: лід "${origin.name}" після брифу`, time:'зараз', read:false, target:{type:'lead', id:origin.id}, ownerId: origin.managerId});
+            }
+            logActivity(`Позначено бриф з лідом "${origin.name}" як ${qualified===true?'кваліфікований':qualified===false?'некваліфікований':'невизначений'}`, {target:{type:'lead', id:l.id}, silent:true});
           }
-          logActivity(`Позначено бриф з лідом "${origin.name}" як ${qualified===true?'кваліфікований':qualified===false?'некваліфікований':'невизначений'}`, {target:{type:'lead', id:l.id}, silent:true});
+          // Клоузер переніс дату/час брифу — синхронізуємо з оригінальною
+          // карткою менеджера холодної бази й повідомляємо його про перенесення.
+          if(briefMoved){
+            origin.briefDateTime = briefDateTime;
+            NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `🕑 Бриф з лідом "${origin.name}" перенесено на ${briefDateTime}`, time:'зараз', read:false, target:{type:'lead', id:origin.id}, ownerId: origin.managerId});
+            logActivity(`Перенесено бриф з лідом "${origin.name}" на ${briefDateTime}`, {target:{type:'lead', id:l.id}, silent:true});
+          }
         }
       }
     }
@@ -4818,6 +4955,8 @@ function openForwardCloserModal(){
   // ховається, коли lead.closerId вже встановлено, але перевіряємо ще раз
   // тут на випадок застарілого стану панелі.
   if(lead.closerId){ showAlertModal('Цей лід вже передано клоузеру раніше.', 'Вже передано'); return; }
+  const dupLead = findExistingCloserLeadByContact(lead.phone, lead.email, lead.id);
+  if(dupLead){ showAlertModal(`Клієнт із таким телефоном/email вже є у воронці клоузера (лід "${dupLead.name}"). Перевірте, чи це не дублікат, перед пересиланням.`, 'Схожий клієнт вже переданий'); return; }
   const closers = USERS.filter(u=>u.role==='closer');
   if(!closers.length){ showAlertModal('Ще немає жодного акаунту клоузера. Створіть його на сторінці "Менеджери".', 'Немає клоузерів'); return; }
   forwardCloserLeadId = leadId;
@@ -4844,6 +4983,8 @@ function confirmForwardToCloser(){
   const lead = LEADS.find(l=>l.id===forwardCloserLeadId);
   if(!lead) return;
   if(lead.closerId){ closeForwardCloserModal(); showAlertModal('Цей лід вже передано клоузеру раніше.', 'Вже передано'); return; }
+  const dupLead = findExistingCloserLeadByContact(lead.phone, lead.email, lead.id);
+  if(dupLead){ closeForwardCloserModal(); showAlertModal(`Клієнт із таким телефоном/email вже є у воронці клоузера (лід "${dupLead.name}"). Пересилання скасовано.`, 'Схожий клієнт вже переданий'); return; }
   const closer = USERS.find(u=>u.id===forwardCloserSelectedId && u.role==='closer');
   if(!closer){ showAlertModal('Оберіть клоузера.', 'Не обрано клоузера'); return; }
   const dueRaw = document.getElementById('forwardCloserBriefDue').value;
@@ -4908,12 +5049,12 @@ function updateDealPanelCloserSections(l){
   }
   closerSection.style.display = isCloserCard ? '' : 'none';
   if(isCloserCard){
-    document.getElementById('dealBriefDateTime').textContent = l.briefDateTime || '—';
+    setDealBriefCalendarValue(l.briefDateTime || '');
     document.getElementById('dealOriginManager').textContent = l.originManagerId ? managerName(l.originManagerId) : 'Додано вручну';
     resetDealQualifiedSelect(l.qualified);
     document.getElementById('dealQualifiedExplanation').value = l.qualifiedExplanation || '';
     document.getElementById('dealKpPrice').value = l.kpPrice ? Number(l.kpPrice).toLocaleString('en-US') : '';
-    document.getElementById('dealKpDateTime').value = l.kpDateTime || '';
+    setDealKpCalendarValue(l.kpDateTime || '');
   }
 }
 function resetDealQualifiedSelect(value){
@@ -6173,6 +6314,21 @@ function parseUkDate(s){
   const [d,m,y] = s.split('.').map(Number);
   return new Date(y,m-1,d);
 }
+// Парсить рядок "дд.мм.рррр гг:хх" (наприклад, дата й час брифу) у Date.
+// Повертає null, якщо рядок порожній/некоректний.
+function parseUkDateTime(s){
+  if(!s) return null;
+  const [datePart, timePart] = s.split(' ');
+  if(!datePart) return null;
+  const [d,m,y] = datePart.split('.').map(Number);
+  if(!d || !m || !y) return null;
+  let hh = 0, mm = 0;
+  if(timePart){
+    const [h,mi] = timePart.split(':').map(Number);
+    hh = h||0; mm = mi||0;
+  }
+  return new Date(y,m-1,d,hh,mm);
+}
 function isToday(d){
   const t = new Date();
   return d.getFullYear()===t.getFullYear() && d.getMonth()===t.getMonth() && d.getDate()===t.getDate();
@@ -6432,6 +6588,179 @@ function applyForwardCloserDate(){
   closeAllDropdowns();
 }
 renderForwardCloserCalendar();
+
+/* ---- дата й час брифу — редагування прямо з картки клоузера (перенесення
+   брифу), і дата й час КП в картці клоузера — той самий кастомний календар,
+   що й у дедлайну/зустрічі/пересилання. ---- */
+let dealBriefHour = 9, dealBriefMinute = 0;
+function renderDealBriefCalendar(){
+  const monthLabel = document.getElementById('dealBriefCalMonthLabel');
+  const grid = document.getElementById('dealBriefCalGrid');
+  if(!monthLabel || !grid) return;
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const m = state.dealBriefCalendarMonth;
+  monthLabel.textContent = monthNames[m.getMonth()] + ' ' + m.getFullYear();
+  const firstDay = new Date(m.getFullYear(), m.getMonth(), 1);
+  let startOffset = firstDay.getDay();
+  startOffset = (startOffset === 0) ? 6 : startOffset - 1;
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+  const dows = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day muted"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(m.getFullYear(), m.getMonth(), day);
+    let cls = 'cal-day';
+    if(isToday(d)) cls += ' today';
+    if(state.dealBriefPickedDate && +d === +state.dealBriefPickedDate) cls += ' range-edge';
+    html += `<div class="${cls}" onclick="pickDealBriefDate(event,${m.getFullYear()},${m.getMonth()},${day})">${day}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function dealBriefCalNav(dir){
+  state.dealBriefCalendarMonth = new Date(state.dealBriefCalendarMonth.getFullYear(), state.dealBriefCalendarMonth.getMonth()+dir, 1);
+  renderDealBriefCalendar();
+}
+function pickDealBriefDate(e,y,mo,d){
+  if(e) e.stopPropagation();
+  state.dealBriefPickedDate = new Date(y,mo,d);
+  renderDealBriefCalendar();
+}
+function stepDealBriefTime(unit, delta){
+  if(unit === 'h'){
+    dealBriefHour = (dealBriefHour + delta + 24) % 24;
+    document.getElementById('dealBriefHour').value = String(dealBriefHour).padStart(2,'0');
+  } else {
+    dealBriefMinute = (dealBriefMinute + delta*5 + 60) % 60;
+    document.getElementById('dealBriefMinute').value = String(dealBriefMinute).padStart(2,'0');
+  }
+}
+function clearDealBriefDate(){
+  state.dealBriefPickedDate = null;
+  dealBriefHour = 9; dealBriefMinute = 0;
+  const h = document.getElementById('dealBriefHour'), mi = document.getElementById('dealBriefMinute');
+  if(h) h.value = '09';
+  if(mi) mi.value = '00';
+  renderDealBriefCalendar();
+  const hidden = document.getElementById('dealBriefDateTimeInput');
+  const label = document.getElementById('dealBriefDueLabel');
+  if(hidden) hidden.value = '';
+  if(label) label.textContent = 'Оберіть дату';
+}
+function applyDealBriefDate(){
+  if(!state.dealBriefPickedDate){ closeAllDropdowns(); return; }
+  const full = fmtDate(state.dealBriefPickedDate) + ' ' + String(dealBriefHour).padStart(2,'0') + ':' + String(dealBriefMinute).padStart(2,'0');
+  document.getElementById('dealBriefDateTimeInput').value = full;
+  document.getElementById('dealBriefDueLabel').textContent = full;
+  closeAllDropdowns();
+}
+// Встановлює календар "дата брифу" у відповідність до значення картки при
+// відкритті (рядок "дд.мм.рррр гг:хх" або порожньо).
+function setDealBriefCalendarValue(raw){
+  const dt = parseUkDateTime(raw);
+  if(dt){
+    state.dealBriefPickedDate = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    state.dealBriefCalendarMonth = new Date(dt.getFullYear(), dt.getMonth(), 1);
+    dealBriefHour = dt.getHours(); dealBriefMinute = dt.getMinutes();
+    document.getElementById('dealBriefHour').value = String(dealBriefHour).padStart(2,'0');
+    document.getElementById('dealBriefMinute').value = String(dealBriefMinute).padStart(2,'0');
+    document.getElementById('dealBriefDateTimeInput').value = raw;
+    document.getElementById('dealBriefDueLabel').textContent = raw;
+  } else {
+    state.dealBriefPickedDate = null;
+    dealBriefHour = 9; dealBriefMinute = 0;
+    document.getElementById('dealBriefHour').value = '09';
+    document.getElementById('dealBriefMinute').value = '00';
+    document.getElementById('dealBriefDateTimeInput').value = '';
+    document.getElementById('dealBriefDueLabel').textContent = '—';
+  }
+  renderDealBriefCalendar();
+}
+renderDealBriefCalendar();
+
+let dealKpHour = 9, dealKpMinute = 0;
+function renderDealKpCalendar(){
+  const monthLabel = document.getElementById('dealKpCalMonthLabel');
+  const grid = document.getElementById('dealKpCalGrid');
+  if(!monthLabel || !grid) return;
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const m = state.dealKpCalendarMonth;
+  monthLabel.textContent = monthNames[m.getMonth()] + ' ' + m.getFullYear();
+  const firstDay = new Date(m.getFullYear(), m.getMonth(), 1);
+  let startOffset = firstDay.getDay();
+  startOffset = (startOffset === 0) ? 6 : startOffset - 1;
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+  const dows = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day muted"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(m.getFullYear(), m.getMonth(), day);
+    let cls = 'cal-day';
+    if(isToday(d)) cls += ' today';
+    if(state.dealKpPickedDate && +d === +state.dealKpPickedDate) cls += ' range-edge';
+    html += `<div class="${cls}" onclick="pickDealKpDate(event,${m.getFullYear()},${m.getMonth()},${day})">${day}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function dealKpCalNav(dir){
+  state.dealKpCalendarMonth = new Date(state.dealKpCalendarMonth.getFullYear(), state.dealKpCalendarMonth.getMonth()+dir, 1);
+  renderDealKpCalendar();
+}
+function pickDealKpDate(e,y,mo,d){
+  if(e) e.stopPropagation();
+  state.dealKpPickedDate = new Date(y,mo,d);
+  renderDealKpCalendar();
+}
+function stepDealKpTime(unit, delta){
+  if(unit === 'h'){
+    dealKpHour = (dealKpHour + delta + 24) % 24;
+    document.getElementById('dealKpHour').value = String(dealKpHour).padStart(2,'0');
+  } else {
+    dealKpMinute = (dealKpMinute + delta*5 + 60) % 60;
+    document.getElementById('dealKpMinute').value = String(dealKpMinute).padStart(2,'0');
+  }
+}
+function clearDealKpDate(){
+  state.dealKpPickedDate = null;
+  dealKpHour = 9; dealKpMinute = 0;
+  const h = document.getElementById('dealKpHour'), mi = document.getElementById('dealKpMinute');
+  if(h) h.value = '09';
+  if(mi) mi.value = '00';
+  renderDealKpCalendar();
+  const hidden = document.getElementById('dealKpDateTime');
+  const label = document.getElementById('dealKpDueLabel');
+  if(hidden) hidden.value = '';
+  if(label) label.textContent = 'Оберіть дату';
+}
+function applyDealKpDate(){
+  if(!state.dealKpPickedDate){ closeAllDropdowns(); return; }
+  const full = fmtDate(state.dealKpPickedDate) + ' ' + String(dealKpHour).padStart(2,'0') + ':' + String(dealKpMinute).padStart(2,'0');
+  document.getElementById('dealKpDateTime').value = full;
+  document.getElementById('dealKpDueLabel').textContent = full;
+  closeAllDropdowns();
+}
+// Встановлює календар "дата КП" у відповідність до значення картки при
+// відкритті (рядок "дд.мм.рррр гг:хх" або порожньо).
+function setDealKpCalendarValue(raw){
+  const dt = parseUkDateTime(raw);
+  if(dt){
+    state.dealKpPickedDate = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    state.dealKpCalendarMonth = new Date(dt.getFullYear(), dt.getMonth(), 1);
+    dealKpHour = dt.getHours(); dealKpMinute = dt.getMinutes();
+    document.getElementById('dealKpHour').value = String(dealKpHour).padStart(2,'0');
+    document.getElementById('dealKpMinute').value = String(dealKpMinute).padStart(2,'0');
+    document.getElementById('dealKpDateTime').value = raw;
+    document.getElementById('dealKpDueLabel').textContent = raw;
+  } else {
+    state.dealKpPickedDate = null;
+    dealKpHour = 9; dealKpMinute = 0;
+    document.getElementById('dealKpHour').value = '09';
+    document.getElementById('dealKpMinute').value = '00';
+    document.getElementById('dealKpDateTime').value = '';
+    document.getElementById('dealKpDueLabel').textContent = 'Оберіть дату';
+  }
+  renderDealKpCalendar();
+}
+renderDealKpCalendar();
 
 /* =========================================================
    TASKS PAGE (окрема сторінка "Завдання" — фільтри дата+менеджер,
@@ -6770,9 +7099,9 @@ function renderReportsTable(){
   if(state.role === 'manager' || state.role === 'partner'){
     rows = rows.filter(r=>r.managerId===state.managerId);
   } else {
-    // Ця сторінка (Sales) НЕ показує партнерські звіти — для них є окрема
-    // сторінка "Звітність" в розділі Partnership.
-    rows = rows.filter(r=>!isPartnerUserId(r.managerId));
+    // Ця сторінка (Sales) НЕ показує партнерські й клоузерські звіти — для
+    // них є окремі сторінки "Звітність" у розділах Partnership і Closer.
+    rows = rows.filter(r=>!isPartnerUserId(r.managerId) && !isCloserUserId(r.managerId));
     if(state.reportManagerFilter.length) rows = rows.filter(r=>state.reportManagerFilter.includes(r.managerId));
   }
   if(!isPartnerViewer){
@@ -6824,7 +7153,7 @@ function openReportAggregateView(idx){
   if(!g) return;
   state.reportMode = 'view';
   state.reportViewId = null;
-  state.reportBackView = 'reports';
+  state.reportBackView = isCloserUserId(g.managerId) ? 'closer-reports' : 'reports';
   const periodLabel = g.period === 'week' ? 'тиждень' : 'місяць';
   document.getElementById('reportDetailTitle').innerHTML = `Звіт за ${periodLabel} ${fmtRangeLabel(g)} · ${managerName(g.managerId)}`;
   document.getElementById('rdPeriodRow').style.display = 'none';
@@ -6853,12 +7182,15 @@ function renderPartnerReportsTable(){
       <td data-roles="cto" onclick="event.stopPropagation()"><button class="danger-icon-btn" style="width:30px;height:30px;" title="Видалити звіт" onclick="deleteReport(${r.id})">${trashIconSvg()}</button></td>
     </tr>`).join('');
 }
-// Видалення звіту — лише CTO, з підтвердженням і 5с на скасування дії
+// Видалення звіту — CTO може видалити будь-який звіт; клоузер може видалити
+// ЛИШЕ власний звіт (на відміну від Sales/Partnership, де самостійне
+// видалення заборонено навмисно) — з підтвердженням і 5с на скасування дії
 // (той самий патерн, що й для завдань — showConfirmModal + showUndoToast).
 async function deleteReport(id){
-  if(state.role !== 'cto') return;
   const r = REPORTS.find(r=>r.id===id);
   if(!r) return;
+  const canDelete = state.role === 'cto' || (state.role === 'closer' && r.managerId === state.managerId);
+  if(!canDelete) return;
   const ok = await showConfirmModal({
     title:'Видалити звіт',
     text:`Видалити звіт за ${r.date} (${managerName(r.managerId)})?`,
@@ -6868,13 +7200,13 @@ async function deleteReport(id){
   if(!ok) return;
   const idx = REPORTS.findIndex(x=>x.id===id);
   REPORTS.splice(idx,1);
-  renderReportsTable(); renderPartnerReportsTable();
+  renderReportsTable(); renderPartnerReportsTable(); renderCloserReports();
   renderAnalytics();
   logActivity(`Видалено звіт за ${r.date} (${managerName(r.managerId)})`, {target:{type:'view', name:'reports'}});
   fbScheduleSave();
   showUndoToast(`Звіт за ${r.date} видалено`, () => {
     REPORTS.splice(idx,0,r);
-    renderReportsTable(); renderPartnerReportsTable();
+    renderReportsTable(); renderPartnerReportsTable(); renderCloserReports();
     renderAnalytics();
     logActivity(`Скасовано видалення звіту за ${r.date}`, {target:{type:'view', name:'reports'}});
     fbScheduleSave();
@@ -6891,6 +7223,22 @@ function renderReportSummaryStrip(values, period, managerId){
   const el = document.getElementById('reportSummaryStrip');
   if(!el) return;
   if(!values){ el.innerHTML = ''; return; }
+  if(isCloserReportContext(managerId)){
+    if(period === 'week' || period === 'month'){
+      el.innerHTML = `
+        <span class="report-summary-chip">🧑‍💼 ${values.briefsHeld||0} брифів</span>
+        <span class="report-summary-chip">✅ ${values.qualified||0} кваліфіковано</span>
+        <span class="report-summary-chip">📄 ${values.kpAssigned||0} КП призначено</span>
+        <span class="report-summary-chip">💰 ${values.sales||0} продажів</span>`;
+      return;
+    }
+    el.innerHTML = `
+      <span class="report-summary-chip">🧑‍💼 ${values.briefsHeld||0} брифів</span>
+      <span class="report-summary-chip">✅ ${values.qualified||0} кваліфіковано</span>
+      <span class="report-summary-chip">📄 ${values.kpAssigned||0} КП призначено</span>
+      <span class="report-summary-chip">💰 ${values.sales||0} продажів</span>`;
+    return;
+  }
   const isPartner = isPartnerReportContext(managerId);
   const firstLabel = isPartner ? 'звернень' : 'дзвінків';
   // Тиждень/місяць Sales — без "кваліф. брифів" (прибрано як непотрібний
@@ -6956,16 +7304,17 @@ function openReportCreate(){
   if(state.role === 'cto') return; // CTO лише переглядає звіти керівника відділу і менеджерів
   state.reportMode = 'create';
   state.reportViewId = null;
+  state.reportBackView = state.role === 'closer' ? 'closer-reports' : 'reports';
   document.getElementById('reportDetailTitle').textContent = 'Створити звіт — сьогодні';
   document.getElementById('reportEditBtn').style.display = 'none';
   renderReportSummaryStrip(null);
   document.getElementById('rdComment').value = '';
   resetRdNicheSelect();
-  // Sales (manager/admin) більше не обирають тип звіту вручну — тижневий і
-  // місячний звіт тепер рахуються повністю автоматично з щоденних звітів,
-  // тож єдине, що створюється власноруч, — щоденний звіт. Partnership і
-  // далі має вибір День/Тиждень/Місяць, як раніше.
-  const isSales = state.role === 'manager' || state.role === 'admin';
+  // Sales (manager/admin) і Closer більше не обирають тип звіту вручну —
+  // тижневий і місячний звіт рахуються повністю автоматично з щоденних
+  // звітів, тож єдине, що створюється власноруч, — щоденний звіт.
+  // Partnership і далі має вибір День/Тиждень/Місяць, як раніше.
+  const isSales = state.role === 'manager' || state.role === 'admin' || state.role === 'closer';
   document.getElementById('rdPeriodRow').style.display = isSales ? 'none' : '';
   const periodMenu = document.querySelector('#reportPeriodSelect .cselect-menu');
   const defaultPeriod = isSales ? 'day' : (state.role === 'partner' ? 'week' : 'month');
@@ -6975,8 +7324,8 @@ function openReportCreate(){
   document.querySelector('#reportPeriodSelect .cselect-label').textContent = periodMenu.querySelector('li.selected').textContent;
   const me = currentUserRecord();
   // Ніша — довільна (обирається дропдауном), лише для звітів SALES-відділу
-  // (не для партнерських звітів).
-  document.getElementById('rdNicheRow').style.display = (state.role === 'partner') ? 'none' : '';
+  // (не для партнерських і не для клоузерських звітів).
+  document.getElementById('rdNicheRow').style.display = (state.role === 'partner' || state.role === 'closer') ? 'none' : '';
   renderReportFieldsForPeriod(defaultPeriod, me ? me.id : null);
   setReportFieldsEnabled(true);
   document.getElementById('reportDetailActions').innerHTML = '<button class="btn" onclick="saveReportDetail()">Зберегти звіт</button>';
@@ -6995,11 +7344,14 @@ function openReportView(id){
   state.reportMode = 'view';
   state.reportViewId = id;
   // Кнопка "Назад" має повертати туди, звідки й відкрили звіт — на сторінку
-  // Sales "Звітність" або на окрему Partnership "Звітність партнерств".
-  state.reportBackView = (isPartnerUserId(r.managerId) && (state.role==='admin'||state.role==='cto')) ? 'partner-reports' : 'reports';
+  // Sales "Звітність", окрему Partnership "Звітність партнерств", або
+  // "Звітність клоузера".
+  state.reportBackView = (isPartnerUserId(r.managerId) && (state.role==='admin'||state.role==='cto')) ? 'partner-reports'
+    : isCloserUserId(r.managerId) ? 'closer-reports'
+    : 'reports';
   document.getElementById('reportDetailTitle').innerHTML = 'Звіт — ' + r.date + ' · ' + managerName(r.managerId);
   document.getElementById('rdPeriodRow').style.display = 'none';
-  document.getElementById('rdNicheRow').style.display = isPartnerUserId(r.managerId) ? 'none' : '';
+  document.getElementById('rdNicheRow').style.display = (isPartnerUserId(r.managerId) || isCloserUserId(r.managerId)) ? 'none' : '';
   resetRdNicheSelect(r.niche);
   renderReportFieldsForPeriod(period, r.managerId, r);
   document.getElementById('rdComment').value = r.comment;
@@ -7024,8 +7376,9 @@ function enableReportEditing(){
 function notifyReportEdited(r, editorName){
   const target = {type:'report', id:r.id};
   const editorId = currentUserRecord() ? currentUserRecord().id : null;
-  NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `Звіт за ${r.date} (${editorName}) відредаговано`, time:'зараз', read:false, target, ownerId:'ostap'});
-  USERS.filter(u=>u.role==='admin' && u.id!==editorId).forEach(a=>{
+  // Сповіщаємо СЕО (роль cto) і керівника(-ів) відділу (роль admin) — крім
+  // самого редактора, щоб не дублювати йому власне сповіщення.
+  USERS.filter(u=>(u.role==='cto' || u.role==='admin') && u.id!==editorId).forEach(a=>{
     NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `Звіт за ${r.date} (${editorName}) відредаговано`, time:'зараз', read:false, target, ownerId:a.id});
   });
   renderNotifications();
@@ -7047,10 +7400,10 @@ function saveReportDetail(){
 
   if(isEdit){
     Object.assign(existing, values, {comment, niche});
-    renderReportsTable(); renderPartnerReportsTable();
+    renderReportsTable(); renderPartnerReportsTable(); renderCloserReports();
     logActivity(`Відредаговано звіт за ${existing.date}`, {target:{type:'report', id:existing.id}});
     notifyReportEdited(existing, me ? me.name : '');
-    showView(null, 'reports');
+    showView(null, state.reportBackView || 'reports');
     return;
   }
 
@@ -7059,13 +7412,17 @@ function saveReportDetail(){
   const newReportId = nextReportId++;
   REPORTS.unshift({id: newReportId, date: today, managerId: me ? me.id : 'ostap', period, comment, niche, ...values});
   setReportFieldsEnabled(true);
-  renderReportsTable(); renderPartnerReportsTable();
+  renderReportsTable(); renderPartnerReportsTable(); renderCloserReports();
   logActivity(`Збережено звіт за ${today} (${periodLabel.toLowerCase()})`, {target:{type:'report', id:newReportId}});
-  showView(null, 'reports');
+  showView(null, state.role === 'closer' ? 'closer-reports' : 'reports');
 }
 // Дефолтний коментар, якщо менеджер лишив поле коментаря порожнім —
 // різний набір показників для дня/тижня і місяця (в останнього — стара логіка).
 function defaultReportComment(period, values){
+  if(state.role === 'closer'){
+    if(period === 'week' || period === 'month') return `${values.briefsHeld||0} брифів · ${values.qualified||0} кваліфіковано · ${values.kpAssigned||0} КП · ${values.sales||0} продажів`;
+    return `${values.briefsHeld||0} брифів · ${values.qualified||0} кваліфіковано · ${values.kpAssigned||0} КП призначено · ${values.sales||0} продажів`;
+  }
   const isPartner = state.role === 'partner';
   const first = isPartner ? 'звернень' : 'дзвінків';
   // Тиждень/місяць Sales більше не створюються вручну (ця гілка лишається
@@ -7088,10 +7445,10 @@ function defaultReportComment(period, values){
 // менеджер бачить лише свої звіти; керівник відділу і CTO — усі.
 function scopedReportsForAnalytics(){
   if(state.role === 'manager' || state.role === 'partner') return REPORTS.filter(r=>r.managerId===state.managerId);
-  // Аналітика — сторінка SALES-відділу (партнерство сюди взагалі не має
-  // навігації), тож партнерські звіти з агрегованого view CTO/admin теж
+  // Аналітика — сторінка SALES-відділу (партнерство й клоузер сюди взагалі
+  // не мають навігації), тож їхні звіти з агрегованого view CTO/admin теж
   // виключаємо — так само, як на сторінках Завдання/Звітність.
-  return REPORTS.filter(r=>!isPartnerUserId(r.managerId));
+  return REPORTS.filter(r=>!isPartnerUserId(r.managerId) && !isCloserUserId(r.managerId));
 }
 // Аналітика розбита на 3 вкладки — Денна/Тижнева/Місячна. Кожна показує
 // ЛИШЕ звіти свого періоду зі своїм набором показників (більше не потрібно
@@ -8574,6 +8931,14 @@ function closerQualBadge(l){
   if(l.qualified === false) return '<span class="status-icon" title="Не кваліфікований">❌</span>';
   return '';
 }
+// Бриф вважається простроченим, якщо результат (кваліфікований/ні) ще не
+// визначено, а дата й час брифу вже минули — тоді картка підсвічується
+// червоним, щоб клоузер не забув проставити результат.
+function isCloserCardOverdue(l){
+  if(l.qualified === true || l.qualified === false) return false;
+  const dt = parseUkDateTime(l.briefDateTime);
+  return !!dt && dt < new Date();
+}
 function renderCloserBoard(){
   const board = document.getElementById('closerBoard');
   const hint = document.getElementById('closerNoPipelineHint');
@@ -8591,12 +8956,15 @@ function renderCloserBoard(){
   if(hint) hint.style.display = 'none';
   board.innerHTML = cp.stages.map(stage => {
     const cards = LEADS.filter(l => l.stage === stage && l.managerId === cp.ownerId && l.pipelineId === cp.id);
-    const cardsHtml = cards.map(c => `
-      <div class="lead-card" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
+    const cardsHtml = cards.map(c => {
+      const overdue = isCloserCardOverdue(c);
+      return `
+      <div class="lead-card${overdue?' brief-overdue':''}" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
         <div class="lead-title">${c.name}</div>
         <div class="lead-sub">${c.company||''}</div>
-        <div class="lead-foot"><span class="lead-value">${c.briefDateTime ? '🕑 '+c.briefDateTime : ''}</span>${closerQualBadge(c)}</div>
-      </div>`).join('');
+        <div class="lead-foot"><span class="lead-value">${c.briefDateTime ? '🕑 '+c.briefDateTime : ''}</span>${overdue?'<span class="status-icon" title="Бриф прострочено — визначте результат">⏰</span>':''}${closerQualBadge(c)}</div>
+      </div>`;
+    }).join('');
     return `
       <div class="column" data-stage="${stage}" ondragover="allowDrop(event)" ondragenter="columnDragEnter(event)" ondragleave="columnDragLeave(event)" ondrop="closerDropCard(event,'${escAttr(stage)}')">
         <div class="column-head"><div class="column-title">${stage}</div><div class="column-meta">${cards.length} ${cards.length===1?'лід':'ліди'}</div></div>
@@ -8701,6 +9069,7 @@ function renderCloserClientsTable(){
   tbody.innerHTML = rows.map(l => {
     const qual = l.qualified === true ? '<span class="badge" style="color:var(--success);background:#1FAE6A1A;">Кваліфікований</span>'
       : l.qualified === false ? '<span class="badge" style="color:var(--danger);background:#E5484D1A;">Не кваліфікований</span>'
+      : isCloserCardOverdue(l) ? '<span class="badge" style="color:var(--danger);background:#E5484D1A;">⏰ Прострочено</span>'
       : '<span class="badge warn">Очікує</span>';
     return `
     <tr class="clickable" onclick="openDeal(${l.id})">
@@ -8758,7 +9127,14 @@ function closerReportRows(){
   if(state.role === 'closer') rows = rows.filter(l=>l.managerId===state.managerId);
   return rows;
 }
+// Орендатор сторінки "Звітність клоузера" — рендерить і щоденні звіти
+// (ручне введення клоузера, як у Sales), і автоматичну аналітику, зібрану
+// прямо з карток LEADS (кількість лідів/кваліфікація/бонуси менеджерів).
 function renderCloserReports(){
+  renderCloserDailyReportsTable();
+  renderCloserAutoAnalytics();
+}
+function renderCloserAutoAnalytics(){
   const summaryEl = document.getElementById('closerReportSummary');
   const tbody = document.getElementById('closerReportsByManagerBody');
   if(!summaryEl || !tbody) return;
@@ -8783,7 +9159,7 @@ function renderCloserReports(){
     else if(l.qualified === false) byManager[key].unqualified++;
   });
   const entries = Object.entries(byManager).sort((a,b)=>b[1].total-a[1].total);
-  if(!entries.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty-hint">Ще немає переданих лідів.</td></tr>'; return; }
+  if(!entries.length){ tbody.innerHTML = '<tr><td colspan="7" class="empty-hint">Ще немає переданих лідів.</td></tr>'; return; }
   tbody.innerHTML = entries.map(([key, s]) => {
     const name = key === '__none__' ? 'Без джерела (додано вручну)' : managerName(key);
     const pend = s.total - s.qualified - s.unqualified;
@@ -8795,6 +9171,58 @@ function renderCloserReports(){
       <td>${s.unqualified}</td>
       <td>${pend}</td>
       <td>${rate}%</td>
+      <td>$${(s.qualified*10).toLocaleString('en-US')}</td>
+    </tr>`;
+  }).join('');
+}
+// Щоденні звіти клоузера (ручне введення: скільки брифів/КП/продажів) —
+// той самий принцип, що й на сторінці "Звітність" Sales: День — список
+// збережених звітів (створення/перегляд/редагування/видалення), Тиждень і
+// Місяць — повністю автоматичні агрегати сумою днів (без збереження).
+function setCloserReportsPeriodTab(tab){
+  state.closerReportsPeriodTab = tab;
+  const dayBtn = document.getElementById('closerReportsPeriodTabDayBtn');
+  const weekBtn = document.getElementById('closerReportsPeriodTabWeekBtn');
+  const monthBtn = document.getElementById('closerReportsPeriodTabMonthBtn');
+  if(dayBtn) dayBtn.classList.toggle('active', tab==='day');
+  if(weekBtn) weekBtn.classList.toggle('active', tab==='week');
+  if(monthBtn) monthBtn.classList.toggle('active', tab==='month');
+  renderCloserDailyReportsTable();
+}
+function renderCloserDailyReportsTable(){
+  const thead = document.getElementById('closerDailyReportsTableHead');
+  const tbody = document.getElementById('closerDailyReportsTableBody');
+  if(!thead || !tbody) return;
+  const tab = state.closerReportsPeriodTab || 'day';
+  let rows = REPORTS.filter(r => isCloserUserId(r.managerId));
+  if(state.role === 'closer') rows = rows.filter(r=>r.managerId===state.managerId);
+  rows = rows.filter(r=>r.period === 'day');
+  if(tab !== 'day'){
+    const groups = tab === 'week' ? groupDayReportsByWeek(rows) : groupDayReportsByMonth(rows);
+    state.reportAggregateGroups = groups;
+    thead.innerHTML = `<tr><th>${tab==='week'?'Тиждень':'Місяць'}</th><th data-roles="admin cto">Клоузер</th><th>Брифів</th><th>Кваліфіковано</th><th>Призначено КП</th><th>Продажів</th></tr>`;
+    if(!groups.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty-hint">Немає щоденних звітів за цей період.</td></tr>'; return; }
+    tbody.innerHTML = groups.map((g,idx) => `
+      <tr class="clickable" onclick="openReportAggregateView(${idx})">
+        <td>${fmtRangeLabel(g)}</td>
+        <td data-roles="admin cto">${managerName(g.managerId)}</td>
+        <td>${g.briefsHeld||0}</td>
+        <td>${g.qualified||0}</td>
+        <td>${g.kpAssigned||0}</td>
+        <td>${g.sales||0}</td>
+      </tr>`).join('');
+    return;
+  }
+  thead.innerHTML = `<tr><th>Дата</th><th data-roles="admin cto">Клоузер</th><th>Звіт</th><th style="width:44px;"></th></tr>`;
+  if(!rows.length){ tbody.innerHTML = '<tr><td colspan="4" class="empty-hint">Ще немає жодного щоденного звіту.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(r => {
+    const canDelete = state.role === 'cto' || (state.role === 'closer' && r.managerId === state.managerId);
+    return `
+    <tr class="clickable" onclick="openReportView(${r.id})">
+      <td>${r.date}</td>
+      <td data-roles="admin cto">${managerName(r.managerId)}</td>
+      <td>${r.comment}</td>
+      <td onclick="event.stopPropagation()">${canDelete ? `<button class="danger-icon-btn" style="width:30px;height:30px;" title="Видалити звіт" onclick="deleteReport(${r.id})">${trashIconSvg()}</button>` : ''}</td>
     </tr>`;
   }).join('');
 }
