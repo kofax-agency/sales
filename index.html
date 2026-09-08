@@ -1930,7 +1930,23 @@
   </div>
   <div class="field">
     <label>Дата і час брифу</label>
-    <input type="datetime-local" id="forwardCloserBriefDue">
+    <div class="cselect" id="forwardCloserDueSelect">
+      <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+        <span class="cselect-label" id="forwardCloserDueLabel">Оберіть дату</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      </button>
+      <div class="calendar-popover">
+        <div class="cal-head"><button type="button" onclick="forwardCloserCalNav(-1)">‹</button><span id="forwardCloserCalMonthLabel"></span><button type="button" onclick="forwardCloserCalNav(1)">›</button></div>
+        <div class="cal-grid" id="forwardCloserCalGrid"></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;">
+          <div class="stepper"><button type="button" onclick="stepForwardCloserTime('h',-1)">−</button><input id="forwardCloserHour" type="text" value="09" readonly><button type="button" onclick="stepForwardCloserTime('h',1)">+</button></div>
+          <span style="font-weight:800;">:</span>
+          <div class="stepper"><button type="button" onclick="stepForwardCloserTime('m',-1)">−</button><input id="forwardCloserMinute" type="text" value="00" readonly><button type="button" onclick="stepForwardCloserTime('m',1)">+</button></div>
+        </div>
+        <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearForwardCloserDate()">Скинути</button><button class="btn small" type="button" onclick="applyForwardCloserDate()">Застосувати</button></div>
+      </div>
+    </div>
+    <input type="hidden" id="forwardCloserBriefDue">
   </div>
   <div class="confirm-modal-actions">
     <button class="btn secondary" onclick="closeForwardCloserModal()">Скасувати</button>
@@ -2840,6 +2856,8 @@ const state = {
   duePickedDate: null,
   meetingCalendarMonth: new Date(2026,6,1),
   meetingPickedDate: null,
+  forwardCloserCalendarMonth: new Date(2026,6,1),
+  forwardCloserPickedDate: null,
   dealPanelTab: 'info',
   editingDealTaskIdx: null,
   editingDealMeetingId: null,
@@ -4805,8 +4823,7 @@ function openForwardCloserModal(){
   forwardCloserLeadId = leadId;
   forwardCloserSelectedId = closers[0].id;
   renderForwardCloserOptions(closers);
-  const dueEl = document.getElementById('forwardCloserBriefDue');
-  if(dueEl) dueEl.value = '';
+  clearForwardCloserDate();
   document.getElementById('forwardCloserOverlay').classList.add('open');
   document.getElementById('forwardCloserModal').classList.add('open');
 }
@@ -4831,7 +4848,7 @@ function confirmForwardToCloser(){
   if(!closer){ showAlertModal('Оберіть клоузера.', 'Не обрано клоузера'); return; }
   const dueRaw = document.getElementById('forwardCloserBriefDue').value;
   if(!dueRaw){ showAlertModal('Вкажіть дату і час брифу.', 'Не вказано дату'); return; }
-  const briefDateTime = fmtDateTimeLocal(dueRaw);
+  const briefDateTime = dueRaw;
   const cp = closerPipelines().find(p=>p.ownerId===closer.id);
   if(!cp){ showAlertModal('У цього клоузера ще немає воронки. Спробуйте ще раз за хвилину.', 'Помилка'); return; }
   const me = currentUserRecord();
@@ -6349,6 +6366,72 @@ function applyMeetingDate(){
   closeAllDropdowns();
 }
 renderMeetingCalendar();
+
+/* ---- дата й час брифу при пересиланні клоузеру: той самий кастомний
+   календар (одна дата) + година/хвилина, що й у дедлайну/зустрічі — без
+   можливості вписати дату вручну. ---- */
+let forwardCloserHour = 9, forwardCloserMinute = 0;
+function renderForwardCloserCalendar(){
+  const monthLabel = document.getElementById('forwardCloserCalMonthLabel');
+  const grid = document.getElementById('forwardCloserCalGrid');
+  if(!monthLabel || !grid) return;
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const m = state.forwardCloserCalendarMonth;
+  monthLabel.textContent = monthNames[m.getMonth()] + ' ' + m.getFullYear();
+  const firstDay = new Date(m.getFullYear(), m.getMonth(), 1);
+  let startOffset = firstDay.getDay();
+  startOffset = (startOffset === 0) ? 6 : startOffset - 1;
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+  const dows = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day muted"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(m.getFullYear(), m.getMonth(), day);
+    let cls = 'cal-day';
+    if(isToday(d)) cls += ' today';
+    if(state.forwardCloserPickedDate && +d === +state.forwardCloserPickedDate) cls += ' range-edge';
+    html += `<div class="${cls}" onclick="pickForwardCloserDate(event,${m.getFullYear()},${m.getMonth()},${day})">${day}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function forwardCloserCalNav(dir){
+  state.forwardCloserCalendarMonth = new Date(state.forwardCloserCalendarMonth.getFullYear(), state.forwardCloserCalendarMonth.getMonth()+dir, 1);
+  renderForwardCloserCalendar();
+}
+function pickForwardCloserDate(e,y,mo,d){
+  if(e) e.stopPropagation();
+  state.forwardCloserPickedDate = new Date(y,mo,d);
+  renderForwardCloserCalendar();
+}
+function stepForwardCloserTime(unit, delta){
+  if(unit === 'h'){
+    forwardCloserHour = (forwardCloserHour + delta + 24) % 24;
+    document.getElementById('forwardCloserHour').value = String(forwardCloserHour).padStart(2,'0');
+  } else {
+    forwardCloserMinute = (forwardCloserMinute + delta*5 + 60) % 60;
+    document.getElementById('forwardCloserMinute').value = String(forwardCloserMinute).padStart(2,'0');
+  }
+}
+function clearForwardCloserDate(){
+  state.forwardCloserPickedDate = null;
+  forwardCloserHour = 9; forwardCloserMinute = 0;
+  const h = document.getElementById('forwardCloserHour'), mi = document.getElementById('forwardCloserMinute');
+  if(h) h.value = '09';
+  if(mi) mi.value = '00';
+  renderForwardCloserCalendar();
+  const hidden = document.getElementById('forwardCloserBriefDue');
+  const label = document.getElementById('forwardCloserDueLabel');
+  if(hidden) hidden.value = '';
+  if(label) label.textContent = 'Оберіть дату';
+}
+function applyForwardCloserDate(){
+  if(!state.forwardCloserPickedDate){ closeAllDropdowns(); return; }
+  const full = fmtDate(state.forwardCloserPickedDate) + ' ' + String(forwardCloserHour).padStart(2,'0') + ':' + String(forwardCloserMinute).padStart(2,'0');
+  document.getElementById('forwardCloserBriefDue').value = full;
+  document.getElementById('forwardCloserDueLabel').textContent = full;
+  closeAllDropdowns();
+}
+renderForwardCloserCalendar();
 
 /* =========================================================
    TASKS PAGE (окрема сторінка "Завдання" — фільтри дата+менеджер,
