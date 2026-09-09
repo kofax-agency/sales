@@ -9101,9 +9101,10 @@ function closerQualBadge(l){
   if(l.qualified === false) return '<span class="status-icon" title="Не кваліфікований">❌</span>';
   return '';
 }
-// Фіксована палітра кольорів для позначки ніші на картці клоузера — колір
-// обирається детерміновано за хешем назви ніші, тож одна й та сама ніша
-// завжди отримує однаковий колір (і в різних картках, і після перезавантаження).
+// Спільна фіксована палітра кольорів для плашок на картці клоузера — колір
+// обирається детерміновано за хешем рядка (назви ніші або id менеджера),
+// тож один і той самий рядок завжди отримує однаковий колір (і в різних
+// картках, і після перезавантаження).
 const CLOSER_NICHE_PALETTE = [
   {bg:'#5B8DEF1A', text:'#5B8DEF'},
   {bg:'#1FAE6A1A', text:'#1FAE6A'},
@@ -9116,22 +9117,30 @@ const CLOSER_NICHE_PALETTE = [
   {bg:'#8E6ACC1A', text:'#8E6ACC'},
   {bg:'#C77D0A1A', text:'#C77D0A'},
 ];
-function nicheColor(niche){
-  if(!niche) return {bg:'var(--surface-2)', text:'var(--text-muted)'};
+function hashPaletteColor(str){
+  if(!str) return {bg:'var(--surface-2)', text:'var(--text-muted)'};
   let hash = 0;
-  for(let i=0;i<niche.length;i++){ hash = (hash*31 + niche.charCodeAt(i)) >>> 0; }
+  const s = String(str);
+  for(let i=0;i<s.length;i++){ hash = (hash*31 + s.charCodeAt(i)) >>> 0; }
   return CLOSER_NICHE_PALETTE[hash % CLOSER_NICHE_PALETTE.length];
 }
-// Позначка на картці клоузера: від якого менеджера передано лід + ніша,
-// одним кольоровим чіпом. Колір беремо за нішею, тож картки з однаковою
-// нішею (навіть від різних менеджерів) відразу видно за кольором.
-function closerOriginChip(c){
+// Ніша — колір за назвою ніші (однакова ніша = однаковий колір).
+function nicheColor(niche){ return hashPaletteColor(niche); }
+// Менеджер — свій закріплений колір за id менеджера (не залежить від ніші),
+// тож картки одного й того ж менеджера завжди мають один і той самий колір.
+function managerColor(managerId){ return hashPaletteColor('mgr:' + managerId); }
+// Дві окремі плашки на картці клоузера: від якого менеджера передано лід
+// (колір закріплений за менеджером) і ніша ліда (колір закріплений за нішею).
+function closerManagerChip(c){
   const mgr = USERS.find(u=>u.id===c.originManagerId);
-  const name = mgr ? mgr.name : '';
-  if(!name && !c.niche) return '';
+  if(!mgr) return '';
+  const col = managerColor(mgr.id);
+  return `<span class="badge" style="background:${col.bg};color:${col.text};" title="Передано менеджером">${mgr.name}</span>`;
+}
+function closerNicheChip(c){
+  if(!c.niche) return '';
   const col = nicheColor(c.niche);
-  const label = [name, c.niche].filter(Boolean).join(' · ');
-  return `<span class="badge" style="background:${col.bg};color:${col.text};" title="Передано від менеджера${c.niche?' · Ніша: '+c.niche:''}">${label}</span>`;
+  return `<span class="badge" style="background:${col.bg};color:${col.text};" title="Ніша">${c.niche}</span>`;
 }
 // Бриф вважається простроченим, якщо результат (кваліфікований/ні) ще не
 // визначено, а дата й час брифу вже минули — тоді картка підсвічується
@@ -9168,12 +9177,13 @@ function renderCloserBoard(){
       });
     const cardsHtml = cards.map(c => {
       const overdue = isCloserCardOverdue(c);
-      const originChip = closerOriginChip(c);
+      const managerChip = closerManagerChip(c);
+      const nicheChip = closerNicheChip(c);
       return `
       <div class="lead-card${overdue?' brief-overdue':''}" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
         <div class="lead-title">${c.name}</div>
         <div class="lead-sub">${c.company||''}</div>
-        ${originChip ? `<div style="margin-top:4px;">${originChip}</div>` : ''}
+        ${(managerChip || nicheChip) ? `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${managerChip}${nicheChip}</div>` : ''}
         <div class="lead-foot"><span class="lead-value">${c.briefDateTime ? '🕑 '+c.briefDateTime : ''}</span>${overdue?'<span class="status-icon" title="Бриф прострочено — визначте результат">⏰</span>':''}${closerQualBadge(c)}</div>
       </div>`;
     }).join('');
