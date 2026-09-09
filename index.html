@@ -3200,6 +3200,7 @@ function completeLogin(user, opts){
   document.getElementById('appRoot').classList.add('ready');
 
   if(ensurePipelineIntegrity()) fbScheduleSave();
+  if(ensureDailyReportsForManagers()) fbScheduleSave();
   renderPipelineOwnerFilterOptions();
   renderBoardPipelineOptions();
   renderManagerMultiOptions();
@@ -4020,6 +4021,52 @@ function ensureCeoCloserAccounts(){
     USERS.push({id:'vadym', name:'Вадим', role:'cto', login:'holova.vadym@kofax.agency', password:'Ceo!2026Vad'});
     changed = true;
   }
+  return changed;
+}
+// Створює порожній щоденний звіт (усі поля = 0, без коментаря) для
+// конкретного менеджера на конкретну дату, якщо такого ще немає.
+// r.autoCreated=true позначає "ще не заповнено" — знімається, щойно
+// менеджер один раз збереже цей звіт (див. saveReportDetail).
+function createEmptyDailyReport(managerId, dateObj){
+  const dateStr = dateObj.toLocaleDateString('uk-UA');
+  if(REPORTS.some(r => r.managerId === managerId && r.period === 'day' && r.date === dateStr)) return false;
+  const values = {};
+  dailyFieldsFor(managerId).forEach(f => { values[f.key] = 0; });
+  const newId = nextReportId++;
+  REPORTS.unshift({id: newId, date: dateStr, managerId, period: 'day', comment: '', niche: '', ...values, autoCreated: true});
+  return true;
+}
+// Щоденні звіти Sales-менеджерів більше не створюються вручну — система сама
+// готує порожній звіт на кожен день, а менеджер лише заповнює його (в тому
+// числі заднім числом, якщо забув учора). Якщо в менеджера вже є звіти,
+// добудовуємо прогалину від останнього наявного дня до сьогодні (обмежено
+// 30 днями назад, щоб не заспамити історію при довгій перерві); якщо
+// звітів ще не було жодного (новий акаунт) — створюємо лише сьогоднішній.
+const DAILY_REPORT_MAX_BACKFILL_DAYS = 30;
+function ensureDailyReportsForManagers(){
+  let changed = false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  USERS.filter(u => u.role === 'manager').forEach(m => {
+    const mine = REPORTS.filter(r => r.managerId === m.id && r.period === 'day');
+    if(!mine.length){
+      if(createEmptyDailyReport(m.id, today)) changed = true;
+      return;
+    }
+    const dates = mine.map(r => parseUkDate(r.date)).filter(Boolean);
+    if(!dates.length){
+      if(createEmptyDailyReport(m.id, today)) changed = true;
+      return;
+    }
+    const lastDate = new Date(Math.max.apply(null, dates));
+    lastDate.setHours(0,0,0,0);
+    const earliestAllowed = new Date(today);
+    earliestAllowed.setDate(today.getDate() - DAILY_REPORT_MAX_BACKFILL_DAYS);
+    let cursor = new Date(Math.max(lastDate.getTime() + 86400000, earliestAllowed.getTime()));
+    while(cursor <= today){
+      if(createEmptyDailyReport(m.id, cursor)) changed = true;
+      cursor = new Date(cursor.getTime() + 86400000);
+    }
+  });
   return changed;
 }
 function ensureColdBaseIntegrity(){
@@ -5021,10 +5068,16 @@ function confirmForwardToCloser(){
   if(!cp){ showAlertModal('У цього клоузера ще немає воронки. Спробуйте ще раз за хвилину.', 'Помилка'); return; }
   const me = currentUserRecord();
   const newId = nextLeadId++;
+  // Нотатки й документи з картки менеджера холодної бази переносяться разом
+  // із лідом (копія, а не спільне посилання) — щоб клоузер бачив всю
+  // попередню історію спілкування й нічого не губилось при передачі.
+  // Завдання НЕ переносяться — це власні робочі нагадування менеджера.
+  const carriedNotes = (lead.notes || []).map(n => ({...n}));
+  const carriedAttachments = (lead.attachments || []).map(a => ({...a}));
   LEADS.push({
     id:newId, name:lead.name, phone:lead.phone, email:lead.email, company:lead.company, niche:lead.niche, link:lead.link,
     stage: cp.stages[0], value:0, pipelineId: cp.id, managerId: closer.id,
-    createdAt: new Date().toLocaleDateString('uk-UA'), notes:[], tasks:[], attachments:[],
+    createdAt: new Date().toLocaleDateString('uk-UA'), notes:carriedNotes, tasks:[], attachments:carriedAttachments,
     originDealId: lead.id, originManagerId: me ? me.id : lead.managerId, briefDateTime,
     qualified: null, qualifiedExplanation: '', kpPrice: 0, kpDateTime: '',
   });
@@ -7164,14 +7217,20 @@ function renderReportsTable(){
   }
   if(thead) thead.innerHTML = `<tr><th>Дата</th><th data-roles="admin cto">Менеджер</th><th>Ніша</th><th>Звіт</th><th data-roles="cto" style="width:44px;"></th></tr>`;
   if(!rows.length){ tbody.innerHTML = '<tr><td colspan="5" class="empty-hint">Немає звітів за обраними фільтрами.</td></tr>'; return; }
-  tbody.innerHTML = rows.map(r => `
+  tbody.innerHTML = rows.map(r => {
+    const isToday = r.date === new Date().toLocaleDateString('uk-UA');
+    const reportCell = r.autoCreated
+      ? `<span class="badge ${isToday?'warn':''}" style="${isToday?'':'color:var(--danger);background:#E5484D1A;'}">${isToday?'Ще не заповнено':'⏰ Пропущено — заповніть'}</span>`
+      : r.comment;
+    return `
     <tr class="clickable" onclick="openReportView(${r.id})">
       <td>${r.date}</td>
       <td data-roles="admin cto">${managerName(r.managerId)}</td>
       <td>${r.niche || '—'}</td>
-      <td>${r.comment}</td>
+      <td>${reportCell}</td>
       <td data-roles="cto" onclick="event.stopPropagation()"><button class="danger-icon-btn" style="width:30px;height:30px;" title="Видалити звіт" onclick="deleteReport(${r.id})">${trashIconSvg()}</button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 // Клік по агрегованому рядку (тиждень/місяць) — читання-тільки перегляд
 // без id, без редагування/видалення (це не окремий збережений запис).
@@ -7329,6 +7388,15 @@ function resetRdNicheSelect(value){
 }
 function openReportCreate(){
   if(state.role === 'cto') return; // CTO лише переглядає звіти керівника відділу і менеджерів
+  // Менеджер: щоденний звіт на сьогодні вже створено автоматично
+  // (ensureDailyReportsForManagers) — відкриваємо саме його на редагування,
+  // а не плодимо дублікат.
+  if(state.role === 'manager'){
+    const me = currentUserRecord();
+    const today = new Date().toLocaleDateString('uk-UA');
+    const existing = me && REPORTS.find(r => r.managerId === me.id && r.period === 'day' && r.date === today);
+    if(existing){ openReportView(existing.id); enableReportEditing(); return; }
+  }
   state.reportMode = 'create';
   state.reportViewId = null;
   state.reportBackView = state.role === 'closer' ? 'closer-reports' : 'reports';
@@ -7426,10 +7494,19 @@ function saveReportDetail(){
   const niche = state.rdNicheValue || '';
 
   if(isEdit){
-    Object.assign(existing, values, {comment, niche});
+    // Якщо це був автоматично створений (ще не заповнений) звіт — перше
+    // збереження вважається "заповненням", а не "редагуванням": без
+    // сповіщення керівництву про факт редагування (інакше воно спрацьовувало б
+    // щодня на кожен щоденний звіт кожного менеджера).
+    const wasAutoCreated = !!existing.autoCreated;
+    Object.assign(existing, values, {comment, niche, autoCreated: false});
     renderReportsTable(); renderPartnerReportsTable(); renderCloserReports();
-    logActivity(`Відредаговано звіт за ${existing.date}`, {target:{type:'report', id:existing.id}});
-    notifyReportEdited(existing, me ? me.name : '');
+    if(wasAutoCreated){
+      logActivity(`Заповнено звіт за ${existing.date}`, {target:{type:'report', id:existing.id}});
+    } else {
+      logActivity(`Відредаговано звіт за ${existing.date}`, {target:{type:'report', id:existing.id}});
+      notifyReportEdited(existing, me ? me.name : '');
+    }
     showView(null, state.reportBackView || 'reports');
     return;
   }
@@ -9024,6 +9101,38 @@ function closerQualBadge(l){
   if(l.qualified === false) return '<span class="status-icon" title="Не кваліфікований">❌</span>';
   return '';
 }
+// Фіксована палітра кольорів для позначки ніші на картці клоузера — колір
+// обирається детерміновано за хешем назви ніші, тож одна й та сама ніша
+// завжди отримує однаковий колір (і в різних картках, і після перезавантаження).
+const CLOSER_NICHE_PALETTE = [
+  {bg:'#5B8DEF1A', text:'#5B8DEF'},
+  {bg:'#1FAE6A1A', text:'#1FAE6A'},
+  {bg:'#F5A6231A', text:'#F5A623'},
+  {bg:'#9B59B61A', text:'#9B59B6'},
+  {bg:'#17A2B81A', text:'#17A2B8'},
+  {bg:'#D6336C1A', text:'#D6336C'},
+  {bg:'#E5484D1A', text:'#E5484D'},
+  {bg:'#20A0871A', text:'#20A087'},
+  {bg:'#8E6ACC1A', text:'#8E6ACC'},
+  {bg:'#C77D0A1A', text:'#C77D0A'},
+];
+function nicheColor(niche){
+  if(!niche) return {bg:'var(--surface-2)', text:'var(--text-muted)'};
+  let hash = 0;
+  for(let i=0;i<niche.length;i++){ hash = (hash*31 + niche.charCodeAt(i)) >>> 0; }
+  return CLOSER_NICHE_PALETTE[hash % CLOSER_NICHE_PALETTE.length];
+}
+// Позначка на картці клоузера: від якого менеджера передано лід + ніша,
+// одним кольоровим чіпом. Колір беремо за нішею, тож картки з однаковою
+// нішею (навіть від різних менеджерів) відразу видно за кольором.
+function closerOriginChip(c){
+  const mgr = USERS.find(u=>u.id===c.originManagerId);
+  const name = mgr ? mgr.name : '';
+  if(!name && !c.niche) return '';
+  const col = nicheColor(c.niche);
+  const label = [name, c.niche].filter(Boolean).join(' · ');
+  return `<span class="badge" style="background:${col.bg};color:${col.text};" title="Передано від менеджера${c.niche?' · Ніша: '+c.niche:''}">${label}</span>`;
+}
 // Бриф вважається простроченим, якщо результат (кваліфікований/ні) ще не
 // визначено, а дата й час брифу вже минули — тоді картка підсвічується
 // червоним, щоб клоузер не забув проставити результат.
@@ -9048,13 +9157,23 @@ function renderCloserBoard(){
   if(!editorOpen) board.style.display = '';
   if(hint) hint.style.display = 'none';
   board.innerHTML = cp.stages.map(stage => {
-    const cards = LEADS.filter(l => l.stage === stage && l.managerId === cp.ownerId && l.pipelineId === cp.id);
+    const cards = LEADS.filter(l => l.stage === stage && l.managerId === cp.ownerId && l.pipelineId === cp.id)
+      .sort((a,b) => {
+        const da = parseUkDateTime(a.briefDateTime);
+        const db = parseUkDateTime(b.briefDateTime);
+        if(!da && !db) return 0;
+        if(!da) return 1;
+        if(!db) return -1;
+        return da - db;
+      });
     const cardsHtml = cards.map(c => {
       const overdue = isCloserCardOverdue(c);
+      const originChip = closerOriginChip(c);
       return `
       <div class="lead-card${overdue?' brief-overdue':''}" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
         <div class="lead-title">${c.name}</div>
         <div class="lead-sub">${c.company||''}</div>
+        ${originChip ? `<div style="margin-top:4px;">${originChip}</div>` : ''}
         <div class="lead-foot"><span class="lead-value">${c.briefDateTime ? '🕑 '+c.briefDateTime : ''}</span>${overdue?'<span class="status-icon" title="Бриф прострочено — визначте результат">⏰</span>':''}${closerQualBadge(c)}</div>
       </div>`;
     }).join('');
@@ -9946,6 +10065,10 @@ function fbApplyRemoteData(data){
     // Одноразова міграція посад СЕО (Вадим)/Клоузер (Остап) — див.
     // ensureCeoCloserAccounts(). Спрацює один раз і збереже результат.
     if(ensureCeoCloserAccounts()) needsRepairSave = true;
+    // Автостворення порожніх щоденних звітів Sales-менеджерів (див.
+    // ensureDailyReportsForManagers()) — щоб їх завжди було що заповнити,
+    // навіть за пропущені дні.
+    if(ensureDailyReportsForManagers()) needsRepairSave = true;
 
     if(state.userId){
       renderBoard();
