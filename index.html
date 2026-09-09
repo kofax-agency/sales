@@ -2958,6 +2958,15 @@ let NOTIFICATIONS = [];
 // створює push-сповіщення для того, хто виконав дію.
 let HISTORY = [];
 
+// Перший день ПОТОЧНОГО місяця — використовується як стартовий місяць для
+// всіх кастомних календарів (дедлайн завдання, зустріч, бриф клоузеру, дата
+// брифу/КП на картці ліда), щоб при відкритті вони завжди показували
+// актуальний місяць, а не якусь застарілу дату.
+function currentMonthStart(){
+  const n = new Date();
+  return new Date(n.getFullYear(), n.getMonth(), 1);
+}
+
 const state = {
   role: 'cto',
   userId: null,
@@ -2970,15 +2979,15 @@ const state = {
   // список власників ('admin' і/або id менеджерів), чиї воронки показувати.
   pipelineOwnerFilter: [],
   currentPipelineId: 'default',
-  dueCalendarMonth: new Date(2026,6,1),
+  dueCalendarMonth: currentMonthStart(),
   duePickedDate: null,
-  meetingCalendarMonth: new Date(2026,6,1),
+  meetingCalendarMonth: currentMonthStart(),
   meetingPickedDate: null,
-  forwardCloserCalendarMonth: new Date(2026,6,1),
+  forwardCloserCalendarMonth: currentMonthStart(),
   forwardCloserPickedDate: null,
-  dealBriefCalendarMonth: new Date(2026,6,1),
+  dealBriefCalendarMonth: currentMonthStart(),
   dealBriefPickedDate: null,
-  dealKpCalendarMonth: new Date(2026,6,1),
+  dealKpCalendarMonth: currentMonthStart(),
   dealKpPickedDate: null,
   dealPanelTab: 'info',
   editingDealTaskIdx: null,
@@ -2988,7 +2997,7 @@ const state = {
   clientManagerFilter: [],
   clientPipelineFilter: [],
   dateRange: {start:null, end:null},
-  calendarMonth: new Date(2026,6,1),
+  calendarMonth: currentMonthStart(),
   currentDealId: null,
   currentClientId: null,
   editingManagerId: null,
@@ -2997,13 +3006,13 @@ const state = {
   reportViewId: null,
   coldBaseViewId: null,
   taskDateRange: {start:null, end:null},
-  taskCalendarMonth: new Date(2026,6,1),
+  taskCalendarMonth: currentMonthStart(),
   taskManagerFilter: [],
   tasksTab: 'active',
   partnerTasksTab: 'active',
   closerTasksTab: 'active',
   reportDateRange: {start:null, end:null},
-  reportCalendarMonth: new Date(2026,6,1),
+  reportCalendarMonth: currentMonthStart(),
   reportManagerFilter: [],
   reportNicheFilter: [],
   reportsPeriodTab: 'day',
@@ -6459,7 +6468,7 @@ function pickDate(e,y,mo,d){
   }
   renderCalendar();
 }
-function clearRange(){ state.dateRange = {start:null, end:null}; renderCalendar(); document.getElementById('dateRangeLabel').textContent = 'Оберіть період'; }
+function clearRange(){ state.dateRange = {start:null, end:null}; state.calendarMonth = currentMonthStart(); renderCalendar(); document.getElementById('dateRangeLabel').textContent = 'Оберіть період'; }
 function applyRange(){
   const label = document.getElementById('dateRangeLabel');
   if(state.dateRange.start && state.dateRange.end){
@@ -6520,6 +6529,7 @@ function stepDueTime(unit, delta){
 }
 function clearDueDate(){
   state.duePickedDate = null;
+  state.dueCalendarMonth = currentMonthStart();
   dueHour = 9; dueMinute = 0;
   const h = document.getElementById('dueHour'), mi = document.getElementById('dueMinute');
   if(h) h.value = '09';
@@ -6584,6 +6594,7 @@ function stepMeetingTime(unit, delta){
 }
 function clearMeetingDate(){
   state.meetingPickedDate = null;
+  state.meetingCalendarMonth = currentMonthStart();
   meetingHour = 9; meetingMinute = 0;
   const h = document.getElementById('meetingHour'), mi = document.getElementById('meetingMinute');
   if(h) h.value = '09';
@@ -6650,6 +6661,7 @@ function stepForwardCloserTime(unit, delta){
 }
 function clearForwardCloserDate(){
   state.forwardCloserPickedDate = null;
+  state.forwardCloserCalendarMonth = currentMonthStart();
   forwardCloserHour = 9; forwardCloserMinute = 0;
   const h = document.getElementById('forwardCloserHour'), mi = document.getElementById('forwardCloserMinute');
   if(h) h.value = '09';
@@ -6716,6 +6728,7 @@ function stepDealBriefTime(unit, delta){
 }
 function clearDealBriefDate(){
   state.dealBriefPickedDate = null;
+  state.dealBriefCalendarMonth = currentMonthStart();
   dealBriefHour = 9; dealBriefMinute = 0;
   const h = document.getElementById('dealBriefHour'), mi = document.getElementById('dealBriefMinute');
   if(h) h.value = '09';
@@ -6747,6 +6760,7 @@ function setDealBriefCalendarValue(raw){
     document.getElementById('dealBriefDueLabel').textContent = raw;
   } else {
     state.dealBriefPickedDate = null;
+    state.dealBriefCalendarMonth = currentMonthStart();
     dealBriefHour = 9; dealBriefMinute = 0;
     document.getElementById('dealBriefHour').value = '09';
     document.getElementById('dealBriefMinute').value = '00';
@@ -6801,6 +6815,7 @@ function stepDealKpTime(unit, delta){
 }
 function clearDealKpDate(){
   state.dealKpPickedDate = null;
+  state.dealKpCalendarMonth = currentMonthStart();
   dealKpHour = 9; dealKpMinute = 0;
   const h = document.getElementById('dealKpHour'), mi = document.getElementById('dealKpMinute');
   if(h) h.value = '09';
@@ -6832,6 +6847,7 @@ function setDealKpCalendarValue(raw){
     document.getElementById('dealKpDueLabel').textContent = raw;
   } else {
     state.dealKpPickedDate = null;
+    state.dealKpCalendarMonth = currentMonthStart();
     dealKpHour = 9; dealKpMinute = 0;
     document.getElementById('dealKpHour').value = '09';
     document.getElementById('dealKpMinute').value = '00';
@@ -6909,7 +6925,7 @@ function pickTaskDate(e,y,mo,d){
   }
   renderTaskCalendar();
 }
-function clearTaskRange(){ state.taskDateRange = {start:null, end:null}; renderTaskCalendar(); document.getElementById('taskDateRangeLabel').textContent = 'Оберіть період'; renderTasksTable(); renderPartnerTasksTable(); }
+function clearTaskRange(){ state.taskDateRange = {start:null, end:null}; state.taskCalendarMonth = currentMonthStart(); renderTaskCalendar(); document.getElementById('taskDateRangeLabel').textContent = 'Оберіть період'; renderTasksTable(); renderPartnerTasksTable(); }
 function applyTaskRange(){
   const label = document.getElementById('taskDateRangeLabel');
   if(state.taskDateRange.start && state.taskDateRange.end){
@@ -7132,7 +7148,7 @@ function pickReportDate(e,y,mo,d){
   }
   renderReportCalendar();
 }
-function clearReportRange(){ state.reportDateRange = {start:null, end:null}; renderReportCalendar(); document.getElementById('reportDateRangeLabel').textContent = 'Оберіть період'; renderReportsTable(); renderPartnerReportsTable(); }
+function clearReportRange(){ state.reportDateRange = {start:null, end:null}; state.reportCalendarMonth = currentMonthStart(); renderReportCalendar(); document.getElementById('reportDateRangeLabel').textContent = 'Оберіть період'; renderReportsTable(); renderPartnerReportsTable(); }
 function applyReportRange(){
   const label = document.getElementById('reportDateRangeLabel');
   if(state.reportDateRange.start && state.reportDateRange.end){
