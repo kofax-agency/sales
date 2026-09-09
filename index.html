@@ -986,6 +986,27 @@
             <div class="card stat-card"><div class="stat-label">Угод у воронці</div><div class="stat-value" id="partnerStatDeals">0</div></div>
           </div>
         </div>
+        <div data-roles="closer">
+          <div class="grid-3" style="margin-bottom:16px;">
+            <div class="card stat-card"><div class="stat-label">Лідів у роботі</div><div class="stat-value" id="closerStatActiveLeads">0</div></div>
+            <div class="card stat-card"><div class="stat-label">Брифів сьогодні</div><div class="stat-value" id="closerStatBriefsToday">0</div><div class="stat-sub" id="closerStatBriefsOverdue" style="color:var(--text-muted);">прострочених немає</div></div>
+            <div class="card stat-card"><div class="stat-label">Успішно закрито</div><div class="stat-value" id="closerStatClosedWon">0</div><div class="stat-sub" id="closerStatClosedSum" style="color:var(--text-muted);">на суму КП $0</div></div>
+          </div>
+          <div class="grid-3">
+            <div class="card widget">
+              <div class="section-title">Найближчі брифи</div>
+              <div id="closerDashboardBriefs" class="widget-scroll"></div>
+            </div>
+            <div class="card widget">
+              <div class="section-title">Прострочені брифи</div>
+              <div id="closerDashboardOverdue" class="widget-scroll"></div>
+            </div>
+            <div class="card widget">
+              <div class="section-title">Push-сповіщення</div>
+              <div id="closerDashboardNotifs" class="widget-scroll"></div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- ============ PIPELINE ============ -->
@@ -3206,6 +3227,7 @@ function completeLogin(user, opts){
   renderDashboardTasks();
   renderDashboardCalls();
   renderDashboardStats();
+  renderCloserDashboard();
   renderAccountView();
   renderReminderBanner();
   scheduleAllUpcomingMeetings();
@@ -3440,6 +3462,7 @@ function showView(e, name){
   if(name === 'specialists') renderSpecialistsTable();
   if(name === 'dashboard' && (state.role === 'hr' || state.role === 'teamlead')) renderHrDashboard();
   if(name === 'dashboard' && state.role === 'partner') renderPartnerDashboard();
+  if(name === 'dashboard' && state.role === 'closer') renderCloserDashboard();
   if(name === 'partners') renderPartnersTable();
   if(name === 'partner-pipeline') renderPartnerBoard();
   if(name === 'closer-pipeline') renderCloserBoard();
@@ -3657,9 +3680,13 @@ function markAllNotifRead(){
   fbScheduleSave();
 }
 function renderDashboardNotifs(){
-  const el = document.getElementById('dashboardNotifs');
-  if(!el) return;
-  el.innerHTML = visibleNotifications().map(n => `<div class="notif-item" style="cursor:pointer;" onclick="handleNotifClick(${n.id})">🔔 <span class="row-click">${n.text}</span> ${n.read?'':'<span class="badge warn">нове</span>'}</div>`).join('');
+  const items = visibleNotifications().map(n => `<div class="notif-item" style="cursor:pointer;" onclick="handleNotifClick(${n.id})">🔔 <span class="row-click">${n.text}</span> ${n.read?'':'<span class="badge warn">нове</span>'}</div>`).join('');
+  // Клоузерський дашборд має власний контейнер для сповіщень (окремий id,
+  // щоб не дублювати id="dashboardNotifs" у DOM) — заповнюємо обидва, якщо є.
+  ['dashboardNotifs','closerDashboardNotifs'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = items;
+  });
 }
 
 /* =========================================================
@@ -8904,6 +8931,72 @@ function renderPartnerDashboard(){
 }
 
 /* =========================================================
+   CLOSER: ГОЛОВНА (дашборд) — інтерактивні картки й списки замість
+   порожньої сторінки: активні ліди, брифи на сьогодні/прострочені,
+   найближчі брифи (клікабельно відкривають картку), сповіщення.
+   ========================================================= */
+const CLOSER_TERMINAL_STAGES = ['Успішно закрито','Мінус після брифу','Мінус після КП'];
+function closerDashboardLeads(){
+  let rows = LEADS.filter(l => isCloserUserId(l.managerId));
+  if(state.role === 'closer') rows = rows.filter(l=>l.managerId===state.managerId);
+  return rows;
+}
+function renderCloserDashboard(){
+  const activeEl = document.getElementById('closerStatActiveLeads');
+  if(!activeEl) return;
+  const rows = closerDashboardLeads();
+
+  const active = rows.filter(l=>!CLOSER_TERMINAL_STAGES.includes(l.stage));
+  activeEl.textContent = active.length;
+
+  const dayStart = new Date(); dayStart.setHours(0,0,0,0);
+  const dayEnd = new Date(dayStart); dayEnd.setDate(dayStart.getDate()+1);
+  const briefsToday = rows.filter(l=>{
+    const dt = parseUkDateTime(l.briefDateTime);
+    return dt && dt >= dayStart && dt < dayEnd;
+  });
+  document.getElementById('closerStatBriefsToday').textContent = briefsToday.length;
+  const overdueRows = rows.filter(isCloserCardOverdue);
+  const overdueStatEl = document.getElementById('closerStatBriefsOverdue');
+  overdueStatEl.textContent = overdueRows.length ? `${overdueRows.length} прострочено` : 'прострочених немає';
+  overdueStatEl.style.color = overdueRows.length ? 'var(--danger)' : 'var(--text-muted)';
+
+  const closedWon = rows.filter(l=>l.stage === 'Успішно закрито');
+  document.getElementById('closerStatClosedWon').textContent = closedWon.length;
+  const closedSum = closedWon.reduce((s,l)=>s+Number(l.kpPrice||0),0);
+  document.getElementById('closerStatClosedSum').textContent = `на суму КП $${closedSum.toLocaleString('en-US')}`;
+
+  // Найближчі брифи — ще без результату, заплановані на зараз/майбутнє,
+  // найближчий часом — першим.
+  const upcoming = rows
+    .filter(l => l.qualified !== true && l.qualified !== false)
+    .map(l => ({l, dt: parseUkDateTime(l.briefDateTime)}))
+    .filter(x => x.dt && x.dt >= new Date())
+    .sort((a,b) => a.dt - b.dt)
+    .slice(0,6);
+  const briefsEl = document.getElementById('closerDashboardBriefs');
+  if(briefsEl){
+    briefsEl.innerHTML = upcoming.length ? upcoming.map(x => `
+      <div class="call-item">
+        <span class="row-click" onclick="openClientCard(${x.l.id})">🕑 ${x.l.name}${x.l.company?' · '+x.l.company:''}</span>
+        ${dtChip(x.l.briefDateTime)}
+      </div>`).join('') : '<div class="empty-hint">Немає запланованих брифів.</div>';
+  }
+
+  const overdueEl = document.getElementById('closerDashboardOverdue');
+  if(overdueEl){
+    const overdueList = overdueRows.slice(0,6);
+    overdueEl.innerHTML = overdueList.length ? overdueList.map(l => `
+      <div class="call-item">
+        <span class="row-click" onclick="openClientCard(${l.id})">⏰ ${l.name}${l.company?' · '+l.company:''}</span>
+        ${dtChip(l.briefDateTime)}
+      </div>`).join('') : '<div class="empty-hint">Прострочених брифів немає.</div>';
+  }
+
+  renderDashboardNotifs();
+}
+
+/* =========================================================
    CLOSER: ВОРОНКА (повністю окрема від Sales і Partnership)
    ========================================================= */
 let currentCloserPipelineId = null;
@@ -9887,6 +9980,7 @@ function fbApplyRemoteData(data){
       renderPartnersTable();
       renderPartnerDashboard();
       renderPartnerBoard();
+      renderCloserDashboard();
       scheduleAllUpcomingMeetings();
       updateHeaderAvatars();
       updateAccountSwitchUI();
