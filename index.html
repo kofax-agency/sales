@@ -9219,20 +9219,24 @@ function renderCloserBoard(){
       const overdue = isCloserCardOverdue(c);
       const managerChip = closerManagerChip(c);
       const nicheChip = closerNicheChip(c);
-      // На етапі "Призначено КП" картка показує дату КП замість дати брифу
-      // (або підказку "Встановити дату", якщо КП ще не призначено). На всіх
-      // інших етапах (в т.ч. якщо картку повернули назад у "Призначено
-      // бриф") показ автоматично повертається до дати брифу.
-      const isKpStage = stage === 'Призначено КП';
+      // Картка показує дату КП замість дати брифу на будь-якому етапі, КРІМ
+      // першого (cp.stages[0] — саме туди завжди потрапляє щойно переданий
+      // лід, див. confirmForwardToCloser). Прив'язка до "не першого етапу",
+      // а не до конкретної НАЗВИ стовпця — щоб перейменування/редагування
+      // етапів у воронці (стаж-редактор) не ламало цю логіку. Повернення
+      // картки назад у перший етап автоматично повертає показ дати брифу.
+      const isKpStage = stage !== cp.stages[0];
       const dateHtml = isKpStage
-        ? (c.kpDateTime ? '🕑 '+c.kpDateTime : '<span style="color:var(--text-muted);">Встановити дату</span>')
-        : (c.briefDateTime ? '🕑 '+c.briefDateTime : '');
+        ? (c.kpDateTime
+            ? `<span class="lead-value" style="background:#1FAE6A1A;color:var(--success);padding:2px 8px;border-radius:999px;">🕑 ${c.kpDateTime}</span>`
+            : `<span class="lead-value" style="color:var(--text-muted);">Встановити дату</span>`)
+        : `<span class="lead-value">${c.briefDateTime ? '🕑 '+c.briefDateTime : ''}</span>`;
       return `
       <div class="lead-card${overdue?' brief-overdue':''}" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
         <div class="lead-title">${c.name}</div>
         <div class="lead-sub">${c.company||''}</div>
         ${(managerChip || nicheChip) ? `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${managerChip}${nicheChip}</div>` : ''}
-        <div class="lead-foot"><span class="lead-value">${dateHtml}</span>${overdue?'<span class="status-icon" title="Бриф прострочено — визначте результат">⏰</span>':''}${closerQualBadge(c)}</div>
+        <div class="lead-foot">${dateHtml}${overdue?'<span class="status-icon" title="Бриф прострочено — визначте результат">⏰</span>':''}${closerQualBadge(c)}</div>
       </div>`;
     }).join('');
     return `
