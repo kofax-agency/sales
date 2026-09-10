@@ -4894,11 +4894,35 @@ function saveDeal(){
       const briefDateTime = briefDateTimeEl ? briefDateTimeEl.value : l.briefDateTime;
       const resultChanged = l.qualified !== qualified || l.qualifiedExplanation !== explanation;
       const briefMoved = briefDateTime && l.briefDateTime && briefDateTime !== l.briefDateTime;
+      const previousKpDateTime = l.kpDateTime;
       l.qualified = qualified;
       l.qualifiedExplanation = explanation;
       l.kpPrice = kpPrice;
       l.kpDateTime = kpDateTime;
       l.briefDateTime = briefDateTime;
+      // Автоматичне завдання "Створити комерційну пропозицію" — дедлайн
+      // завжди синхронізований з датою й часом проведення КП. Перше
+      // призначення дати КП створює завдання клоузеру; будь-яка наступна
+      // зміна дати лише оновлює дедлайн того самого завдання (без дублікатів,
+      // прив'язка через l.kpTaskId).
+      if(kpDateTime && kpDateTime !== previousKpDateTime){
+        const kpTaskTitle = `Створити комерційну пропозицію - "${l.name}"`;
+        const existingKpTask = l.kpTaskId != null ? TASKS.find(t=>t.id===l.kpTaskId) : null;
+        if(existingKpTask){
+          existingKpTask.due = kpDateTime;
+          const localKpTask = l.tasks.find(t=>t.id===existingKpTask.id);
+          if(localKpTask) localKpTask.due = kpDateTime;
+        } else {
+          const kpTaskId = Date.now()+Math.random();
+          const kpTask = {id:kpTaskId, title:kpTaskTitle, due:kpDateTime, done:false};
+          l.tasks.push(kpTask);
+          TASKS.unshift({...kpTask, leadId:l.id, leadName:l.name, managerId:l.managerId});
+          l.kpTaskId = kpTaskId;
+        }
+        renderDealTasks(l);
+        renderDashboardTasks();
+        renderTasksTable(); renderPartnerTasksTable(); renderCloserTasksTable();
+      }
       if(l.originDealId != null){
         const origin = LEADS.find(o=>o.id===l.originDealId);
         if(origin){
@@ -9195,12 +9219,20 @@ function renderCloserBoard(){
       const overdue = isCloserCardOverdue(c);
       const managerChip = closerManagerChip(c);
       const nicheChip = closerNicheChip(c);
+      // На етапі "Призначено КП" картка показує дату КП замість дати брифу
+      // (або підказку "Встановити дату", якщо КП ще не призначено). На всіх
+      // інших етапах (в т.ч. якщо картку повернули назад у "Призначено
+      // бриф") показ автоматично повертається до дати брифу.
+      const isKpStage = stage === 'Призначено КП';
+      const dateHtml = isKpStage
+        ? (c.kpDateTime ? '🕑 '+c.kpDateTime : '<span style="color:var(--text-muted);">Встановити дату</span>')
+        : (c.briefDateTime ? '🕑 '+c.briefDateTime : '');
       return `
       <div class="lead-card${overdue?' brief-overdue':''}" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
         <div class="lead-title">${c.name}</div>
         <div class="lead-sub">${c.company||''}</div>
         ${(managerChip || nicheChip) ? `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${managerChip}${nicheChip}</div>` : ''}
-        <div class="lead-foot"><span class="lead-value">${c.briefDateTime ? '🕑 '+c.briefDateTime : ''}</span>${overdue?'<span class="status-icon" title="Бриф прострочено — визначте результат">⏰</span>':''}${closerQualBadge(c)}</div>
+        <div class="lead-foot"><span class="lead-value">${dateHtml}</span>${overdue?'<span class="status-icon" title="Бриф прострочено — визначте результат">⏰</span>':''}${closerQualBadge(c)}</div>
       </div>`;
     }).join('');
     return `
