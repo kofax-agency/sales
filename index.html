@@ -2673,13 +2673,15 @@ const PARTNER_MONTHLY_FIELDS = [
   {key:'meetingsHeld', label:'Зустрічей відбулось'},
   {key:'qualifiedBriefs', label:'Укладено партнерств'},
 ];
-const PARTNER_WEEKLY_AUTO_FIELDS = [
+// Партнерство заповнює тижневий звіт повністю вручну — жодних авто-сум із
+// щоденних звітів, лише розрахункові % (PARTNER_WEEKLY_CALC_FIELDS) лишаються
+// автоматичними.
+const PARTNER_WEEKLY_AUTO_FIELDS = [];
+const PARTNER_WEEKLY_MANUAL_FIELDS = [
   {key:'calls', label:'Звернень / тиждень'},
   {key:'talks', label:'Розмов'},
   {key:'reachLPR', label:'Вихід на ЛПР партнера'},
   {key:'meetings', label:'Зустрічей призначено'},
-];
-const PARTNER_WEEKLY_MANUAL_FIELDS = [
   {key:'meetingsHeld', label:'Зустрічей відбулось'},
   {key:'qualifiedBriefs', label:'Укладено партнерств'},
 ];
@@ -2862,18 +2864,25 @@ function renderWeeklyFields(managerId, prefillRecord){
   manualFields.forEach(f => { manualVals[f.key] = prefillRecord ? Number(prefillRecord[f.key]||0) : 0; });
   const calcInput = {...auto, ...manualVals};
 
-  let html = '<div class="report-field-group-title">Автоматично за тиждень</div>';
-  autoFields.forEach(f => {
-    html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}</span><span class="report-field-value">${auto[f.key]}</span></div>`;
-  });
-  html += '<div class="report-field-group-title">Розрахункові показники</div>';
-  calcFields.forEach(f => {
-    html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}<span class="report-field-sub">· ${f.sub}</span></span><span class="report-field-value" id="rdcalc_${f.key}">${f.calc(calcInput)}%</span></div>`;
-  });
+  // Порядок секцій: спершу авто-суми (якщо є, як у Sales/Closer), потім
+  // ручні поля (якщо є, як у Partnership — щоб їх заповнили ДО того, як
+  // побачать розраховані з них %), і насамкінець завжди розрахункові
+  // показники.
+  let html = '';
+  if(autoFields.length){
+    html += '<div class="report-field-group-title">Автоматично за тиждень</div>';
+    autoFields.forEach(f => {
+      html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}</span><span class="report-field-value">${auto[f.key]}</span></div>`;
+    });
+  }
   if(manualFields.length){
     html += '<div class="report-field-group-title">Вручну</div>';
     manualFields.forEach(f => { html += reportInputRow(f.key, f.label, manualVals[f.key]); });
   }
+  html += '<div class="report-field-group-title">Розрахункові показники</div>';
+  calcFields.forEach(f => {
+    html += `<div class="report-field-row readonly"><span class="report-metric-label">${f.label}<span class="report-field-sub">· ${f.sub}</span></span><span class="report-field-value" id="rdcalc_${f.key}">${f.calc(calcInput)}%</span></div>`;
+  });
   grid.innerHTML = html;
 }
 // Живий перерахунок % при зміні ручних тижневих полів (лишається для
