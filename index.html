@@ -2147,6 +2147,40 @@
             <input type="hidden" id="dealKpDateTime">
           </div>
         </div>
+        <div class="field-row" style="align-items:flex-end;">
+          <div class="field"><label>Посилання на КП (Figma / структура сайту)</label><input id="dealKpLink" type="text" placeholder="https://..."></div>
+          <div class="field" style="max-width:180px;flex:none;">
+            <label>Дата відправки КП</label>
+            <div class="cselect" id="dealKpSentAtSelect">
+              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="dealKpSentAtLabel">Оберіть дату</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              </button>
+              <div class="calendar-popover">
+                <div class="cal-head"><button type="button" onclick="dealKpSentAtCalNav(-1)">‹</button><span id="dealKpSentAtCalMonthLabel"></span><button type="button" onclick="dealKpSentAtCalNav(1)">›</button></div>
+                <div class="cal-grid" id="dealKpSentAtCalGrid"></div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:10px 0;">
+                  <div class="stepper"><button type="button" onclick="stepDealKpSentAtTime('h',-1)">−</button><input id="dealKpSentAtHour" type="text" value="09" readonly><button type="button" onclick="stepDealKpSentAtTime('h',1)">+</button></div>
+                  <span style="font-weight:800;">:</span>
+                  <div class="stepper"><button type="button" onclick="stepDealKpSentAtTime('m',-1)">−</button><input id="dealKpSentAtMinute" type="text" value="00" readonly><button type="button" onclick="stepDealKpSentAtTime('m',1)">+</button></div>
+                </div>
+                <div class="cal-foot"><button class="btn secondary small" type="button" onclick="clearDealKpSentAtDate()">Скинути</button><button class="btn small" type="button" onclick="applyDealKpSentAtDate()">Застосувати</button></div>
+              </div>
+            </div>
+            <input type="hidden" id="dealKpSentAt">
+          </div>
+          <div class="field" style="flex:none;"><button class="btn small" type="button" onclick="saveDealKpLink()">Зберегти</button></div>
+        </div>
+        <div id="dealKpLinkDisplay" style="margin-top:6px;"></div>
+        <div id="dealDecisionWaitSection" style="display:none;margin-top:16px;">
+          <div class="section-title" style="font-size:13px;">Очікування рішення — автопінг</div>
+          <div id="dealDecisionWaitInfo" style="font-size:13px;color:var(--text-muted);margin-bottom:6px;"></div>
+          <div class="field">
+            <label>Чернетка нагадування клієнту</label>
+            <textarea id="dealDecisionWaitDraft" readonly style="min-height:80px;"></textarea>
+          </div>
+          <button class="btn secondary small" type="button" onclick="copyDecisionWaitDraft(event)">Скопіювати</button>
+        </div>
       </div>
     </div>
     <div class="panel-tab-pane js-hidden" data-tab-pane="notes">
@@ -2998,6 +3032,8 @@ const state = {
   dealBriefPickedDate: null,
   dealKpCalendarMonth: currentMonthStart(),
   dealKpPickedDate: null,
+  dealKpSentAtCalendarMonth: currentMonthStart(),
+  dealKpSentAtPickedDate: null,
   dealPanelTab: 'info',
   editingDealTaskIdx: null,
   editingDealMeetingId: null,
@@ -3219,6 +3255,8 @@ function completeLogin(user, opts){
 
   if(ensurePipelineIntegrity()) fbScheduleSave();
   if(ensureDailyReportsForManagers()) fbScheduleSave();
+  if(ensureKpLinkFields()) fbScheduleSave();
+  if(ensureDecisionWaitFields()) fbScheduleSave();
   renderPipelineOwnerFilterOptions();
   renderBoardPipelineOptions();
   renderManagerMultiOptions();
@@ -3250,6 +3288,7 @@ function completeLogin(user, opts){
   renderAccountView();
   renderReminderBanner();
   scheduleAllUpcomingMeetings();
+  startDecisionWaitWatcher();
   updateAccountSwitchUI();
   // Відновлюємо сторінку, на якій користувач був до оновлення (F5), замість
   // того, щоб завжди кидати на дашборд. 'report-detail' пропускаємо — вона
@@ -3787,6 +3826,7 @@ async function toggleTaskDone(idx, checked){
     t.done = true;
     let m = findLeadTaskMatch(t);
     if(m){ m.lead.tasks[m.idx].done = true; if(state.currentDealId === m.lead.id) renderDealTasks(m.lead); }
+    maybeStopDecisionWaitOnTaskDone(t.id, true);
     logActivity(`Виконано завдання "${t.title}" (${t.leadName})`, {target:{type:'task', leadId:t.leadId, tab:'done'}});
     renderDashboardTasks();
     renderTasksTable(); renderPartnerTasksTable();
@@ -4083,6 +4123,20 @@ function ensureDailyReportsForManagers(){
     while(cursor <= today){
       if(createEmptyDailyReport(m.id, cursor)) changed = true;
       cursor = new Date(cursor.getTime() + 86400000);
+    }
+  });
+  return changed;
+}
+// Одноразова міграція: додає порожні поля посилання на КП (kpLink) і дати
+// відправки КП (kpSentAt) усім лідам клоузера, створеним ДО появи цієї фічі —
+// щоб їх можна було безпечно читати/показувати без перевірки на undefined.
+// Нічого не видаляє й не змінює в наявних даних, лише додає відсутні поля.
+function ensureKpLinkFields(){
+  let changed = false;
+  LEADS.forEach(l => {
+    if(isCloserUserId(l.managerId)){
+      if(l.kpLink === undefined){ l.kpLink = ''; changed = true; }
+      if(l.kpSentAt === undefined){ l.kpSentAt = ''; changed = true; }
     }
   });
   return changed;
@@ -4591,6 +4645,7 @@ function toggleDealTaskDone(leadId, idx){
   t.done = !t.done;
   const gt = t.id ? TASKS.find(x=>x.id===t.id) : TASKS.find(x=>x.leadId===l.id && x.title===t.title && x.due===t.due);
   if(gt) gt.done = t.done;
+  if(t.id) maybeStopDecisionWaitOnTaskDone(t.id, t.done);
   renderDealTasks(l);
   renderDashboardTasks();
   renderTasksTable(); renderPartnerTasksTable();
@@ -5121,7 +5176,8 @@ function confirmForwardToCloser(){
     stage: cp.stages[0], value:0, pipelineId: cp.id, managerId: closer.id,
     createdAt: new Date().toLocaleDateString('uk-UA'), notes:carriedNotes, tasks:[], attachments:carriedAttachments,
     originDealId: lead.id, originManagerId: me ? me.id : lead.managerId, briefDateTime,
-    qualified: null, qualifiedExplanation: '', kpPrice: 0, kpDateTime: '',
+    qualified: null, qualifiedExplanation: '', kpPrice: 0, kpDateTime: '', kpLink: '', kpSentAt: '',
+    decisionWaitEnteredAt: '', decisionWaitFromStage: '', decisionWaitActive: false, decisionWaitTaskId: null, decisionWaitStepIndex: 0, decisionWaitDraft: '',
   });
   lead.closerId = closer.id;
   lead.closerLeadId = newId;
@@ -5177,7 +5233,77 @@ function updateDealPanelCloserSections(l){
     document.getElementById('dealQualifiedExplanation').value = l.qualifiedExplanation || '';
     document.getElementById('dealKpPrice').value = l.kpPrice ? Number(l.kpPrice).toLocaleString('en-US') : '';
     setDealKpCalendarValue(l.kpDateTime || '');
+    document.getElementById('dealKpLink').value = l.kpLink || '';
+    setDealKpSentAtCalendarValue(l.kpSentAt || '');
+    renderDealKpLinkDisplay(l);
+    renderDealDecisionWaitSection(l);
   }
+}
+// Показує (лише поки лід має активну/минулу історію автопінгу) блок з
+// кількістю днів у стадії "Очікування рішення" й останньою чернеткою
+// нагадування + кнопкою "Скопіювати". Ланцюжок керується автоматично —
+// тут лише відображення, без ручного редагування дедлайнів.
+function renderDealDecisionWaitSection(l){
+  const section = document.getElementById('dealDecisionWaitSection');
+  const info = document.getElementById('dealDecisionWaitInfo');
+  const draft = document.getElementById('dealDecisionWaitDraft');
+  if(!section || !info || !draft) return;
+  if(!l.decisionWaitEnteredAt){
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+  const entered = parseUkDateTime(l.decisionWaitEnteredAt);
+  const days = entered ? Math.max(0, Math.floor((Date.now() - entered.getTime()) / 86400000)) : 0;
+  const task = l.decisionWaitTaskId != null ? TASKS.find(t=>t.id===l.decisionWaitTaskId) : null;
+  let statusText;
+  if(!l.decisionWaitActive){
+    statusText = 'Ланцюжок нагадувань зупинено (задачу виконано або лід покинув етап).';
+  } else if(task && !task.done){
+    statusText = `Активний ланцюжок — наступний пінг заплановано на ${task.due}.`;
+  } else {
+    statusText = 'Активний ланцюжок.';
+  }
+  info.textContent = `У стадії "Очікування рішення" вже ${days} дн. (з ${l.decisionWaitEnteredAt}). ${statusText}`;
+  draft.value = l.decisionWaitDraft || '';
+}
+// Копіює чернетку автопінгу в буфер обміну (через спільну утиліту
+// copyCellToClipboard — та сама іконка-підказка, що й для інших полів).
+function copyDecisionWaitDraft(e){
+  const el = document.getElementById('dealDecisionWaitDraft');
+  if(!el) return;
+  copyCellToClipboard(e, el.value);
+}
+// Показує посилання на КП як клікабельне (з датою відправки), або плейсхолдер,
+// якщо посилання ще не додане.
+function renderDealKpLinkDisplay(l){
+  const el = document.getElementById('dealKpLinkDisplay');
+  if(!el) return;
+  if(l.kpLink){
+    el.innerHTML = `<div style="font-size:13px;">🔗 <a href="${escAttr(l.kpLink)}" target="_blank" rel="noopener" style="color:var(--accent);">${escAttr(l.kpLink)}</a>${l.kpSentAt ? ` <span style="color:var(--text-muted);">· надіслано ${escAttr(l.kpSentAt)}</span>` : ''}</div>`;
+  } else {
+    el.innerHTML = `<div style="font-size:13px;color:var(--text-muted);">Додати посилання на КП</div>`;
+  }
+}
+// Валідація й збереження посилання на КП + дати відправки. Власна кнопка
+// "Зберегти", окрема від загального збереження картки (за аналогією з
+// нотатками/завданнями/зустрічами/документами).
+function saveDealKpLink(){
+  if(state.currentDealId === null) return;
+  const l = LEADS.find(x => x.id === state.currentDealId);
+  if(!l) return;
+  const linkVal = document.getElementById('dealKpLink').value.trim();
+  const sentAtVal = document.getElementById('dealKpSentAt').value;
+  if(linkVal && !/^https?:\/\/.+/i.test(linkVal)){
+    showAlertModal('Вкажіть коректне посилання (має починатися з http:// або https://)');
+    return;
+  }
+  l.kpLink = linkVal;
+  l.kpSentAt = sentAtVal;
+  fbScheduleSave();
+  logActivity(`Оновлено посилання на КП для угоди "${l.name}"`, {target:{type:'lead', id:l.id}});
+  renderDealKpLinkDisplay(l);
+  renderBoard();
 }
 function resetDealQualifiedSelect(value){
   const label = document.getElementById('dealQualifiedLabel');
@@ -6890,6 +7016,93 @@ function setDealKpCalendarValue(raw){
   renderDealKpCalendar();
 }
 renderDealKpCalendar();
+
+let dealKpSentAtHour = 9, dealKpSentAtMinute = 0;
+function renderDealKpSentAtCalendar(){
+  const monthLabel = document.getElementById('dealKpSentAtCalMonthLabel');
+  const grid = document.getElementById('dealKpSentAtCalGrid');
+  if(!monthLabel || !grid) return;
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const m = state.dealKpSentAtCalendarMonth;
+  monthLabel.textContent = monthNames[m.getMonth()] + ' ' + m.getFullYear();
+  const firstDay = new Date(m.getFullYear(), m.getMonth(), 1);
+  let startOffset = firstDay.getDay();
+  startOffset = (startOffset === 0) ? 6 : startOffset - 1;
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+  const dows = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+  let html = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startOffset;i++) html += `<div class="cal-day muted"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(m.getFullYear(), m.getMonth(), day);
+    let cls = 'cal-day';
+    if(isToday(d)) cls += ' today';
+    if(state.dealKpSentAtPickedDate && +d === +state.dealKpSentAtPickedDate) cls += ' range-edge';
+    html += `<div class="${cls}" onclick="pickDealKpSentAtDate(event,${m.getFullYear()},${m.getMonth()},${day})">${day}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function dealKpSentAtCalNav(dir){
+  state.dealKpSentAtCalendarMonth = new Date(state.dealKpSentAtCalendarMonth.getFullYear(), state.dealKpSentAtCalendarMonth.getMonth()+dir, 1);
+  renderDealKpSentAtCalendar();
+}
+function pickDealKpSentAtDate(e,y,mo,d){
+  if(e) e.stopPropagation();
+  state.dealKpSentAtPickedDate = new Date(y,mo,d);
+  renderDealKpSentAtCalendar();
+}
+function stepDealKpSentAtTime(unit, delta){
+  if(unit === 'h'){
+    dealKpSentAtHour = (dealKpSentAtHour + delta + 24) % 24;
+    document.getElementById('dealKpSentAtHour').value = String(dealKpSentAtHour).padStart(2,'0');
+  } else {
+    dealKpSentAtMinute = (dealKpSentAtMinute + delta*5 + 60) % 60;
+    document.getElementById('dealKpSentAtMinute').value = String(dealKpSentAtMinute).padStart(2,'0');
+  }
+}
+function clearDealKpSentAtDate(){
+  state.dealKpSentAtPickedDate = null;
+  state.dealKpSentAtCalendarMonth = currentMonthStart();
+  dealKpSentAtHour = 9; dealKpSentAtMinute = 0;
+  const h = document.getElementById('dealKpSentAtHour'), mi = document.getElementById('dealKpSentAtMinute');
+  if(h) h.value = '09';
+  if(mi) mi.value = '00';
+  renderDealKpSentAtCalendar();
+  const hidden = document.getElementById('dealKpSentAt');
+  const label = document.getElementById('dealKpSentAtLabel');
+  if(hidden) hidden.value = '';
+  if(label) label.textContent = 'Оберіть дату';
+}
+function applyDealKpSentAtDate(){
+  if(!state.dealKpSentAtPickedDate){ closeAllDropdowns(); return; }
+  const full = fmtDate(state.dealKpSentAtPickedDate) + ' ' + String(dealKpSentAtHour).padStart(2,'0') + ':' + String(dealKpSentAtMinute).padStart(2,'0');
+  document.getElementById('dealKpSentAt').value = full;
+  document.getElementById('dealKpSentAtLabel').textContent = full;
+  closeAllDropdowns();
+}
+// Встановлює календар "дата відправки КП" у відповідність до значення картки
+// при відкритті (рядок "дд.мм.рррр гг:хх" або порожньо).
+function setDealKpSentAtCalendarValue(raw){
+  const dt = parseUkDateTime(raw);
+  if(dt){
+    state.dealKpSentAtPickedDate = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+    state.dealKpSentAtCalendarMonth = new Date(dt.getFullYear(), dt.getMonth(), 1);
+    dealKpSentAtHour = dt.getHours(); dealKpSentAtMinute = dt.getMinutes();
+    document.getElementById('dealKpSentAtHour').value = String(dealKpSentAtHour).padStart(2,'0');
+    document.getElementById('dealKpSentAtMinute').value = String(dealKpSentAtMinute).padStart(2,'0');
+    document.getElementById('dealKpSentAt').value = raw;
+    document.getElementById('dealKpSentAtLabel').textContent = raw;
+  } else {
+    state.dealKpSentAtPickedDate = null;
+    state.dealKpSentAtCalendarMonth = currentMonthStart();
+    dealKpSentAtHour = 9; dealKpSentAtMinute = 0;
+    document.getElementById('dealKpSentAtHour').value = '09';
+    document.getElementById('dealKpSentAtMinute').value = '00';
+    document.getElementById('dealKpSentAt').value = '';
+    document.getElementById('dealKpSentAtLabel').textContent = 'Оберіть дату';
+  }
+  renderDealKpSentAtCalendar();
+}
+renderDealKpSentAtCalendar();
 
 /* =========================================================
    TASKS PAGE (окрема сторінка "Завдання" — фільтри дата+менеджер,
@@ -9191,6 +9404,212 @@ function closerNicheChip(c){
   const col = nicheColor(c.niche);
   return `<span class="badge" style="background:${col.bg};color:${col.text};" title="Ніша">${c.niche}</span>`;
 }
+/* =========================================================
+   АВТОПІНГ "ОЧІКУВАННЯ РІШЕННЯ" — коли лід потрапляє на цей етап воронки
+   клоузера, запускається ланцюжок автоматичних нагадувань: створюється
+   завдання "Запінгувати ..." з дедлайном і чернеткою тексту, і якщо
+   дедлайн минає, а лід досі чекає рішення — автоматично створюється
+   наступне завдання з довшим інтервалом. Ланцюжок зупиняється, щойно
+   задачу виконано АБО картку перенесено з цього етапу.
+   У проєкті немає серверного cron (лише статичний сайт + Firestore), тому
+   перевірка — "найкраща спроба": фонова (setInterval), не лише при
+   відкритті сторінки, але спрацьовує, поки хоч у когось відкрита CRM —
+   так само, як уже працюють браузерні нагадування про зустрічі. Чернетка
+   пінгу зараз — простий текстовий шаблон (без AI/зовнішніх ключів); якщо
+   згодом підключите Claude API — генерацію можна замінити лише в
+   buildDecisionWaitDraft(), не чіпаючи решту ланцюжка.
+   ========================================================= */
+// Назва етапу воронки клоузера, який запускає автопінг. Це звичайний
+// (не структурно закріплений, на відміну від cp.stages[0]) етап, тому при
+// перейменуванні цього стовпця в редакторі воронки — оновіть значення
+// тут, в ОДНОМУ місці.
+const DECISION_WAIT_STAGE_NAME = 'Очікування рішення';
+// Інтервали (у днях) ланцюжка нагадувань: перше завдання — через
+// DECISION_WAIT_INTERVALS_DAYS[0] днів після входу в етап. Якщо дедлайн
+// минув, а лід усе ще чекає рішення — наступне завдання створюється через
+// DECISION_WAIT_INTERVALS_DAYS[i+1] днів від МОМЕНТУ ЦІЄЇ перевірки
+// (по суті "відкласти ще на N днів"); останнє значення масиву
+// повторюється, якщо кроків забракло. Один параметр в одному місці —
+// замість хардкоду "3"/"7"/"14" по всьому коду.
+const DECISION_WAIT_INTERVALS_DAYS = [3, 7, 14];
+function addDays(d, n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmtDateTime(d){ return fmtDate(d) + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+// Одноразова міграція: додає порожні поля автопінгу лідам клоузера,
+// створеним до появи цієї фічі. Нічого не видаляє й не змінює в наявних
+// даних, лише додає відсутні поля.
+function ensureDecisionWaitFields(){
+  let changed = false;
+  LEADS.forEach(l => {
+    if(isCloserUserId(l.managerId)){
+      if(l.decisionWaitEnteredAt === undefined){ l.decisionWaitEnteredAt = ''; changed = true; }
+      if(l.decisionWaitFromStage === undefined){ l.decisionWaitFromStage = ''; changed = true; }
+      if(l.decisionWaitActive === undefined){ l.decisionWaitActive = false; changed = true; }
+      if(l.decisionWaitTaskId === undefined){ l.decisionWaitTaskId = null; changed = true; }
+      if(l.decisionWaitStepIndex === undefined){ l.decisionWaitStepIndex = 0; changed = true; }
+      if(l.decisionWaitDraft === undefined){ l.decisionWaitDraft = ''; changed = true; }
+    }
+  });
+  return changed;
+}
+// Простий шаблонний текст нагадування (без AI) — враховує ім'я контакту,
+// назву компанії і гілку послуги. Гілку ("сайти"/"реклама") визначаємо за
+// словами в НАЗВІ попереднього етапу (decisionWaitFromStage), а не за
+// точним збігом рядка — щоб перейменування етапів у редакторі воронки не
+// ламало підбір формулювання (той самий принцип, що й для isKpStage).
+function buildDecisionWaitDraft(lead){
+  const contactName = (lead.name || '').trim().split(/\s+/)[0] || 'колего';
+  const companyPart = lead.company ? ` з ${lead.company}` : '';
+  const fromStage = (lead.decisionWaitFromStage || '').toLowerCase();
+  let serviceMention = 'нашу комерційну пропозицію';
+  if(fromStage.includes('сайт')) serviceMention = 'комерційну пропозицію по сайту';
+  else if(fromStage.includes('реклам')) serviceMention = 'комерційну пропозицію по рекламі';
+  return `Привіт, ${contactName}!${companyPart ? ' Це щодо співпраці' + companyPart + '.' : ''} Хотів ненав'язливо нагадати про ${serviceMention} — чи вдалось подивитись? Буду радий відповісти на питання або обговорити деталі зручним для вас способом.`;
+}
+// Створює (або, якщо вже є відкрита нагадувальна задача, оновлює її
+// дедлайн) завдання автопінгу — за аналогією з l.kpTaskId (дедуп через
+// l.decisionWaitTaskId, без дублікатів).
+function createOrUpdateDecisionWaitTask(lead, dueDate){
+  const due = fmtDateTime(dueDate);
+  lead.decisionWaitDraft = buildDecisionWaitDraft(lead);
+  const title = `Запінгувати "${lead.name}"${lead.company ? ' ('+lead.company+')' : ''}`;
+  const existing = lead.decisionWaitTaskId != null ? TASKS.find(t=>t.id===lead.decisionWaitTaskId) : null;
+  if(existing && !existing.done){
+    existing.title = title;
+    existing.due = due;
+    const localTask = lead.tasks.find(t=>t.id===existing.id);
+    if(localTask){ localTask.title = title; localTask.due = due; }
+  } else {
+    const taskId = Date.now()+Math.random();
+    const task = {id:taskId, title, due, done:false};
+    lead.tasks.push(task);
+    TASKS.unshift({...task, leadId:lead.id, leadName:lead.name, managerId:lead.managerId});
+    lead.decisionWaitTaskId = taskId;
+  }
+}
+// Зупиняє ланцюжок автонагадувань (задачу, що вже створена, НЕ видаляє —
+// клоузер сам вирішує, виконати її чи прибрати вручну). Ланцюжок
+// відновиться заново, лише коли лід знову потрапить у цей етап.
+function stopDecisionWaitChain(lead){
+  lead.decisionWaitActive = false;
+}
+// Викликається одразу після перетягування картки клоузера між етапами
+// (миттєва реакція UI). Вхід у "Очікування рішення" — стартуємо ланцюжок
+// з нуля; вихід з нього — зупиняємо. Будь-який інший перехід не чіпаємо.
+function handleDecisionWaitStageChange(lead, oldStage, newStage){
+  if(newStage === DECISION_WAIT_STAGE_NAME && oldStage !== DECISION_WAIT_STAGE_NAME){
+    lead.decisionWaitEnteredAt = fmtDateTime(new Date());
+    lead.decisionWaitFromStage = oldStage || '';
+    lead.decisionWaitActive = true;
+    lead.decisionWaitStepIndex = 0;
+    createOrUpdateDecisionWaitTask(lead, addDays(new Date(), DECISION_WAIT_INTERVALS_DAYS[0]));
+    NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `⏳ Лід "${lead.name}" очікує рішення клієнта — заплановано пінг на ${lead.tasks.find(t=>t.id===lead.decisionWaitTaskId).due}`, time:'зараз', read:false, target:{type:'lead', id:lead.id}, ownerId: lead.managerId});
+    renderNotifications();
+  } else if(newStage !== DECISION_WAIT_STAGE_NAME && oldStage === DECISION_WAIT_STAGE_NAME){
+    stopDecisionWaitChain(lead);
+  }
+}
+// Якщо позначену виконаною задачу щойно завершили, і саме вона була
+// активною задачею автопінгу цього ліда — зупиняємо ланцюжок (вимога:
+// виконання задачі зупиняє нагадування, навіть якщо лід і далі в цьому
+// етапі; відновиться, лише коли лід знову зайде в "Очікування рішення").
+function maybeStopDecisionWaitOnTaskDone(taskId, done){
+  if(!done || taskId == null) return;
+  const lead = LEADS.find(l => l.decisionWaitTaskId === taskId);
+  if(lead && lead.decisionWaitActive){
+    stopDecisionWaitChain(lead);
+    if(state.currentDealId === lead.id) renderDealDecisionWaitSection(lead);
+  }
+}
+// Фонова перевірка ланцюжків автопінгу для всіх лідів клоузера. У проєкті
+// немає серверного cron — це виклик "найкраща спроба": запускається одразу
+// при вході в акаунт і далі періодично (setInterval нижче), тобто working,
+// поки хоч в одного користувача відкрита CRM у браузері.
+function checkDecisionWaitReminders(){
+  let changed = false;
+  const now = new Date();
+  LEADS.forEach(l => {
+    if(!isCloserUserId(l.managerId)) return;
+    const inStage = l.stage === DECISION_WAIT_STAGE_NAME;
+    if(inStage){
+      if(!l.decisionWaitEnteredAt){
+        // Лід опинився в цьому етапі не через звичне перетягування (напр.
+        // стара картка з часів до появи фічі, або масове редагування
+        // етапів) — стартуємо ланцюжок зараз же.
+        l.decisionWaitEnteredAt = fmtDateTime(now);
+        l.decisionWaitFromStage = l.decisionWaitFromStage || '';
+        l.decisionWaitActive = true;
+        l.decisionWaitStepIndex = 0;
+        createOrUpdateDecisionWaitTask(l, addDays(now, DECISION_WAIT_INTERVALS_DAYS[0]));
+        changed = true;
+        return;
+      }
+      if(l.decisionWaitActive && l.decisionWaitTaskId != null){
+        const task = TASKS.find(t=>t.id===l.decisionWaitTaskId);
+        if(!task || task.done){
+          l.decisionWaitActive = false;
+          changed = true;
+        } else {
+          const dueDate = parseUkDateTime(task.due);
+          if(dueDate && dueDate.getTime() < now.getTime()){
+            const lastIdx = DECISION_WAIT_INTERVALS_DAYS.length - 1;
+            l.decisionWaitStepIndex = Math.min((l.decisionWaitStepIndex||0) + 1, lastIdx);
+            const intervalDays = DECISION_WAIT_INTERVALS_DAYS[l.decisionWaitStepIndex];
+            createOrUpdateDecisionWaitTask(l, addDays(now, intervalDays));
+            NOTIFICATIONS.unshift({id: Date.now()+Math.random(), text: `🔁 Лід "${l.name}" досі очікує рішення — новий пінг заплановано на ${l.tasks.find(t=>t.id===l.decisionWaitTaskId).due}`, time:'зараз', read:false, target:{type:'lead', id:l.id}, ownerId: l.managerId});
+            changed = true;
+          }
+        }
+      }
+    } else if(l.decisionWaitActive){
+      // Картку перенесено з "Очікування рішення" повз closerDropCard
+      // (напр. редактор етапів) — про всяк випадок зупиняємо ланцюжок.
+      l.decisionWaitActive = false;
+      changed = true;
+    }
+  });
+  if(changed){
+    renderCloserBoard();
+    renderNotifications();
+    renderDashboardTasks();
+    renderTasksTable(); renderPartnerTasksTable(); renderCloserTasksTable();
+    renderDashboardStats();
+    if(state.currentDealId != null){
+      const openLead = LEADS.find(x=>x.id===state.currentDealId);
+      if(openLead) renderDealDecisionWaitSection(openLead);
+    }
+    fbScheduleSave();
+  }
+}
+let decisionWaitIntervalStarted = false;
+// Запускає фонову перевірку раз одразу і далі кожні 15 хвилин, поки
+// сторінка відкрита. Захист decisionWaitIntervalStarted — щоб повторний
+// вхід у акаунт (напр. швидке перемикання CTO між акаунтами) не плодив
+// кілька паралельних інтервалів.
+function startDecisionWaitWatcher(){
+  checkDecisionWaitReminders();
+  if(decisionWaitIntervalStarted) return;
+  decisionWaitIntervalStarted = true;
+  setInterval(checkDecisionWaitReminders, 15*60*1000);
+}
+// Показує компактний бейдж на міні-картці: скільки днів лід у стадії
+// "Очікування рішення", і червоніє, якщо дедлайн поточної задачі-пінгу
+// прострочено.
+function decisionWaitBadge(c){
+  // Лише поки картка ДІЙСНО в цьому етапі — decisionWaitEnteredAt свідомо
+  // не очищається при виході (щоб історія лишалась видимою в картці ліда),
+  // тож без цієї перевірки бейдж міг би "застрягти" на картці, яка вже
+  // перейшла в інший етап.
+  if(c.stage !== DECISION_WAIT_STAGE_NAME || !c.decisionWaitEnteredAt) return '';
+  const entered = parseUkDateTime(c.decisionWaitEnteredAt);
+  if(!entered) return '';
+  const days = Math.max(0, Math.floor((Date.now() - entered.getTime()) / 86400000));
+  const task = c.decisionWaitTaskId != null ? TASKS.find(t=>t.id===c.decisionWaitTaskId) : null;
+  const taskDue = task && !task.done ? parseUkDateTime(task.due) : null;
+  const isOverdue = !!(taskDue && taskDue.getTime() < Date.now());
+  const style = isOverdue ? 'background:#E5484D1A;color:var(--danger);' : 'background:#F5A5241A;color:var(--warning);';
+  const title = isOverdue ? 'Задачу на пінг клієнту прострочено' : 'Днів у стадії «Очікування рішення»';
+  return `<span class="lead-value" style="${style}padding:2px 8px;border-radius:999px;" title="${title}">⏳ ${days} дн.${isOverdue?' ⚠':''}</span>`;
+}
 // Бриф вважається простроченим, якщо результат (кваліфікований/ні) ще не
 // визначено, а дата й час брифу вже минули — тоді картка підсвічується
 // червоним, щоб клоузер не забув проставити результат.
@@ -9245,7 +9664,7 @@ function renderCloserBoard(){
         <div class="lead-title">${c.name}</div>
         <div class="lead-sub">${c.company||''}</div>
         ${(managerChip || nicheChip) ? `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${managerChip}${nicheChip}</div>` : ''}
-        <div class="lead-foot">${dateHtml}${overdue?'<span class="status-icon" title="Бриф прострочено — визначте результат">⏰</span>':''}${closerQualBadge(c)}</div>
+        <div class="lead-foot">${dateHtml}${overdue?'<span class="status-icon" title="Бриф прострочено — визначте результат">⏰</span>':''}${c.kpLink?`<span class="status-icon" title="Відкрити КП" onclick="event.stopPropagation(); window.open('${escAttr(c.kpLink)}','_blank')">🔗</span>`:''}${decisionWaitBadge(c)}${closerQualBadge(c)}</div>
       </div>`;
     }).join('');
     return `
@@ -9261,7 +9680,13 @@ function closerDropCard(e, stage){
   dragEnterDepth = 0;
   e.currentTarget.classList.remove('drag-over');
   const lead = LEADS.find(l=>l.id===draggedLeadId);
-  if(lead){ lead.stage = stage; renderCloserBoard(); fbScheduleSave(); }
+  if(lead){
+    const oldStage = lead.stage;
+    lead.stage = stage;
+    handleDecisionWaitStageChange(lead, oldStage, stage);
+    renderCloserBoard();
+    fbScheduleSave();
+  }
 }
 /* ---- редактор етапів воронки клоузера (та сама логіка, що й у партнерств) ---- */
 let editingCloserStages = [];
@@ -10140,6 +10565,16 @@ function fbApplyRemoteData(data){
     // ensureDailyReportsForManagers()) — щоб їх завжди було що заповнити,
     // навіть за пропущені дні.
     if(ensureDailyReportsForManagers()) needsRepairSave = true;
+
+    // Одноразова міграція: додає поля kpLink/kpSentAt лідам клоузера,
+    // створеним до появи цієї фічі — див. ensureKpLinkFields().
+    // Спрацює один раз і збереже результат.
+    if(ensureKpLinkFields()) needsRepairSave = true;
+
+    // Одноразова міграція: додає поля автопінгу "Очікування рішення"
+    // лідам клоузера, створеним до появи цієї фічі — див.
+    // ensureDecisionWaitFields(). Спрацює один раз і збереже результат.
+    if(ensureDecisionWaitFields()) needsRepairSave = true;
 
     if(state.userId){
       renderBoard();
