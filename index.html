@@ -3255,6 +3255,7 @@ function completeLogin(user, opts){
 
   if(ensurePipelineIntegrity()) fbScheduleSave();
   if(ensureDailyReportsForManagers()) fbScheduleSave();
+  if(removeEmptyWeekendReports()) fbScheduleSave();
   if(ensureKpLinkFields()) fbScheduleSave();
   if(ensureDecisionWaitFields()) fbScheduleSave();
   renderPipelineOwnerFilterOptions();
@@ -4081,11 +4082,19 @@ function ensureCeoCloserAccounts(){
   }
   return changed;
 }
+// Субота(6)/неділя(0) — на ці дні щоденні звіти Sales-менеджерів більше не
+// створюються автоматично (і не мають створюватись вручну — форма створення
+// звіту прибрана раніше, звіти йдуть лише автостворенням).
+function isWeekend(dateObj){
+  const day = dateObj.getDay();
+  return day === 0 || day === 6;
+}
 // Створює порожній щоденний звіт (усі поля = 0, без коментаря) для
 // конкретного менеджера на конкретну дату, якщо такого ще немає.
 // r.autoCreated=true позначає "ще не заповнено" — знімається, щойно
 // менеджер один раз збереже цей звіт (див. saveReportDetail).
 function createEmptyDailyReport(managerId, dateObj){
+  if(isWeekend(dateObj)) return false;
   const dateStr = dateObj.toLocaleDateString('uk-UA');
   if(REPORTS.some(r => r.managerId === managerId && r.period === 'day' && r.date === dateStr)) return false;
   const values = {};
@@ -4126,6 +4135,23 @@ function ensureDailyReportsForManagers(){
     }
   });
   return changed;
+}
+// Одноразове прибирання: видаляє щоденні звіти на суботу/неділю, які досі
+// НІКОЛИ не зберігав менеджер (r.autoCreated===true — цей прапорець
+// знімається назавжди щойно звіт хоч раз збережено, див. saveReportDetail),
+// тобто це чисто порожні "заглушки", а не реально введені дані. Реальний
+// звіт, який менеджер сам заповнив за вихідний день, НЕ видаляється —
+// autoCreated в нього вже false, під цю умову він не підпадає.
+function removeEmptyWeekendReports(){
+  const before = REPORTS.length;
+  for(let i = REPORTS.length - 1; i >= 0; i--){
+    const r = REPORTS[i];
+    if(r.period === 'day' && r.autoCreated === true){
+      const d = parseUkDate(r.date);
+      if(d && isWeekend(d)) REPORTS.splice(i, 1);
+    }
+  }
+  return REPORTS.length !== before;
 }
 // Одноразова міграція: додає порожні поля посилання на КП (kpLink) і дати
 // відправки КП (kpSentAt) усім лідам клоузера, створеним ДО появи цієї фічі —
@@ -10565,6 +10591,11 @@ function fbApplyRemoteData(data){
     // ensureDailyReportsForManagers()) — щоб їх завжди було що заповнити,
     // навіть за пропущені дні.
     if(ensureDailyReportsForManagers()) needsRepairSave = true;
+
+    // Одноразове прибирання порожніх (ще не заповнених) щоденних звітів на
+    // суботу/неділю — див. removeEmptyWeekendReports(). Реальні дані, які
+    // менеджер сам вніс за вихідний, не зачіпає.
+    if(removeEmptyWeekendReports()) needsRepairSave = true;
 
     // Одноразова міграція: додає поля kpLink/kpSentAt лідам клоузера,
     // створеним до появи цієї фічі — див. ensureKpLinkFields().
