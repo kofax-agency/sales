@@ -203,8 +203,15 @@
   .lead-card.brief-overdue .lead-value{color:var(--danger);font-weight:700;}
   .lead-title{font-weight:700;margin-bottom:2px;}
   .lead-sub{color:var(--text-muted);font-size:12px;}
-  .lead-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;}
+  .lead-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;flex-wrap:wrap;}
   .lead-value{font-size:12px;font-weight:700;color:var(--text-muted);margin-right:auto;}
+  /* Кластер бейджів-станів на картці клоузера (КП-лінк/прострочення/
+     очікування рішення/кваліфікація) — рівні кола однакового розміру
+     замість голих емодзі різного розміру впритул одне до одного. */
+  .lead-foot-badges{display:flex;align-items:center;gap:4px;flex-shrink:0;flex-wrap:wrap;}
+  .closer-badge-icon{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--surface-2);color:var(--text-muted);font-size:12px;line-height:1;flex-shrink:0;}
+  .closer-badge-icon.danger{background:#E5484D1A;color:var(--danger);}
+  .closer-pill-badge{display:inline-flex;align-items:center;height:22px;box-sizing:border-box;font-size:11px;font-weight:700;padding:0 8px;border-radius:999px;white-space:nowrap;flex-shrink:0;}
   .card-forward-btn{width:24px;height:24px;border:none;border-radius:6px;background:transparent;color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:background .15s,color .15s;}
   .card-forward-btn:hover{background:var(--surface-2);color:var(--accent-1);}
   .pipeline-stage-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
@@ -2070,7 +2077,23 @@
             <div id="dealCreatedAt" style="padding:9px 12px;font-size:13px;color:var(--text-muted);font-weight:600;"></div>
           </div>
         </div>
-        <div class="field" data-roles="admin cto" style="max-width:220px;"><label>Сума угоди ($)</label><input id="dealValue" type="text" inputmode="numeric" placeholder="0" oninput="formatMoneyLive(this)"></div>
+        <div class="field-row">
+          <div class="field" style="max-width:220px;">
+            <label>Тип послуги</label>
+            <div class="cselect" id="dealServiceTypeSelect">
+              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="dealServiceTypeLabel">Не вказано</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" data-select="dealServiceType">
+                <li data-value="">Не вказано</li>
+                <li data-value="website">🌐 Сайт</li>
+                <li data-value="ads">📢 Реклама</li>
+              </ul>
+            </div>
+          </div>
+          <div class="field" data-roles="admin cto" style="max-width:220px;"><label>Сума угоди ($)</label><input id="dealValue" type="text" inputmode="numeric" placeholder="0" oninput="formatMoneyLive(this)"></div>
+        </div>
       </div>
       <!-- Sales-лід: кнопка передачі клоузеру + статус/результат, коли вже передано -->
       <div class="panel-section" id="dealForwardCloserSection" style="display:none;">
@@ -3258,6 +3281,7 @@ function completeLogin(user, opts){
   if(removeEmptyWeekendReports()) fbScheduleSave();
   if(ensureKpLinkFields()) fbScheduleSave();
   if(ensureDecisionWaitFields()) fbScheduleSave();
+  if(ensureServiceTypeField()) fbScheduleSave();
   renderPipelineOwnerFilterOptions();
   renderBoardPipelineOptions();
   renderManagerMultiOptions();
@@ -3665,6 +3689,7 @@ document.addEventListener('click', function(e){
   if(selectType === 'forwardPipeline'){ forwardSelectedPipelineId = li.dataset.value; renderForwardStageOptions(); }
   if(selectType === 'forwardCloser'){ forwardCloserSelectedId = li.dataset.value; }
   if(selectType === 'dealQualified'){ state.dealQualifiedValue = li.dataset.value; }
+  if(selectType === 'dealServiceType'){ state.dealServiceTypeValue = li.dataset.value; }
   if(selectType === 'pdPipeline'){ pdSelectedPipelineId = li.dataset.value; }
   if(selectType === 'coldBaseManager'){ setColdBaseDefaultManager(state.coldBaseViewId, li.dataset.value || null); }
   if(selectType === 'coldStatusFilter'){ coldDetailStatusFilter = li.dataset.value || ''; renderColdBaseDetail(); }
@@ -4136,17 +4161,31 @@ function ensureDailyReportsForManagers(){
   });
   return changed;
 }
-// Одноразове прибирання: видаляє щоденні звіти на суботу/неділю, які досі
-// НІКОЛИ не зберігав менеджер (r.autoCreated===true — цей прапорець
-// знімається назавжди щойно звіт хоч раз збережено, див. saveReportDetail),
-// тобто це чисто порожні "заглушки", а не реально введені дані. Реальний
-// звіт, який менеджер сам заповнив за вихідний день, НЕ видаляється —
-// autoCreated в нього вже false, під цю умову він не підпадає.
+// Звіт вважається "порожньою заглушкою" (безпечно видаляти), якщо в ньому
+// НІКОЛИ не було введено жодних реальних даних — усі числові поля нульові,
+// без коментаря й без ніші. Перевіряємо саме вміст, а не лише прапорець
+// autoCreated — бо старі щоденні звіти за вихідні, створені ЩЕ ДО появи
+// цього прапорця, можуть його не мати взагалі (undefined), і перевірка
+// "autoCreated===true" такі старі заглушки б пропускала.
+function isEmptyDailyReportShell(r){
+  if(r.comment) return false;
+  if(r.niche) return false;
+  return dailyFieldsFor(r.managerId).every(f => !r[f.key]);
+}
+// Одноразове прибирання: видаляє щоденні звіти Sales-менеджерів на
+// суботу/неділю, які є порожніми заглушками (див. isEmptyDailyReportShell).
+// Навмисно обмежено роллю 'manager' (Sales) — це саме та роль, для якої
+// звіти взагалі автостворюються (див. ensureDailyReportsForManagers); звіти
+// Partnership/Closer менеджери створюють і заповнюють вручну самі, тому їх
+// ця функція не чіпає, навіть якщо там випадково лишилися нулі. Реальний
+// звіт з хоч якимись введеними даними — НЕ видаляється, незалежно від того,
+// яким шляхом і коли він був створений.
 function removeEmptyWeekendReports(){
   const before = REPORTS.length;
   for(let i = REPORTS.length - 1; i >= 0; i--){
     const r = REPORTS[i];
-    if(r.period === 'day' && r.autoCreated === true){
+    const mgr = USERS.find(u=>u.id===r.managerId);
+    if(r.period === 'day' && mgr && mgr.role === 'manager' && isEmptyDailyReportShell(r)){
       const d = parseUkDate(r.date);
       if(d && isWeekend(d)) REPORTS.splice(i, 1);
     }
@@ -4164,6 +4203,16 @@ function ensureKpLinkFields(){
       if(l.kpLink === undefined){ l.kpLink = ''; changed = true; }
       if(l.kpSentAt === undefined){ l.kpSentAt = ''; changed = true; }
     }
+  });
+  return changed;
+}
+// Одноразова міграція: додає порожнє поле serviceType (Сайт/Реклама) усім
+// лідам, створеним ДО появи цієї фічі — загальне поле, не прив'язане до
+// конкретної воронки/ролі. Нічого не видаляє й не змінює в наявних даних.
+function ensureServiceTypeField(){
+  let changed = false;
+  LEADS.forEach(l => {
+    if(l.serviceType === undefined){ l.serviceType = ''; changed = true; }
   });
   return changed;
 }
@@ -4315,6 +4364,7 @@ function renderBoard(){
       <div class="lead-card" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
         <div class="lead-title">${c.name}</div>
         <div class="lead-sub">${c.company}</div>
+        ${serviceTypeChip(c) ? `<div style="margin-top:4px;">${serviceTypeChip(c)}</div>` : ''}
         <div class="lead-foot">
           ${showValue ? `<span class="lead-value">$${Number(c.value||0).toLocaleString('en-US')}</span>` : '<span></span>'}
           ${c.flag === 'red' ? '<span class="status-icon red">●</span>' : ''}
@@ -4540,6 +4590,7 @@ function openDeal(id, presetStage){
     // Дата створення встановлюється автоматично при збереженні — тут лише
     // показуємо, якою вона буде, полем не можна керувати вручну.
     document.getElementById('dealCreatedAt').textContent = new Date().toLocaleDateString('uk-UA') + ' (встановиться при збереженні)';
+    resetDealServiceTypeSelect('');
     document.getElementById('dealNotesList').innerHTML = '<div class="empty-hint">Нотаток ще немає.</div>';
     document.getElementById('dealTasksList').innerHTML = '<div class="empty-hint">Завдань ще немає.</div>';
     document.getElementById('dealMeetingsList').innerHTML = '<div class="empty-hint">Зустрічей ще немає.</div>';
@@ -4559,6 +4610,7 @@ function openDeal(id, presetStage){
     document.getElementById('dealLink').value = l.link;
     document.getElementById('dealCreatedAt').textContent = l.createdAt;
     document.getElementById('dealValue').value = l.value ? Number(l.value).toLocaleString('en-US') : '';
+    resetDealServiceTypeSelect(l.serviceType || '');
     renderDealNotes(l);
     renderDealTasks(l);
     renderDealMeetings(l);
@@ -4951,6 +5003,10 @@ function saveDeal(){
   // відсутнє/приховане для менеджера, тому без нього беремо 0.
   const valueEl = document.getElementById('dealValue');
   const value = (state.role === 'admin' || state.role === 'cto') ? parseMoneyValue(valueEl) : 0;
+  // "Тип послуги" — загальне поле (Сайт/Реклама), доступне на картці
+  // будь-якого типу; значення тримається в state (див. generic cselect
+  // click-handler, selectType === 'dealServiceType').
+  const serviceType = state.dealServiceTypeValue || '';
 
   if(state.currentDealId === null){
     const dupKey = (n,p,e2)=> (n+p+e2).toLowerCase().replace(/\s+/g,'');
@@ -4960,11 +5016,11 @@ function saveDeal(){
     const cp = currentPipeline();
     const stage = document.getElementById('dealPanel').dataset.presetStage || cp.stages[0];
     const newId = nextLeadId++;
-    LEADS.push({id:newId, name, phone, email, company, niche, link, stage, value, pipelineId: cp.id, managerId: owner, createdAt: new Date().toLocaleDateString('uk-UA'), notes:[], tasks:[], attachments:[]});
+    LEADS.push({id:newId, name, phone, email, company, niche, link, serviceType, stage, value, pipelineId: cp.id, managerId: owner, createdAt: new Date().toLocaleDateString('uk-UA'), notes:[], tasks:[], attachments:[]});
     logActivity(`Створено нову угоду "${name}" (${company||'без компанії'})`, {target:{type:'lead', id:newId}});
   } else {
     const l = LEADS.find(l=>l.id===state.currentDealId);
-    const patch = {name, phone, email, company, niche, link};
+    const patch = {name, phone, email, company, niche, link, serviceType};
     if(state.role === 'admin' || state.role === 'cto') patch.value = value;
     Object.assign(l, patch);
     // Картка у воронці КЛОУЗЕРА — додатково зберігаємо результат брифу й
@@ -5198,7 +5254,7 @@ function confirmForwardToCloser(){
   const carriedNotes = (lead.notes || []).map(n => ({...n}));
   const carriedAttachments = (lead.attachments || []).map(a => ({...a}));
   LEADS.push({
-    id:newId, name:lead.name, phone:lead.phone, email:lead.email, company:lead.company, niche:lead.niche, link:lead.link,
+    id:newId, name:lead.name, phone:lead.phone, email:lead.email, company:lead.company, niche:lead.niche, link:lead.link, serviceType:lead.serviceType || '',
     stage: cp.stages[0], value:0, pipelineId: cp.id, managerId: closer.id,
     createdAt: new Date().toLocaleDateString('uk-UA'), notes:carriedNotes, tasks:[], attachments:carriedAttachments,
     originDealId: lead.id, originManagerId: me ? me.id : lead.managerId, briefDateTime,
@@ -5343,6 +5399,39 @@ function resetDealQualifiedSelect(value){
     });
   }
   state.dealQualifiedValue = value === true ? 'yes' : value === false ? 'no' : '';
+}
+// Той самий патерн, що й resetDealQualifiedSelect — простий одиничний
+// cselect для загального поля "Тип послуги" (Сайт/Реклама), доступного
+// на картці угоди будь-якого типу (Sales/Партнерство/Клоузер).
+function resetDealServiceTypeSelect(value){
+  const label = document.getElementById('dealServiceTypeLabel');
+  const text = serviceTypeLabel(value) || 'Не вказано';
+  if(label) label.textContent = text;
+  const menu = document.querySelector('#dealServiceTypeSelect .cselect-menu');
+  if(menu){
+    menu.querySelectorAll('li').forEach(li=>{
+      li.classList.toggle('selected', (li.dataset.value || '') === (value || ''));
+    });
+  }
+  state.dealServiceTypeValue = value || '';
+}
+// Людський підпис для значення типу послуги — використовується і в
+// deal-панелі, і в чіпах на міні-картках (renderBoard/renderCloserBoard).
+function serviceTypeLabel(v){
+  if(v === 'website') return '🌐 Сайт';
+  if(v === 'ads') return '📢 Реклама';
+  return '';
+}
+// Кольорова плашка типу послуги для міні-картки — фіксована (не хеш-based)
+// схема кольорів, бо значень лише два.
+function serviceTypeChip(c){
+  if(!c.serviceType) return '';
+  const isAds = c.serviceType === 'ads';
+  const bg = isAds ? '#F5A6231A' : '#5B8DEF1A';
+  const text = isAds ? '#F5A623' : '#5B8DEF';
+  const label = serviceTypeLabel(c.serviceType);
+  if(!label) return '';
+  return `<span class="badge" style="background:${bg};color:${text};" title="Тип послуги">${label}</span>`;
 }
 
 /* =========================================================
@@ -9385,8 +9474,8 @@ function renderCloserPipelineOptions(){
 // Невеличкий бейдж кваліфікації прямо на картці ліда у воронці — щоб було
 // видно результат брифу, не відкриваючи картку.
 function closerQualBadge(l){
-  if(l.qualified === true) return '<span class="status-icon" title="Кваліфікований">✅</span>';
-  if(l.qualified === false) return '<span class="status-icon" title="Не кваліфікований">❌</span>';
+  if(l.qualified === true) return '<span class="closer-badge-icon" title="Кваліфікований">✅</span>';
+  if(l.qualified === false) return '<span class="closer-badge-icon" title="Не кваліфікований">❌</span>';
   return '';
 }
 // Спільна фіксована палітра кольорів для плашок на картці клоузера — колір
@@ -9634,7 +9723,7 @@ function decisionWaitBadge(c){
   const isOverdue = !!(taskDue && taskDue.getTime() < Date.now());
   const style = isOverdue ? 'background:#E5484D1A;color:var(--danger);' : 'background:#F5A5241A;color:var(--warning);';
   const title = isOverdue ? 'Задачу на пінг клієнту прострочено' : 'Днів у стадії «Очікування рішення»';
-  return `<span class="lead-value" style="${style}padding:2px 8px;border-radius:999px;" title="${title}">⏳ ${days} дн.${isOverdue?' ⚠':''}</span>`;
+  return `<span class="closer-pill-badge" style="${style}" title="${title}">⏳ ${days} дн.${isOverdue?' ⚠':''}</span>`;
 }
 // Бриф вважається простроченим, якщо результат (кваліфікований/ні) ще не
 // визначено, а дата й час брифу вже минули — тоді картка підсвічується
@@ -9673,6 +9762,7 @@ function renderCloserBoard(){
       const overdue = isCloserCardOverdue(c);
       const managerChip = closerManagerChip(c);
       const nicheChip = closerNicheChip(c);
+      const serviceChip = serviceTypeChip(c);
       // Картка показує дату КП замість дати брифу на будь-якому етапі, КРІМ
       // першого (cp.stages[0] — саме туди завжди потрапляє щойно переданий
       // лід, див. confirmForwardToCloser). Прив'язка до "не першого етапу",
@@ -9689,8 +9779,8 @@ function renderCloserBoard(){
       <div class="lead-card${overdue?' brief-overdue':''}" draggable="true" ondragstart="dragStart(event,${c.id})" onclick="openDeal(${c.id})" data-lead-id="${c.id}">
         <div class="lead-title">${c.name}</div>
         <div class="lead-sub">${c.company||''}</div>
-        ${(managerChip || nicheChip) ? `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${managerChip}${nicheChip}</div>` : ''}
-        <div class="lead-foot">${dateHtml}${overdue?'<span class="status-icon" title="Бриф прострочено — визначте результат">⏰</span>':''}${c.kpLink?`<span class="status-icon" title="Відкрити КП" onclick="event.stopPropagation(); window.open('${escAttr(c.kpLink)}','_blank')">🔗</span>`:''}${decisionWaitBadge(c)}${closerQualBadge(c)}</div>
+        ${(managerChip || nicheChip || serviceChip) ? `<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">${managerChip}${nicheChip}${serviceChip}</div>` : ''}
+        <div class="lead-foot">${dateHtml}<div class="lead-foot-badges">${overdue?'<span class="closer-badge-icon danger" title="Бриф прострочено — визначте результат">⏰</span>':''}${c.kpLink?`<span class="closer-badge-icon" title="Відкрити КП" onclick="event.stopPropagation(); window.open('${escAttr(c.kpLink)}','_blank')">🔗</span>`:''}${decisionWaitBadge(c)}${closerQualBadge(c)}</div></div>
       </div>`;
     }).join('');
     return `
@@ -10606,6 +10696,10 @@ function fbApplyRemoteData(data){
     // лідам клоузера, створеним до появи цієї фічі — див.
     // ensureDecisionWaitFields(). Спрацює один раз і збереже результат.
     if(ensureDecisionWaitFields()) needsRepairSave = true;
+
+    // Одноразова міграція: додає поле serviceType (Сайт/Реклама) усім
+    // лідам, створеним до появи цієї фічі — див. ensureServiceTypeField().
+    if(ensureServiceTypeField()) needsRepairSave = true;
 
     if(state.userId){
       renderBoard();
