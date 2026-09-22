@@ -2094,6 +2094,27 @@
           </div>
           <div class="field" data-roles="admin cto" style="max-width:220px;"><label>Сума угоди ($)</label><input id="dealValue" type="text" inputmode="numeric" placeholder="0" oninput="formatMoneyLive(this)"></div>
         </div>
+        <!-- Канал реклами — дочірній вибір, з'являється лише коли "Тип послуги" = "Реклама" -->
+        <div class="field-row" id="dealAdsChannelRow" style="display:none;">
+          <div class="field" style="max-width:220px;">
+            <label>Канал реклами</label>
+            <div class="cselect" id="dealAdsChannelSelect">
+              <button type="button" class="cselect-trigger" style="width:100%;border-radius:8px;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="dealAdsChannelLabel">Не вказано</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" data-select="dealAdsChannel">
+                <li data-value="">Не вказано</li>
+                <li data-value="meta">Meta</li>
+                <li data-value="google">Google</li>
+                <li data-value="tiktok">TikTok</li>
+                <li data-value="meta_google">Meta + Google</li>
+                <li data-value="meta_tiktok">Meta + TikTok</li>
+                <li data-value="tiktok_google">TikTok + Google</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
       <!-- Sales-лід: кнопка передачі клоузеру + статус/результат, коли вже передано -->
       <div class="panel-section" id="dealForwardCloserSection" style="display:none;">
@@ -3689,7 +3710,8 @@ document.addEventListener('click', function(e){
   if(selectType === 'forwardPipeline'){ forwardSelectedPipelineId = li.dataset.value; renderForwardStageOptions(); }
   if(selectType === 'forwardCloser'){ forwardCloserSelectedId = li.dataset.value; }
   if(selectType === 'dealQualified'){ state.dealQualifiedValue = li.dataset.value; }
-  if(selectType === 'dealServiceType'){ state.dealServiceTypeValue = li.dataset.value; }
+  if(selectType === 'dealServiceType'){ state.dealServiceTypeValue = li.dataset.value; toggleDealAdsChannelRow(li.dataset.value); }
+  if(selectType === 'dealAdsChannel'){ state.dealAdsChannelValue = li.dataset.value; }
   if(selectType === 'pdPipeline'){ pdSelectedPipelineId = li.dataset.value; }
   if(selectType === 'coldBaseManager'){ setColdBaseDefaultManager(state.coldBaseViewId, li.dataset.value || null); }
   if(selectType === 'coldStatusFilter'){ coldDetailStatusFilter = li.dataset.value || ''; renderColdBaseDetail(); }
@@ -4213,6 +4235,7 @@ function ensureServiceTypeField(){
   let changed = false;
   LEADS.forEach(l => {
     if(l.serviceType === undefined){ l.serviceType = ''; changed = true; }
+    if(l.adsChannel === undefined){ l.adsChannel = ''; changed = true; }
   });
   return changed;
 }
@@ -4591,6 +4614,7 @@ function openDeal(id, presetStage){
     // показуємо, якою вона буде, полем не можна керувати вручну.
     document.getElementById('dealCreatedAt').textContent = new Date().toLocaleDateString('uk-UA') + ' (встановиться при збереженні)';
     resetDealServiceTypeSelect('');
+    toggleDealAdsChannelRow('');
     document.getElementById('dealNotesList').innerHTML = '<div class="empty-hint">Нотаток ще немає.</div>';
     document.getElementById('dealTasksList').innerHTML = '<div class="empty-hint">Завдань ще немає.</div>';
     document.getElementById('dealMeetingsList').innerHTML = '<div class="empty-hint">Зустрічей ще немає.</div>';
@@ -4611,6 +4635,8 @@ function openDeal(id, presetStage){
     document.getElementById('dealCreatedAt').textContent = l.createdAt;
     document.getElementById('dealValue').value = l.value ? Number(l.value).toLocaleString('en-US') : '';
     resetDealServiceTypeSelect(l.serviceType || '');
+    resetDealAdsChannelSelect(l.adsChannel || '');
+    toggleDealAdsChannelRow(l.serviceType || '');
     renderDealNotes(l);
     renderDealTasks(l);
     renderDealMeetings(l);
@@ -5007,6 +5033,10 @@ function saveDeal(){
   // будь-якого типу; значення тримається в state (див. generic cselect
   // click-handler, selectType === 'dealServiceType').
   const serviceType = state.dealServiceTypeValue || '';
+  // "Канал реклами" — дочірнє поле, актуальне лише коли serviceType === 'ads';
+  // якщо тип послуги не "Реклама", завжди зберігаємо порожнім (поле й так
+  // приховане та скинуте в toggleDealAdsChannelRow при перемиканні).
+  const adsChannel = serviceType === 'ads' ? (state.dealAdsChannelValue || '') : '';
 
   if(state.currentDealId === null){
     const dupKey = (n,p,e2)=> (n+p+e2).toLowerCase().replace(/\s+/g,'');
@@ -5016,11 +5046,11 @@ function saveDeal(){
     const cp = currentPipeline();
     const stage = document.getElementById('dealPanel').dataset.presetStage || cp.stages[0];
     const newId = nextLeadId++;
-    LEADS.push({id:newId, name, phone, email, company, niche, link, serviceType, stage, value, pipelineId: cp.id, managerId: owner, createdAt: new Date().toLocaleDateString('uk-UA'), notes:[], tasks:[], attachments:[]});
+    LEADS.push({id:newId, name, phone, email, company, niche, link, serviceType, adsChannel, stage, value, pipelineId: cp.id, managerId: owner, createdAt: new Date().toLocaleDateString('uk-UA'), notes:[], tasks:[], attachments:[]});
     logActivity(`Створено нову угоду "${name}" (${company||'без компанії'})`, {target:{type:'lead', id:newId}});
   } else {
     const l = LEADS.find(l=>l.id===state.currentDealId);
-    const patch = {name, phone, email, company, niche, link, serviceType};
+    const patch = {name, phone, email, company, niche, link, serviceType, adsChannel};
     if(state.role === 'admin' || state.role === 'cto') patch.value = value;
     Object.assign(l, patch);
     // Картка у воронці КЛОУЗЕРА — додатково зберігаємо результат брифу й
@@ -5260,7 +5290,7 @@ function confirmForwardToCloser(){
   const carriedNotes = (lead.notes || []).map(n => ({...n}));
   const carriedAttachments = (lead.attachments || []).map(a => ({...a}));
   LEADS.push({
-    id:newId, name:lead.name, phone:lead.phone, email:lead.email, company:lead.company, niche:lead.niche, link:lead.link, serviceType:lead.serviceType || '',
+    id:newId, name:lead.name, phone:lead.phone, email:lead.email, company:lead.company, niche:lead.niche, link:lead.link, serviceType:lead.serviceType || '', adsChannel:lead.adsChannel || '',
     stage: cp.stages[0], value:0, pipelineId: cp.id, managerId: closer.id,
     createdAt: new Date().toLocaleDateString('uk-UA'), notes:carriedNotes, tasks:[], attachments:carriedAttachments,
     originDealId: lead.id, originManagerId: me ? me.id : lead.managerId, briefDateTime,
@@ -5435,9 +5465,52 @@ function serviceTypeChip(c){
   const isAds = c.serviceType === 'ads';
   const bg = isAds ? '#F5A6231A' : '#5B8DEF1A';
   const text = isAds ? '#F5A623' : '#5B8DEF';
-  const label = serviceTypeLabel(c.serviceType);
+  let label = serviceTypeLabel(c.serviceType);
   if(!label) return '';
+  // Для реклами додатково показуємо обраний канал (Meta/Google/TikTok/…),
+  // якщо він вказаний — прямо в тій самій плашці через кому.
+  if(isAds && c.adsChannel){
+    const chLabel = adsChannelLabel(c.adsChannel);
+    if(chLabel) label += `, ${chLabel}`;
+  }
   return `<span class="badge" style="background:${bg};color:${text};" title="Тип послуги">${label}</span>`;
+}
+// Показує/ховає поле "Канал реклами" залежно від обраного типу послуги —
+// дочірній вибір, актуальний лише коли тип послуги = "Реклама". При
+// перемиканні на будь-яке інше значення поле ховається й скидається.
+function toggleDealAdsChannelRow(serviceTypeValue){
+  const row = document.getElementById('dealAdsChannelRow');
+  if(!row) return;
+  if(serviceTypeValue === 'ads'){
+    row.style.display = '';
+  } else {
+    row.style.display = 'none';
+    resetDealAdsChannelSelect('');
+  }
+}
+// Той самий патерн cselect, що й resetDealServiceTypeSelect — для
+// дочірнього поля "Канал реклами".
+function resetDealAdsChannelSelect(value){
+  const label = document.getElementById('dealAdsChannelLabel');
+  const text = adsChannelLabel(value) || 'Не вказано';
+  if(label) label.textContent = text;
+  const menu = document.querySelector('#dealAdsChannelSelect .cselect-menu');
+  if(menu){
+    menu.querySelectorAll('li').forEach(li=>{
+      li.classList.toggle('selected', (li.dataset.value || '') === (value || ''));
+    });
+  }
+  state.dealAdsChannelValue = value || '';
+}
+// Людський підпис для каналу реклами.
+function adsChannelLabel(v){
+  if(v === 'meta') return 'Meta';
+  if(v === 'google') return 'Google';
+  if(v === 'tiktok') return 'TikTok';
+  if(v === 'meta_google') return 'Meta + Google';
+  if(v === 'meta_tiktok') return 'Meta + TikTok';
+  if(v === 'tiktok_google') return 'TikTok + Google';
+  return '';
 }
 
 /* =========================================================
