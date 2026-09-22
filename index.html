@@ -2087,8 +2087,8 @@
               </button>
               <ul class="cselect-menu" data-select="dealServiceType">
                 <li data-value="">Не вказано</li>
-                <li data-value="website">🌐 Сайт</li>
-                <li data-value="ads">📢 Реклама</li>
+                <li data-value="website">Сайт</li>
+                <li data-value="ads">Реклама</li>
               </ul>
             </div>
           </div>
@@ -5094,6 +5094,8 @@ function saveDeal(){
     logActivity(`Відредаговано угоду "${name}"`, {target:{type:'lead', id:l.id}});
   }
   renderBoard();
+  if(typeof renderCloserBoard === 'function') renderCloserBoard();
+  if(typeof renderPartnerBoard === 'function') renderPartnerBoard();
   renderClientsTable();
   renderCloserClientsTable();
   renderCloserReports();
@@ -5113,6 +5115,8 @@ async function deleteDeal(){
   if(!ok) return;
   LEADS = LEADS.filter(x=>x.id!==l.id);
   renderBoard();
+  if(typeof renderCloserBoard === 'function') renderCloserBoard();
+  if(typeof renderPartnerBoard === 'function') renderPartnerBoard();
   renderClientsTable();
   renderDashboardStats();
   closeAllPanels();
@@ -5120,6 +5124,8 @@ async function deleteDeal(){
   showUndoToast(`Угоду "${l.name}" видалено`, () => {
     LEADS.push(l);
     renderBoard();
+    if(typeof renderCloserBoard === 'function') renderCloserBoard();
+    if(typeof renderPartnerBoard === 'function') renderPartnerBoard();
     renderClientsTable();
     renderDashboardStats();
     logActivity(`Відновлено угоду "${l.name}" (скасовано видалення)`);
@@ -5418,8 +5424,8 @@ function resetDealServiceTypeSelect(value){
 // Людський підпис для значення типу послуги — використовується і в
 // deal-панелі, і в чіпах на міні-картках (renderBoard/renderCloserBoard).
 function serviceTypeLabel(v){
-  if(v === 'website') return '🌐 Сайт';
-  if(v === 'ads') return '📢 Реклама';
+  if(v === 'website') return 'Сайт';
+  if(v === 'ads') return 'Реклама';
   return '';
 }
 // Кольорова плашка типу послуги для міні-картки — фіксована (не хеш-based)
