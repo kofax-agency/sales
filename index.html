@@ -1455,6 +1455,26 @@
               <ul class="cselect-menu" id="rdNicheMenu"></ul>
             </div>
           </div>
+          <div class="field" id="rdCityRow" style="max-width:320px;margin-top:14px;">
+            <label>Місто обдзвону</label>
+            <div class="cselect" id="rdCitySelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;width:100%;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="rdCityLabel">Оберіть місто</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="rdCityMenu"></ul>
+            </div>
+          </div>
+          <div class="field" id="rdDialBaseRow" style="max-width:320px;margin-top:14px;">
+            <label>База обдзвону</label>
+            <div class="cselect" id="rdDialBaseSelect">
+              <button type="button" class="cselect-trigger" style="border-radius:8px;width:100%;" onclick="toggleCSelect(this.parentElement)">
+                <span class="cselect-label" id="rdDialBaseLabel">Оберіть базу</span>
+                <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <ul class="cselect-menu" id="rdDialBaseMenu"></ul>
+            </div>
+          </div>
           <div class="report-metric-grid" id="reportMetricGrid"><!-- вставляється через JS: renderReportFieldRows() --></div>
           <div class="field" style="margin-top:18px;"><label>Коментар</label><textarea id="rdComment" style="min-height:64px;" placeholder="Короткий підсумок дня (необов'язково)"></textarea></div>
           <div style="margin-top:18px;display:flex;gap:10px;" id="reportDetailActions">
@@ -1484,6 +1504,14 @@
           <div class="card" style="padding:22px;" data-roles="admin cto" id="analyticsByManagerCard">
             <div class="section-title">Розподіл по спеціалістах</div>
             <div style="display:flex;flex-direction:column;gap:10px;" id="analyticsByManager"></div>
+          </div>
+          <div class="card" style="padding:22px;margin-top:16px;" id="analyticsByCityCard">
+            <div class="section-title">Порівняння по містах обдзвону</div>
+            <div style="display:flex;flex-direction:column;gap:10px;" id="analyticsByCity"></div>
+          </div>
+          <div class="card" style="padding:22px;margin-top:16px;" id="analyticsByDialBaseCard">
+            <div class="section-title">Порівняння по базах обдзвону</div>
+            <div style="display:flex;flex-direction:column;gap:10px;" id="analyticsByDialBase"></div>
           </div>
         </div>
       </section>
@@ -2623,6 +2651,18 @@ let SPEC_DIRECTIONS = ['Sales','Marketing','Development','Design','HR','Finance'
 // Ніші звітів SALES-відділу — зростаючий список, який поповнюється прямо з
 // дропдауна у формі звіту (той самий патерн, що й SPEC_DIRECTIONS вище).
 let REPORT_NICHES = [];
+// Місто обдзвону — зростаючий список, стартово заповнений обласними
+// центрами України; менеджер може дописати своє прямо з дропдауна (той
+// самий патерн, що й REPORT_NICHES).
+let REPORT_CITIES = [
+  'Київ','Вінниця','Дніпро','Донецьк','Житомир','Запоріжжя','Івано-Франківськ',
+  'Кропивницький','Луганськ','Луцьк','Львів','Миколаїв','Одеса','Полтава',
+  'Рівне','Сімферополь','Суми','Тернопіль','Ужгород','Харків','Херсон',
+  'Хмельницький','Черкаси','Чернівці','Чернігів',
+];
+// База обдзвону — зростаючий список; назви джерел лишаються англійською,
+// як в оригіналі (US Market, List.in.ua), менеджер може дописати свою.
+let REPORT_DIAL_BASES = ['US Market', 'List.in.ua'];
 
 // Довідник мов — стартовий набір (укр/рос/англ), HR може дописувати свої.
 let SPEC_LANGUAGES = ['Українська','Російська','Англійська'];
@@ -2992,10 +3032,12 @@ function groupDayReportsByWeek(dayReports){
     if(!d) return;
     const {monday, sunday} = weekRangeContaining(d);
     const key = r.managerId + '|' + monday.getTime();
-    if(!groups[key]) groups[key] = {managerId:r.managerId, period:'week', rangeStart:monday, rangeEnd:sunday, niches:[], count:0};
+    if(!groups[key]) groups[key] = {managerId:r.managerId, period:'week', rangeStart:monday, rangeEnd:sunday, niches:[], cities:[], dialBases:[], count:0};
     const g = groups[key];
     g.count++;
     if(r.niche && !g.niches.includes(r.niche)) g.niches.push(r.niche);
+    if(r.city && !g.cities.includes(r.city)) g.cities.push(r.city);
+    if(r.dialBase && !g.dialBases.includes(r.dialBase)) g.dialBases.push(r.dialBase);
     weeklyAutoFieldsFor(r.managerId).forEach(f => { g[f.key] = (g[f.key]||0) + Number(r[f.key]||0); });
   });
   return Object.values(groups).sort((a,b)=>b.rangeStart-a.rangeStart);
@@ -3008,10 +3050,12 @@ function groupDayReportsByMonth(dayReports){
     const rangeStart = new Date(d.getFullYear(), d.getMonth(), 1);
     const rangeEnd = new Date(d.getFullYear(), d.getMonth()+1, 0);
     const key = r.managerId + '|' + d.getFullYear() + '-' + d.getMonth();
-    if(!groups[key]) groups[key] = {managerId:r.managerId, period:'month', rangeStart, rangeEnd, niches:[], count:0};
+    if(!groups[key]) groups[key] = {managerId:r.managerId, period:'month', rangeStart, rangeEnd, niches:[], cities:[], dialBases:[], count:0};
     const g = groups[key];
     g.count++;
     if(r.niche && !g.niches.includes(r.niche)) g.niches.push(r.niche);
+    if(r.city && !g.cities.includes(r.city)) g.cities.push(r.city);
+    if(r.dialBase && !g.dialBases.includes(r.dialBase)) g.dialBases.push(r.dialBase);
     monthlyAutoFieldsFor(r.managerId).forEach(f => { g[f.key] = (g[f.key]||0) + Number(r[f.key]||0); });
   });
   return Object.values(groups).sort((a,b)=>b.rangeStart-a.rangeStart);
@@ -3303,6 +3347,7 @@ function completeLogin(user, opts){
   if(ensureKpLinkFields()) fbScheduleSave();
   if(ensureDecisionWaitFields()) fbScheduleSave();
   if(ensureServiceTypeField()) fbScheduleSave();
+  if(ensureReportCityDialBaseFields()) fbScheduleSave();
   renderPipelineOwnerFilterOptions();
   renderBoardPipelineOptions();
   renderManagerMultiOptions();
@@ -4147,7 +4192,7 @@ function createEmptyDailyReport(managerId, dateObj){
   const values = {};
   dailyFieldsFor(managerId).forEach(f => { values[f.key] = 0; });
   const newId = nextReportId++;
-  REPORTS.unshift({id: newId, date: dateStr, managerId, period: 'day', comment: '', niche: '', ...values, autoCreated: true});
+  REPORTS.unshift({id: newId, date: dateStr, managerId, period: 'day', comment: '', niche: '', city: '', dialBase: '', ...values, autoCreated: true});
   return true;
 }
 // Щоденні звіти Sales-менеджерів більше не створюються вручну — система сама
@@ -4236,6 +4281,18 @@ function ensureServiceTypeField(){
   LEADS.forEach(l => {
     if(l.serviceType === undefined){ l.serviceType = ''; changed = true; }
     if(l.adsChannel === undefined){ l.adsChannel = ''; changed = true; }
+  });
+  return changed;
+}
+// Одноразова міграція: додає порожні поля city (місто обдзвону) і dialBase
+// (база обдзвону) щоденним звітам SALES-відділу, створеним ДО появи цієї
+// фічі. Нічого не видаляє й не змінює в наявних даних.
+function ensureReportCityDialBaseFields(){
+  let changed = false;
+  REPORTS.forEach(r => {
+    if(r.period !== 'day') return;
+    if(r.city === undefined){ r.city = ''; changed = true; }
+    if(r.dialBase === undefined){ r.dialBase = ''; changed = true; }
   });
   return changed;
 }
@@ -7700,8 +7757,14 @@ function openReportAggregateView(idx){
   document.getElementById('reportDetailTitle').innerHTML = `Звіт за ${periodLabel} ${fmtRangeLabel(g)} · ${managerName(g.managerId)}`;
   document.getElementById('rdPeriodRow').style.display = 'none';
   document.getElementById('rdNicheRow').style.display = 'none';
+  document.getElementById('rdCityRow').style.display = 'none';
+  document.getElementById('rdDialBaseRow').style.display = 'none';
   renderReportFieldsForPeriod(g.period, g.managerId, g);
-  document.getElementById('rdComment').value = g.niches.length ? `Ніші: ${g.niches.join(', ')}` : `${g.count} щоденних звітів за період`;
+  const aggBits = [];
+  if(g.niches.length) aggBits.push(`Ніші: ${g.niches.join(', ')}`);
+  if(g.cities && g.cities.length) aggBits.push(`Міста: ${g.cities.join(', ')}`);
+  if(g.dialBases && g.dialBases.length) aggBits.push(`Бази: ${g.dialBases.join(', ')}`);
+  document.getElementById('rdComment').value = aggBits.length ? aggBits.join(' · ') : `${g.count} щоденних звітів за період`;
   setReportFieldsEnabled(false);
   renderReportSummaryStrip(g, g.period, g.managerId);
   document.getElementById('reportEditBtn').style.display = 'none';
@@ -7760,6 +7823,10 @@ function setReportFieldsEnabled(enabled){
   document.getElementById('rdComment').disabled = !enabled;
   const nicheSelect = document.getElementById('rdNicheSelect');
   if(nicheSelect) nicheSelect.classList.toggle('disabled', !enabled);
+  const citySelect = document.getElementById('rdCitySelect');
+  if(citySelect) citySelect.classList.toggle('disabled', !enabled);
+  const dialBaseSelect = document.getElementById('rdDialBaseSelect');
+  if(dialBaseSelect) dialBaseSelect.classList.toggle('disabled', !enabled);
 }
 function renderReportSummaryStrip(values, period, managerId){
   const el = document.getElementById('reportSummaryStrip');
@@ -7842,6 +7909,77 @@ function resetRdNicheSelect(value){
   if(label) label.textContent = value || 'Оберіть нішу';
   renderRdNicheMenu();
 }
+// Місто обдзвону — той самий патерн дропдауна з можливістю додати своє
+// значення, що й renderRdNicheMenu вище.
+function renderRdCityMenu(){
+  const menu = document.getElementById('rdCityMenu');
+  if(!menu) return;
+  menu.innerHTML = REPORT_CITIES.map(n => `
+    <li data-value="${n}" class="${state.rdCityValue===n?'selected':''}" onclick="selectRdCity('${n}')">${n}</li>`).join('') + `
+    <li onclick="event.stopPropagation()" style="display:flex;gap:6px;padding:8px;">
+      <input type="text" id="rdNewCityInput" placeholder="Нове місто..." style="flex:1;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12.5px;background:var(--surface);color:var(--text);" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault();addRdCityInline();}">
+      <button type="button" class="btn secondary small" onclick="event.stopPropagation();addRdCityInline()">+</button>
+    </li>`;
+}
+function selectRdCity(n){
+  state.rdCityValue = n;
+  const label = document.getElementById('rdCityLabel');
+  if(label) label.textContent = n;
+  closeAllDropdowns();
+  renderRdCityMenu();
+}
+function addRdCityInline(){
+  const input = document.getElementById('rdNewCityInput');
+  const name = input.value.trim();
+  if(!name) return;
+  if(!REPORT_CITIES.includes(name)) REPORT_CITIES.push(name);
+  input.value = '';
+  selectRdCity(name);
+  fbScheduleSave();
+}
+// Скидає/встановлює вибір міста при відкритті форми звіту (створення чи
+// перегляд). value порожній/undefined → "Оберіть місто".
+function resetRdCitySelect(value){
+  state.rdCityValue = value || '';
+  const label = document.getElementById('rdCityLabel');
+  if(label) label.textContent = value || 'Оберіть місто';
+  renderRdCityMenu();
+}
+// База обдзвону — той самий патерн дропдауна з можливістю додати свою
+// базу; назви на кшталт "US Market"/"List.in.ua" лишаються англійською.
+function renderRdDialBaseMenu(){
+  const menu = document.getElementById('rdDialBaseMenu');
+  if(!menu) return;
+  menu.innerHTML = REPORT_DIAL_BASES.map(n => `
+    <li data-value="${n}" class="${state.rdDialBaseValue===n?'selected':''}" onclick="selectRdDialBase('${n}')">${n}</li>`).join('') + `
+    <li onclick="event.stopPropagation()" style="display:flex;gap:6px;padding:8px;">
+      <input type="text" id="rdNewDialBaseInput" placeholder="Нова база..." style="flex:1;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12.5px;background:var(--surface);color:var(--text);" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault();addRdDialBaseInline();}">
+      <button type="button" class="btn secondary small" onclick="event.stopPropagation();addRdDialBaseInline()">+</button>
+    </li>`;
+}
+function selectRdDialBase(n){
+  state.rdDialBaseValue = n;
+  const label = document.getElementById('rdDialBaseLabel');
+  if(label) label.textContent = n;
+  closeAllDropdowns();
+  renderRdDialBaseMenu();
+}
+function addRdDialBaseInline(){
+  const input = document.getElementById('rdNewDialBaseInput');
+  const name = input.value.trim();
+  if(!name) return;
+  if(!REPORT_DIAL_BASES.includes(name)) REPORT_DIAL_BASES.push(name);
+  input.value = '';
+  selectRdDialBase(name);
+  fbScheduleSave();
+}
+// Скидає/встановлює вибір бази обдзвону при відкритті форми звіту.
+function resetRdDialBaseSelect(value){
+  state.rdDialBaseValue = value || '';
+  const label = document.getElementById('rdDialBaseLabel');
+  if(label) label.textContent = value || 'Оберіть базу';
+  renderRdDialBaseMenu();
+}
 function openReportCreate(){
   if(state.role === 'cto') return; // CTO лише переглядає звіти керівника відділу і менеджерів
   // Менеджер: щоденний звіт на сьогодні вже створено автоматично
@@ -7861,6 +7999,8 @@ function openReportCreate(){
   renderReportSummaryStrip(null);
   document.getElementById('rdComment').value = '';
   resetRdNicheSelect();
+  resetRdCitySelect();
+  resetRdDialBaseSelect();
   // Sales (manager/admin) і Closer більше не обирають тип звіту вручну —
   // тижневий і місячний звіт рахуються повністю автоматично з щоденних
   // звітів, тож єдине, що створюється власноруч, — щоденний звіт.
@@ -7877,6 +8017,9 @@ function openReportCreate(){
   // Ніша — довільна (обирається дропдауном), лише для звітів SALES-відділу
   // (не для партнерських і не для клоузерських звітів).
   document.getElementById('rdNicheRow').style.display = (state.role === 'partner' || state.role === 'closer') ? 'none' : '';
+  // Місто/база обдзвону — так само, лише для SALES-звітів.
+  document.getElementById('rdCityRow').style.display = (state.role === 'partner' || state.role === 'closer') ? 'none' : '';
+  document.getElementById('rdDialBaseRow').style.display = (state.role === 'partner' || state.role === 'closer') ? 'none' : '';
   renderReportFieldsForPeriod(defaultPeriod, me ? me.id : null);
   setReportFieldsEnabled(true);
   document.getElementById('reportDetailActions').innerHTML = '<button class="btn" onclick="saveReportDetail()">Зберегти звіт</button>';
@@ -7903,7 +8046,11 @@ function openReportView(id){
   document.getElementById('reportDetailTitle').innerHTML = 'Звіт — ' + r.date + ' · ' + managerName(r.managerId);
   document.getElementById('rdPeriodRow').style.display = 'none';
   document.getElementById('rdNicheRow').style.display = (isPartnerUserId(r.managerId) || isCloserUserId(r.managerId)) ? 'none' : '';
+  document.getElementById('rdCityRow').style.display = (isPartnerUserId(r.managerId) || isCloserUserId(r.managerId)) ? 'none' : '';
+  document.getElementById('rdDialBaseRow').style.display = (isPartnerUserId(r.managerId) || isCloserUserId(r.managerId)) ? 'none' : '';
   resetRdNicheSelect(r.niche);
+  resetRdCitySelect(r.city);
+  resetRdDialBaseSelect(r.dialBase);
   renderReportFieldsForPeriod(period, r.managerId, r);
   document.getElementById('rdComment').value = r.comment;
   setReportFieldsEnabled(false);
@@ -7948,6 +8095,10 @@ function saveReportDetail(){
   // Ніша — обирається дропдауном, лише для sales-звітів (партнерство поле
   // не показує, тож там завжди лишається порожнім).
   const niche = state.rdNicheValue || '';
+  // Місто/база обдзвону — той самий принцип, що й ніша: дропдаун, лише для
+  // sales-звітів, порожні для партнерства/клоузера.
+  const city = state.rdCityValue || '';
+  const dialBase = state.rdDialBaseValue || '';
 
   if(isEdit){
     // Якщо це був автоматично створений (ще не заповнений) звіт — перше
@@ -7955,7 +8106,7 @@ function saveReportDetail(){
     // сповіщення керівництву про факт редагування (інакше воно спрацьовувало б
     // щодня на кожен щоденний звіт кожного менеджера).
     const wasAutoCreated = !!existing.autoCreated;
-    Object.assign(existing, values, {comment, niche, autoCreated: false});
+    Object.assign(existing, values, {comment, niche, city, dialBase, autoCreated: false});
     renderReportsTable(); renderPartnerReportsTable(); renderCloserReports();
     if(wasAutoCreated){
       logActivity(`Заповнено звіт за ${existing.date}`, {target:{type:'report', id:existing.id}});
@@ -7970,7 +8121,7 @@ function saveReportDetail(){
   const periodLabel = document.querySelector('#reportPeriodSelect .cselect-label').textContent;
   const today = new Date().toLocaleDateString('uk-UA');
   const newReportId = nextReportId++;
-  REPORTS.unshift({id: newReportId, date: today, managerId: me ? me.id : 'ostap', period, comment, niche, ...values});
+  REPORTS.unshift({id: newReportId, date: today, managerId: me ? me.id : 'ostap', period, comment, niche, city, dialBase, ...values});
   setReportFieldsEnabled(true);
   renderReportsTable(); renderPartnerReportsTable(); renderCloserReports();
   logActivity(`Збережено звіт за ${today} (${periodLabel.toLowerCase()})`, {target:{type:'report', id:newReportId}});
@@ -8107,6 +8258,54 @@ function renderAnalytics(){
       </div>`;
     }).join('');
   }
+  renderCityBaseComparison(dayReports);
+}
+// Порівняння ефективності по містах обдзвону і по базах обдзвону — завжди
+// рахується з "сирих" щоденних звітів (city/dialBase — поля щоденного
+// звіту), незалежно від обраної вкладки Денна/Тижнева/Місячна, бо ці
+// показники мають сенс лише на рівні дня. Не показуємо групу, якщо
+// жоден звіт ще не має заповненого міста/бази (наприклад, старі звіти
+// до появи фічі) — щоб не плутати порожньою карткою.
+function renderCityBaseComparison(dayReports){
+  const groupBy = (key) => {
+    const groups = {};
+    dayReports.forEach(r => {
+      const val = r[key];
+      if(!val) return;
+      if(!groups[val]) groups[val] = {count:0, calls:0, talks:0, meetingsHeld:0};
+      groups[val].count++;
+      groups[val].calls += Number(r.calls||0);
+      groups[val].talks += Number(r.talks||0);
+      groups[val].meetingsHeld += Number(r.meetingsHeld||0);
+    });
+    return Object.entries(groups).sort((a,b)=>b[1].calls-a[1].calls);
+  };
+  const renderGroupCards = (entries) => entries.map(([name, s]) => {
+    const connectRate = s.calls ? Math.round(s.talks/s.calls*100) : 0;
+    return `
+    <div class="analytics-manager-card">
+      <div class="analytics-manager-name">${name}</div>
+      <div class="analytics-manager-stats">
+        <span><b>${s.count}</b> звітів</span>
+        <span><b>${s.calls}</b> дзвінків</span>
+        <span><b>${s.talks}</b> розмов</span>
+        <span><b>${connectRate}%</b> connect rate</span>
+        <span><b>${s.meetingsHeld}</b> зустрічей відбулось</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const cityEntries = groupBy('city');
+  const cityCard = document.getElementById('analyticsByCityCard');
+  if(cityCard) cityCard.style.display = cityEntries.length ? '' : 'none';
+  const cityEl = document.getElementById('analyticsByCity');
+  if(cityEl) cityEl.innerHTML = renderGroupCards(cityEntries);
+
+  const dialBaseEntries = groupBy('dialBase');
+  const dialBaseCard = document.getElementById('analyticsByDialBaseCard');
+  if(dialBaseCard) dialBaseCard.style.display = dialBaseEntries.length ? '' : 'none';
+  const dialBaseEl = document.getElementById('analyticsByDialBase');
+  if(dialBaseEl) dialBaseEl.innerHTML = renderGroupCards(dialBaseEntries);
 }
 
 /* =========================================================
@@ -10718,6 +10917,8 @@ function fbApplyRemoteData(data){
     if(Array.isArray(data.candidates)) CANDIDATES = data.candidates;
     if(Array.isArray(data.specDirections) && data.specDirections.length) SPEC_DIRECTIONS = data.specDirections;
     if(Array.isArray(data.reportNiches)) REPORT_NICHES = data.reportNiches;
+    if(Array.isArray(data.reportCities) && data.reportCities.length) REPORT_CITIES = data.reportCities;
+    if(Array.isArray(data.reportDialBases) && data.reportDialBases.length) REPORT_DIAL_BASES = data.reportDialBases;
     if(Array.isArray(data.specLanguages) && data.specLanguages.length) SPEC_LANGUAGES = data.specLanguages;
     if(Array.isArray(data.specialists)) SPECIALISTS = data.specialists;
     if(Array.isArray(data.partners)) PARTNERS = data.partners;
@@ -10779,6 +10980,10 @@ function fbApplyRemoteData(data){
     // Одноразова міграція: додає поле serviceType (Сайт/Реклама) усім
     // лідам, створеним до появи цієї фічі — див. ensureServiceTypeField().
     if(ensureServiceTypeField()) needsRepairSave = true;
+
+    // Одноразова міграція: додає поля city/dialBase щоденним звітам,
+    // створеним до появи цієї фічі — див. ensureReportCityDialBaseFields().
+    if(ensureReportCityDialBaseFields()) needsRepairSave = true;
 
     if(state.userId){
       renderBoard();
@@ -10880,6 +11085,8 @@ function fbSaveNow(){
       candidates: CANDIDATES,
       specDirections: SPEC_DIRECTIONS,
       reportNiches: REPORT_NICHES,
+      reportCities: REPORT_CITIES,
+      reportDialBases: REPORT_DIAL_BASES,
       specLanguages: SPEC_LANGUAGES,
       specialists: SPECIALISTS,
       partners: PARTNERS,
