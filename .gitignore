@@ -1,0 +1,38 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code (local settings only; CLAUDE.md stays tracked)
+.claude/settings.local.json
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+service-account*.json
+
+# Dependencies & build output
+node_modules/
+dist/
+build/
+.cache/
+.firebase/
+.vercel/
+
+# Logs & temp
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+tmp/
+*.tmp
