@@ -17,6 +17,13 @@
 - Match the surrounding code's naming and idioms.
 - Prefer clear names over comments; remove dead code instead of commenting it out.
 
+## Skills
+Project skills live in `.claude/skills/` (vendored from `boraoztunc/skills@645553c`):
+- `adversarial-review`: skeptical review of a diff before pushing to `main`.
+- `better-interface`: holistic UI review; routes to `better-ui`, `better-layout`, `better-colors`, `better-typography`, `better-accessibility`, `better-writing`.
+- `interface-review`: UI-quality review of uncommitted work, a branch or a PR.
+- `linear-local-first-architecture`: optimistic updates and local-first sync (relevant to the Firestore layer).
+
 ## Project
 - Kofax Agency internal CRM: a single-page app in `index.html` (HTML + CSS + vanilla JS, no build step).
 - Data is stored in Firebase Firestore (`kofax/crm` document plus `coldBaseContacts` and `attachments` collections).
